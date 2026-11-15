@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Récapitulatif du signalement</title>
+  <style>
+    :root{--bg:#f0f2f5;--carte:#fff;--texte:#1c1e21;--gris:#65676b;--bord:#dadde1;--zone:#f0f2f5}
+    @media (prefers-color-scheme: dark){
+      :root{--bg:#18191a;--carte:#242526;--texte:#e4e6eb;--gris:#b0b3b8;--bord:#3e4042;--zone:#3a3b3c}
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--texte);font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif}
+    main{max-width:560px;margin:0 auto;padding:16px}
+    h1{font-size:1.25rem;margin:8px 0 4px}
+    .intro{color:var(--gris);font-size:.9rem;margin:0 0 14px}
+    .carte{background:var(--carte);border:1px solid var(--bord);border-radius:12px;padding:14px;margin-bottom:12px}
+    dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:.95rem}
+    dt{color:var(--gris)}
+    dd{margin:0;font-weight:600;word-break:break-word}
+    h2{font-size:.95rem;margin:0 0 8px;color:var(--gris);font-weight:600}
+    .apercu{background:var(--zone);border-radius:8px;padding:10px;white-space:pre-wrap;word-break:break-word;font-size:.92rem}
+    .media img,.media video{display:block;max-width:100%;max-height:360px;margin:8px 0 0;border-radius:8px;background:#000}
+    .media audio{width:100%;margin-top:8px}
+    .media a{color:#1877f2}
+    textarea{width:100%;min-height:80px;padding:10px;border:1px solid var(--bord);border-radius:8px;background:var(--carte);color:var(--texte);font:inherit;resize:vertical}
+    .actions{display:flex;gap:10px;margin-top:6px}
+    .actions button,.actions a{flex:1;text-align:center;padding:12px;border:0;border-radius:8px;font:inherit;font-weight:600;cursor:pointer;text-decoration:none}
+    .envoyer{background:#1877f2;color:#fff}
+    .annuler{background:var(--zone);color:var(--texte)}
+    .envoyer:disabled{opacity:.6;cursor:wait}
+    .note{color:var(--gris);font-size:.82rem;margin-top:10px}
+  </style>
+</head>
+<body>
+<main>
+  <h1>Récapitulatif du signalement</h1>
+  <p class="intro">Vérifiez les informations ci-dessous avant de les envoyer aux modérateurs.</p>
+
+  <div class="carte">
+    <dl>
+      <dt>Type</dt><dd>{{ type_label }}</dd>
+      <dt>ID du contenu</dt><dd>#{{ target_id }}</dd>
+      <dt>{{ 'Propriétaire' if type_key == 'group' else 'Auteur' }}</dt><dd>{{ auteur }}</dd>
+      <dt>Motif</dt><dd>{{ reason_label }}</dd>
+    </dl>
+  </div>
+
+  {% if snapshot or media %}
+  <div class="carte">
+    <h2>Contenu signalé</h2>
+    {% if snapshot %}<div class="apercu">{{ snapshot }}</div>{% endif %}
+    {% if media %}
+    <div class="media">
+      {% for m in media %}
+        {% if m.kind == 'video' %}<video src="{{ m.url }}" controls preload="metadata"></video>
+        {% elif m.kind == 'image' %}<img src="{{ m.url }}" alt="Contenu signalé" loading="lazy">
+        {% elif m.kind == 'audio' %}<audio src="{{ m.url }}" controls preload="none"></audio>
+        {% else %}<a href="{{ m.url }}" target="_blank" rel="noopener">Fichier joint{% if m.nom %} : {{ m.nom }}{% endif %}</a>{% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <form method="POST" action="{{ url_for('signalements.envoyer') }}" class="carte" id="form-envoi">
+    {% if csrf_token is defined %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endif %}
+    <input type="hidden" name="type" value="{{ type_key }}">
+    <input type="hidden" name="id" value="{{ target_id }}">
+    <input type="hidden" name="raison" value="{{ reason_key }}">
+    <input type="hidden" name="retour" value="{{ retour }}">
+    <h2>Précisions (facultatif)</h2>
+    <textarea name="details" maxlength="1000" placeholder="Ajoutez des détails utiles aux modérateurs"></textarea>
+    <div class="actions">
+      <a class="annuler" href="{{ retour }}">Annuler</a>
+      <button type="submit" class="envoyer" id="btn-envoyer">Envoyer le signalement</button>
+    </div>
+    <p class="note">Votre signalement sera examiné par l'équipe de modération.</p>
+  </form>
+</main>
+<script>
+document.getElementById('form-envoi').addEventListener('submit', function () {
+  var b = document.getElementById('btn-envoyer');
+  b.disabled = true; b.textContent = 'Envoi…';
+});
+</script>
+</body>
+</html>

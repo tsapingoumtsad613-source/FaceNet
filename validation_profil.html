@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 560px; margin: 40px auto 60px; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <h2 style="text-align: center; color: #1877f2;">Modifier mon Profil</h2>
+    <form action="{{ url_for('main.edit_profile') }}" method="POST" enctype="multipart/form-data">
+
+        <!-- ═══ PHOTO DE COUVERTURE + PHOTO DE PROFIL (aperçu + bouton caméra) ═══ -->
+        <div style="position: relative; margin: 0 0 55px 0;">
+            <div id="ep-cover-preview" style="width: 100%; height: 150px; border-radius: 10px; background-size: cover; background-position: center; background-color: #dfe3ee;
+                {% if current_user.couverture %}background-image: url('{{ url_for('static', filename='uploads/' + current_user.couverture) }}');{% endif %}">
+            </div>
+            <button type="button" onclick="document.getElementById('ep-cover-input').click()"
+                    style="position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; border-radius: 50%; background: #fff; color: #050505; border: 1px solid #ccd0d5; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
+                📷
+            </button>
+            <input type="file" id="ep-cover-input" name="cover_pic" accept="image/*" style="display:none;" onchange="epPreviewFile(this, 'ep-cover-preview')">
+
+            <div style="position: absolute; left: 20px; bottom: -45px;">
+                <div id="ep-avatar-preview" style="width: 90px; height: 90px; border-radius: 50%; border: 3px solid #fff; background-size: cover; background-position: center; background-color: #dfe3ee;
+                    {% if current_user.avatar %}background-image: url('{{ url_for('static', filename='uploads/' + current_user.avatar) }}');{% endif %}">
+                </div>
+                <button type="button" onclick="document.getElementById('ep-avatar-input').click()"
+                        style="position: absolute; right: -2px; bottom: -2px; width: 30px; height: 30px; border-radius: 50%; background: #fff; color: #050505; border: 1px solid #ccd0d5; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
+                    📷
+                </button>
+                <input type="file" id="ep-avatar-input" name="profile_pic" accept="image/*" style="display:none;" onchange="epPreviewFile(this, 'ep-avatar-preview')">
+            </div>
+        </div>
+
+        <script>
+        function epPreviewFile(input, previewId) {
+            if (!input.files || !input.files[0]) return;
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById(previewId).style.backgroundImage = "url('" + e.target.result + "')";
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+        document.currentScript.closest('form').addEventListener('submit', function() {
+            var j = document.getElementById('ep-birth-day').value.trim();
+            var m = document.getElementById('ep-birth-month').value.trim();
+            var a = document.getElementById('ep-birth-year').value.trim();
+            if (j && m && a) {
+                document.getElementById('ep-birth-date-hidden').value =
+                    a + '-' + m.padStart(2, '0') + '-' + j.padStart(2, '0');
+            }
+        });
+        </script>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Nom Complet</label>
+            <input type="text" name="nom_complet" value="{{ current_user.nom_complet if current_user.nom_complet else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Biographie</label>
+            <textarea name="bio" rows="3" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; resize: none; font-family: inherit;">{{ current_user.bio if current_user.bio else '' }}</textarea>
+        </div>
+
+        <h3 style="color:#1877f2; border-top:1px solid #eee; padding-top:15px; margin-bottom:12px; font-size:16px;">Informations personnelles</h3>
+        <div style="display:flex; gap:10px; margin-bottom: 15px;">
+            <div style="flex:1;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Nom</label>
+                <input type="text" name="nom" value="{{ current_user.nom if current_user.nom else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+            </div>
+            <div style="flex:1;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Prénom</label>
+                <input type="text" name="prenom" value="{{ current_user.prenom if current_user.prenom else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+            </div>
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Date de Naissance</label>
+            <div style="display: flex; gap: 8px;">
+                <input type="number" id="ep-birth-day" placeholder="JJ" min="1" max="31"
+                       value="{{ current_user.birth_date.day if current_user.birth_date else '' }}"
+                       style="width: 70px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+                <input type="number" id="ep-birth-month" placeholder="MM" min="1" max="12"
+                       value="{{ current_user.birth_date.month if current_user.birth_date else '' }}"
+                       style="width: 70px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+                <input type="number" id="ep-birth-year" placeholder="AAAA" min="1900" max="2026"
+                       value="{{ current_user.birth_date.year if current_user.birth_date else '' }}"
+                       style="width: 100px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+            </div>
+            <input type="hidden" name="birth_date" id="ep-birth-date-hidden">
+        </div>
+        <div style="display:flex; gap:10px; margin-bottom: 15px;">
+            <div style="flex:1;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Sexe</label>
+                <select name="sexe" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+                    <option value="" {% if not current_user.sexe %}selected{% endif %}>Non précisé</option>
+                    <option value="Homme" {% if current_user.sexe == 'Homme' %}selected{% endif %}>Homme</option>
+                    <option value="Femme" {% if current_user.sexe == 'Femme' %}selected{% endif %}>Femme</option>
+                    <option value="Autre" {% if current_user.sexe == 'Autre' %}selected{% endif %}>Autre</option>
+                </select>
+            </div>
+            <div style="flex:1;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Situation amoureuse</label>
+                <select name="situation_amoureuse" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+                    <option value="" {% if not current_user.situation_amoureuse %}selected{% endif %}>Non précisé</option>
+                    <option value="Célibataire" {% if current_user.situation_amoureuse == 'Célibataire' %}selected{% endif %}>Célibataire</option>
+                    <option value="En couple" {% if current_user.situation_amoureuse == 'En couple' %}selected{% endif %}>En couple</option>
+                    <option value="Fiancé(e)" {% if current_user.situation_amoureuse == 'Fiancé(e)' %}selected{% endif %}>Fiancé(e)</option>
+                    <option value="Marié(e)" {% if current_user.situation_amoureuse == 'Marié(e)' %}selected{% endif %}>Marié(e)</option>
+                    <option value="C'est compliqué" {% if current_user.situation_amoureuse == "C'est compliqué" %}selected{% endif %}>C'est compliqué</option>
+                    <option value="Séparé(e)" {% if current_user.situation_amoureuse == 'Séparé(e)' %}selected{% endif %}>Séparé(e)</option>
+                    <option value="Divorcé(e)" {% if current_user.situation_amoureuse == 'Divorcé(e)' %}selected{% endif %}>Divorcé(e)</option>
+                    <option value="Veuf(ve)" {% if current_user.situation_amoureuse == 'Veuf(ve)' %}selected{% endif %}>Veuf(ve)</option>
+                </select>
+            </div>
+        </div>
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Langues parlées</label>
+            <input type="text" name="langues" value="{{ current_user.langues if current_user.langues else '' }}" placeholder="Ex: Français, Anglais" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+
+        <h3 style="color:#1877f2; border-top:1px solid #eee; padding-top:15px; margin-bottom:12px; font-size:16px;">Coordonnées</h3>
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Email</label>
+            <input type="email" name="email" value="{{ current_user.email if current_user.email else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Téléphone</label>
+            <input type="text" name="phone" value="{{ current_user.phone if current_user.phone else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Site web</label>
+            <input type="url" name="site_web" value="{{ current_user.site_web if current_user.site_web else '' }}" placeholder="https://..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+
+        <h3 style="color:#1877f2; border-top:1px solid #eee; padding-top:15px; margin-bottom:12px; font-size:16px;">Lieux de résidence</h3>
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Habite à</label>
+            <input type="text" name="ville" value="{{ current_user.ville if current_user.ville else '' }}" placeholder="Ex: Bafoussam" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Originaire de</label>
+            <input type="text" name="localisation" value="{{ current_user.localisation if current_user.localisation else '' }}" placeholder="Ex: Cameroun" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+
+        <h3 style="color:#1877f2; border-top:1px solid #eee; padding-top:15px; margin-bottom:12px; font-size:16px;">Travail et études</h3>
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Profession</label>
+            <input type="text" name="emploi_actuel" value="{{ current_user.emploi_actuel if current_user.emploi_actuel else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Entreprise</label>
+            <input type="text" name="entreprise" value="{{ current_user.entreprise if current_user.entreprise else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">École</label>
+            <input type="text" name="ecole" value="{{ current_user.ecole if current_user.ecole else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Université</label>
+            <input type="text" name="universite" value="{{ current_user.universite if current_user.universite else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+
+        <h3 style="color:#1877f2; border-top:1px solid #eee; padding-top:15px; margin-bottom:12px; font-size:16px;">Centres d'intérêt</h3>
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Groupes musicaux préférés</label>
+            <input type="text" name="groupes_musicaux_preferes" value="{{ current_user.groupes_musicaux_preferes if current_user.groupes_musicaux_preferes else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Films préférés</label>
+            <input type="text" name="films_preferes" value="{{ current_user.films_preferes if current_user.films_preferes else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Jeux vidéo préférés</label>
+            <input type="text" name="jeux_video_preferes" value="{{ current_user.jeux_video_preferes if current_user.jeux_video_preferes else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+        <div style="margin-bottom: 25px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Émissions TV préférées</label>
+            <input type="text" name="emissions_tv_preferees" value="{{ current_user.emissions_tv_preferees if current_user.emissions_tv_preferees else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+
+        <button type="submit" style="width: 100%; background: #1877f2; color: white; padding: 12px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 16px;">Enregistrer les modifications</button>
+    </form>
+</div>
+{% endblock %}

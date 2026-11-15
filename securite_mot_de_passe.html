@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+    :root, [data-theme="light"] { --fn-blue:#0866FF; --fn-bg:#F0F2F5; --fn-gray:#65676B; --fn-border:#e4e6eb; --white:#fff; --text-dark:#1c1e21; --input-bg:#f5f6f7; }
+    [data-theme="dark"] { --fn-bg:#18191A; --white:#242526; --text-dark:#E4E6EB; --fn-border:#3E4042; --fn-gray:#B0B3B8; --input-bg:#3A3B3C; }
+    .sec-page { background:var(--fn-bg); min-height:100vh; color:var(--text-dark); font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; }
+    .sec-top { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:12px; padding:12px 16px; background:var(--white); border-bottom:1px solid var(--fn-border); }
+    .sec-top a { color:var(--text-dark); width:36px; height:36px; border-radius:50%; display:grid; place-items:center; text-decoration:none; background:var(--input-bg); }
+    .sec-top h1 { font-size:20px; margin:0; font-weight:800; }
+    .sec-wrap { max-width:680px; margin:0 auto; padding:20px 12px 60px; display:grid; gap:16px; }
+    .sec-card { background:var(--white); border:1px solid var(--fn-border); border-radius:10px; padding:20px; }
+    .sec-card h2 { margin:0 0 4px; font-size:17px; display:flex; align-items:center; gap:10px; }
+    .sec-card h2 i { color:var(--fn-blue); }
+    .sec-desc { margin:0 0 16px; font-size:13.5px; color:var(--fn-gray); line-height:1.45; }
+    .sec-field { position:relative; margin-bottom:12px; }
+    .sec-field label { display:block; font-size:13px; font-weight:600; margin-bottom:5px; }
+    .sec-input, .sec-select { width:100%; box-sizing:border-box; padding:12px 14px; border:1px solid var(--fn-border); border-radius:8px; background:var(--input-bg); color:var(--text-dark); font:inherit; font-size:15px; }
+    .sec-input:focus, .sec-select:focus { outline:2px solid var(--fn-blue); outline-offset:0; background:var(--white); }
+    .sec-eye { position:absolute; right:6px; top:29px; border:0; background:none; color:var(--fn-gray); width:36px; height:36px; cursor:pointer; }
+    .sec-btn { border:0; border-radius:8px; padding:11px 20px; font:inherit; font-weight:700; font-size:14.5px; cursor:pointer; background:var(--fn-blue); color:#fff; }
+    .sec-btn:hover { filter:brightness(1.08); }
+    .sec-btn:focus-visible { outline:3px solid #9cc2ff; outline-offset:2px; }
+    .sec-btn:disabled { opacity:.55; cursor:default; }
+    .sec-btn.gray { background:var(--input-bg); color:var(--text-dark); }
+    .sec-btn.red { background:#e41e3f; }
+    .sec-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:6px; }
+    .sec-msg { margin-top:12px; font-size:13.5px; font-weight:600; display:none; padding:10px 12px; border-radius:8px; }
+    .sec-msg.ok { display:block; background:#e6f6ec; color:#17803d; }
+    .sec-msg.err { display:block; background:#fdecee; color:#c4152f; }
+    .strength { height:5px; border-radius:3px; background:var(--fn-border); overflow:hidden; margin:-4px 0 4px; }
+    .strength span { display:block; height:100%; width:0; transition:width .25s, background .25s; }
+    .strength-txt { font-size:12px; color:var(--fn-gray); margin-bottom:10px; min-height:16px; }
+    .sec-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-top:1px solid var(--fn-border); }
+    .sec-row:first-of-type { border-top:0; }
+    .sec-row small { display:block; color:var(--fn-gray); font-size:12.5px; margin-top:2px; }
+    .pill { font-size:12px; font-weight:700; padding:3px 9px; border-radius:20px; }
+    .pill.on { background:#e6f6ec; color:#17803d; } .pill.off { background:var(--input-bg); color:var(--fn-gray); }
+    .pill.warn { background:#fff4d6; color:#8a5a00; }
+    #tfa-setup { display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--fn-border); }
+    #tfa-qr { width:190px; height:190px; background:#fff; padding:8px; border-radius:8px; border:1px solid var(--fn-border); }
+    #
+-qr svg { width:100%; height:100%; }
+    .tfa-secret { font-family:Consolas,monospace; letter-spacing:2px; background:var(--input-bg); padding:8px 10px; border-radius:6px; word-break:break-all; font-size:13px; display:inline-block; margin:6px 0 12px; }
+    .code-input { letter-spacing:8px; text-align:center; font-size:22px; max-width:220px; }
+    .sec-row { flex-wrap:wrap; }
+    .code-line { flex-basis:100%; display:flex; gap:8px; flex-wrap:wrap; }
+    .code-line .sec-input { max-width:200px; padding:9px 12px; }
+    .link-del { background:none; border:0; color:#e41e3f; font-weight:600; cursor:pointer; font-size:13px; }
+    @media (prefers-reduced-motion:reduce) { .strength span { transition:none; } }
+</style>
+
+<div class="sec-page" id="sec" data-csrf="{{ csrf_token() if csrf_token is defined else '' }}">
+    <div class="sec-top">
+        <a href="{{url_for('main.settings')}}" aria-label="Retour aux paramètres"><i class="fas fa-arrow-left"></i></a>
+        <h1>Sécurité et mot de passe</h1>
+    </div>
+
+    <div class="sec-wrap">
+
+        <!-- MOT DE PASSE -->
+        <section class="sec-card">
+            <h2><i class="fas fa-key"></i> Changer le mot de passe</h2>
+            <p class="sec-desc">Choisis un mot de passe d'au moins 8 caractères, avec des lettres, des chiffres et des symboles.</p>
+            <div class="sec-field"><label for="pw-old">Mot de passe actuel</label>
+                <input class="sec-input" type="password" id="pw-old" autocomplete="current-password">
+                <button type="button" class="sec-eye" data-eye="pw-old" aria-label="Afficher le mot de passe"><i class="fas fa-eye"></i></button></div>
+            <div class="sec-field"><label for="pw-new">Nouveau mot de passe</label>
+                <input class="sec-input" type="password" id="pw-new" autocomplete="new-password">
+                <button type="button" class="sec-eye" data-eye="pw-new" aria-label="Afficher le mot de passe"><i class="fas fa-eye"></i></button></div>
+            <div class="strength"><span id="pw-bar"></span></div><div class="strength-txt" id="pw-txt"></div>
+            <div class="sec-field"><label for="pw-conf">Retape le nouveau mot de passe</label>
+                <input class="sec-input" type="password" id="pw-conf" autocomplete="new-password">
+                <button type="button" class="sec-eye" data-eye="pw-conf" aria-label="Afficher le mot de passe"><i class="fas fa-eye"></i></button></div>
+            <div class="sec-actions"><button class="sec-btn" id="pw-save">Enregistrer le mot de passe</button></div>
+            <div class="sec-msg" id="pw-msg" role="status"></div>
+        </section>
+
+        <!-- 2FA -->
+        <section class="sec-card">
+            <h2><i class="fas fa-shield-halved"></i> Authentification à deux facteurs</h2>
+            <p class="sec-desc">À chaque connexion, FaceNet te demandera un code à 6 chiffres généré par une application d'authentification (Google Authenticator, Microsoft Authenticator, Authy…).</p>
+            <div class="sec-row">
+                <div><strong>Application d'authentification</strong><small id="tfa-state-txt">{{ 'Activée : ton compte est mieux protégé.' if two_factor_enabled else 'Désactivée.' }}</small></div>
+                <span class="pill {{ 'on' if two_factor_enabled else 'off' }}" id="tfa-pill">{{ 'Activée' if two_factor_enabled else 'Désactivée' }}</span>
+            </div>
+            <div id="tfa-methods" style="display:{{ 'none' if two_factor_enabled else 'block' }};margin:12px 0;font-size:14.5px">
+                <p style="margin:0 0 6px;font-weight:600">Recevoir mes codes par :</p>
+                <label style="display:block;padding:5px 0"><input type="radio" name="tfam" value="app" checked> Application d'authentification</label>
+                <label style="display:block;padding:5px 0"><input type="radio" name="tfam" value="whatsapp"> WhatsApp (sur mon numéro vérifié)</label>
+                <label style="display:block;padding:5px 0"><input type="radio" name="tfam" value="sms"> SMS (sur mon numéro vérifié)</label>
+            </div>
+            <div class="sec-actions" id="tfa-actions">
+                {% if two_factor_enabled %}<button class="sec-btn red" id="tfa-off-btn">Désactiver</button>
+                {% else %}<button class="sec-btn" id="tfa-on-btn">Activer</button>{% endif %}
+            </div>
+            <div id="tfa-setup">
+                <p class="sec-desc" id="tfa-info"></p>
+                <div id="tfa-app-part"><div id="tfa-qr"></div>
+                <div>Ou saisis cette clé à la main :<br><span class="tfa-secret" id="tfa-secret"></span></div></div>
+                <input class="sec-input code-input" id="tfa-code" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code">
+                <div class="sec-actions"><button class="sec-btn" id="tfa-confirm">Confirmer et activer</button><button class="sec-btn gray" id="tfa-cancel">Annuler</button></div>
+            </div>
+            <div id="tfa-off-box" style="display:none">
+                <div class="sec-field" style="margin-top:12px"><label for="tfa-off-pw">Confirme avec ton mot de passe</label>
+                    <input class="sec-input" type="password" id="tfa-off-pw" autocomplete="current-password"></div>
+                <div class="sec-actions"><button class="sec-btn red" id="tfa-off-confirm">Désactiver l'authentification</button><button class="sec-btn gray" id="tfa-off-cancel">Annuler</button></div>
+            </div>
+            <div class="sec-msg" id="tfa-msg" role="status"></div>
+        </section>
+
+        <!-- CONTACTS -->
+        <section class="sec-card">
+            <h2><i class="fas fa-address-book"></i> Coordonnées du compte</h2>
+            <p class="sec-desc">Ajoute une adresse e-mail ou un numéro de téléphone pour récupérer ton compte et recevoir les alertes de sécurité.</p>
+            <div id="contact-list">
+                {% if email_principal %}<div class="sec-row"><div><strong>{{ email_principal }}</strong><small>E-mail principal</small></div><span class="pill on">Principal</span></div>{% endif %}
+                {% for c in contacts %}
+                <div class="sec-row" id="contact-{{ c.id }}">
+                    <div><strong>{{ c.value }}</strong><small>{{ 'Adresse e-mail' if c.kind == 'email' else 'Numéro de téléphone' }}</small></div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        {% if c.verified %}<span class="pill on">Vérifié</span>
+                        {% else %}<span class="pill warn">Non vérifié</span>{% endif %}
+                        <button class="link-del" data-del="{{ c.id }}">Supprimer</button>
+                    </div>
+                    {% if not c.verified %}<div class="code-line">
+                        <input class="sec-input" data-code="{{ c.id }}" inputmode="numeric" maxlength="6" placeholder="Code à 6 chiffres" autocomplete="one-time-code" aria-label="Code de vérification">
+                        <button class="sec-btn" data-verify="{{ c.id }}">Vérifier</button>
+                        <button class="sec-btn gray" data-resend="{{ c.id }}">Renvoyer le code</button>
+                        {% if c.kind == 'phone' %}<button class="sec-btn gray" data-resend="{{ c.id }}" data-canal="sms">Recevoir par SMS</button>{% endif %}
+                    </div>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <div style="display:grid;gap:10px;margin-top:14px">
+                <select class="sec-select" id="ct-kind" aria-label="Type de coordonnée"><option value="email">E-mail</option><option value="phone">Téléphone</option></select>
+                <select class="sec-select" id="ct-country" style="display:none" aria-label="Pays">
+                    <option value="">Choisis le pays…</option>
+                    {% for p in pays %}<option value="{{ p.iso }}">{{ p.flag }} {{ p.nom }} (+{{ p.code }})</option>{% endfor %}
+                </select>
+                <div id="ct-canal" style="display:none;font-size:14.5px"><span style="font-weight:600">Recevoir le code par :</span>
+                    <label style="margin-left:10px"><input type="radio" name="ctc" value="whatsapp" checked> WhatsApp</label>
+                    <label style="margin-left:10px"><input type="radio" name="ctc" value="sms"> SMS</label></div>
+                <input class="sec-input" id="ct-value" placeholder="nom@exemple.com" aria-label="Valeur">
+            </div>
+            <div class="sec-actions"><button class="sec-btn" id="ct-add">Ajouter</button></div>
+            <div class="sec-msg" id="ct-msg" role="status"></div>
+        </section>
+    </div>
+</div>
+
+<script>
+(function () {
+    const csrf = document.getElementById('sec').dataset.csrf;
+    const $ = id => document.getElementById(id);
+    async function api(url, data) {
+        const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':csrf}, body:JSON.stringify(data || {}) });
+        let j = {}; try { j = await r.json(); } catch (e) {}
+        if (!r.ok && !j.message) j.message = 'Une erreur est survenue. Réessaie.';
+        j.ok = r.ok && j.ok !== false; return j;
+    }
+    function say(id, ok, text) { const m = $(id); m.className = 'sec-msg ' + (ok ? 'ok' : 'err'); m.textContent = text; }
+
+    document.querySelectorAll('[data-eye]').forEach(b => b.addEventListener('click', () => {
+        const i = $(b.dataset.eye); const show = i.type === 'password'; i.type = show ? 'text' : 'password';
+        b.firstElementChild.className = show ? 'fas fa-eye-slash' : 'fas fa-eye';
+    }));
+
+    $('pw-new').addEventListener('input', e => {
+        const v = e.target.value; let s = 0;
+        if (v.length >= 8) s++; if (v.length >= 12) s++; if (/[a-z]/.test(v) && /[A-Z]/.test(v)) s++; if (/\d/.test(v)) s++; if (/[^A-Za-z0-9]/.test(v)) s++;
+        const lv = [['0%','',''],['20%','#e41e3f','Très faible'],['40%','#f7923b','Faible'],['60%','#f7b928','Moyen'],['80%','#31a24c','Fort'],['100%','#17803d','Très fort']][v ? Math.max(s,1) : 0];
+        $('pw-bar').style.width = lv[0]; $('pw-bar').style.background = lv[1]; $('pw-txt').textContent = lv[2];
+    });
+    $('pw-save').addEventListener('click', async () => {
+        const old = $('pw-old').value, nw = $('pw-new').value, cf = $('pw-conf').value;
+        if (!old || !nw || !cf) return say('pw-msg', false, 'Remplis les trois champs.');
+        if (nw.length < 8) return say('pw-msg', false, 'Le nouveau mot de passe doit contenir au moins 8 caractères.');
+        if (nw !== cf) return say('pw-msg', false, 'Les deux nouveaux mots de passe ne correspondent pas.');
+        $('pw-save').disabled = true;
+        const r = await api('{{ url_for("main.update_password") }}', { actuel:old, nouveau:nw, confirmation:cf });
+        $('pw-save').disabled = false; say('pw-msg', r.ok, r.message);
+        if (r.ok) ['pw-old','pw-new','pw-conf'].forEach(i => $(i).value = '');
+    });
+
+    const tfaMsg = (ok, t) => say('tfa-msg', ok, t);
+    function tfaState(on) {
+        $('tfa-pill').textContent = on ? 'Activée' : 'Désactivée'; $('tfa-pill').className = 'pill ' + (on ? 'on' : 'off');
+        $('tfa-state-txt').textContent = on ? 'Activée : ton compte est mieux protégé.' : 'Désactivée.';
+        $('tfa-setup').style.display = 'none'; $('tfa-off-box').style.display = 'none';
+        $('tfa-actions').style.display = 'flex'; $('tfa-methods').style.display = on ? 'none' : 'block';
+        $('tfa-actions').innerHTML = on ? '<button class="sec-btn red" id="tfa-off-btn">Désactiver</button>' : '<button class="sec-btn" id="tfa-on-btn">Activer</button>';
+        bindTfa();
+    }
+    function bindTfa() {
+        const on = $('tfa-on-btn'), off = $('tfa-off-btn');
+        if (on) on.onclick = async () => {
+            const m = document.querySelector('[name=tfam]:checked').value;
+            const r = await api('{{ url_for("main.tfa_preparer") }}', { method:m });
+            if (!r.ok) return tfaMsg(false, r.message);
+            $('tfa-app-part').style.display = m === 'app' ? 'block' : 'none';
+            if (m === 'app') { $('tfa-qr').innerHTML = r.qr_svg; $('tfa-secret').textContent = r.secret; }
+            $('tfa-info').textContent = r.info;
+            $('tfa-setup').style.display = 'block'; $('tfa-actions').style.display = 'none'; $('tfa-methods').style.display = 'none'; $('tfa-code').focus();
+        };
+        if (off) off.onclick = () => { $('tfa-off-box').style.display = 'block'; $('tfa-actions').style.display = 'none'; };
+    }
+    $('tfa-cancel').onclick = () => tfaState(false);
+    $('tfa-off-cancel').onclick = () => tfaState(true);
+    $('tfa-confirm').onclick = async () => {
+        const r = await api('{{ url_for('main.tfa_preparer') }}', { code:$('tfa-code').value.trim(), method:document.querySelector('[name=tfam]:checked').value });
+        if (r.ok) { tfaState(true); $('tfa-code').value = ''; } tfaMsg(r.ok, r.message);
+    };
+    $('tfa-off-confirm').onclick = async () => {
+        const r = await api('{{ url_for("main.tfa_preparer") }}', { password:$('tfa-off-pw').value });
+        if (r.ok) { tfaState(false); $('tfa-off-pw').value = ''; } tfaMsg(r.ok, r.message);
+    };
+    bindTfa();
+
+    $('ct-kind').addEventListener('change', e => {
+        const ph = e.target.value === 'phone';
+        $('ct-country').style.display = ph ? 'block' : 'none'; $('ct-canal').style.display = ph ? 'block' : 'none';
+        $('ct-value').placeholder = ph ? 'Numéro, sans l\'indicatif du pays' : 'nom@exemple.com';
+    });
+    $('ct-add').addEventListener('click', async () => {
+        const r = await api('{{ url_for("main.liste_masques") }}', { kind:$('ct-kind').value, country:$('ct-country').value, canal:(document.querySelector('[name=ctc]:checked') || {}).value, value:$('ct-value').value.trim() });
+        say('ct-msg', r.ok, r.message); if (r.ok) setTimeout(() => location.reload(), 700);
+    });
+    document.querySelectorAll('[data-verify]').forEach(b => b.addEventListener('click', async () => {
+        const code = document.querySelector('[data-code="' + b.dataset.verify + '"]').value.trim();
+        const r = await api('/securite/contact/' + b.dataset.verify + '/verifier', { code });
+        say('ct-msg', r.ok, r.message); if (r.ok) setTimeout(() => location.reload(), 700);
+    }));
+    document.querySelectorAll('[data-resend]').forEach(b => b.addEventListener('click', async () => {
+        const r = await api('/securite/contact/' + b.dataset.resend + '/renvoyer', { canal: b.dataset.canal || 'whatsapp' });
+        say('ct-msg', r.ok, r.message);
+    }));
+    document.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm('Supprimer cette coordonnée de ton compte ?')) return;
+        const r = await api('/securite/contact/' + b.dataset.del + '/supprimer');
+        if (r.ok) { const row = $('contact-' + b.dataset.del); if (row) row.remove(); } say('ct-msg', r.ok, r.message);
+    }));
+})();
+</script>
+{% endblock %}

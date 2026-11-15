@@ -1,0 +1,1350 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% macro badge_certifie(u) %}{% if u.badge_expire or u.is_verified %}<svg viewBox="0 0 24 24" style="width:1em; height:1em; vertical-align:-0.125em; margin-left: 3px;"><path fill="#1877F2" d="M 12.00,0.85 C 12.45,0.85 12.94,1.45 13.34,1.79 C 13.75,2.13 14.01,2.76 14.45,2.87 C 14.88,2.99 15.42,2.57 15.94,2.48 C 16.46,2.40 17.19,2.12 17.57,2.34 C 17.96,2.57 18.09,3.33 18.27,3.83 C 18.45,4.32 18.37,5.00 18.68,5.32 C 19.00,5.63 19.68,5.55 20.17,5.73 C 20.67,5.91 21.43,6.04 21.66,6.42 C 21.88,6.81 21.60,7.54 21.52,8.06 C 21.43,8.58 21.01,9.12 21.13,9.55 C 21.24,9.99 21.87,10.25 22.21,10.66 C 22.55,11.06 23.15,11.55 23.15,12.00 C 23.15,12.45 22.55,12.94 22.21,13.34 C 21.87,13.75 21.24,14.01 21.13,14.45 C 21.01,14.88 21.43,15.42 21.52,15.94 C 21.60,16.46 21.88,17.19 21.66,17.57 C 21.43,17.96 20.67,18.09 20.17,18.27 C 19.68,18.45 19.00,18.37 18.68,18.68 C 18.37,19.00 18.45,19.68 18.27,20.17 C 18.09,20.67 17.96,21.43 17.57,21.66 C 17.19,21.88 16.46,21.60 15.94,21.52 C 15.42,21.43 14.88,21.01 14.45,21.13 C 14.01,21.24 13.75,21.87 13.34,22.21 C 12.94,22.55 12.45,23.15 12.00,23.15 C 11.55,23.15 11.06,22.55 10.66,22.21 C 10.25,21.87 9.99,21.24 9.55,21.13 C 9.12,21.01 8.58,21.43 8.06,21.52 C 7.54,21.60 6.81,21.88 6.43,21.66 C 6.04,21.43 5.91,20.67 5.73,20.17 C 5.55,19.68 5.63,19.00 5.32,18.68 C 5.00,18.37 4.32,18.45 3.83,18.27 C 3.33,18.09 2.57,17.96 2.34,17.58 C 2.12,17.19 2.40,16.46 2.48,15.94 C 2.57,15.42 2.99,14.88 2.87,14.45 C 2.76,14.01 2.13,13.75 1.79,13.34 C 1.45,12.94 0.85,12.45 0.85,12.00 C 0.85,11.55 1.45,11.06 1.79,10.66 C 2.13,10.25 2.76,9.99 2.87,9.55 C 2.99,9.12 2.57,8.58 2.48,8.06 C 2.40,7.54 2.12,6.81 2.34,6.42 C 2.57,6.04 3.33,5.91 3.83,5.73 C 4.32,5.55 5.00,5.63 5.32,5.32 C 5.63,5.00 5.55,4.32 5.73,3.83 C 5.91,3.33 6.04,2.57 6.42,2.34 C 6.81,2.12 7.54,2.40 8.06,2.48 C 8.58,2.57 9.12,2.99 9.55,2.87 C 9.99,2.76 10.25,2.13 10.66,1.79 C 11.06,1.45 11.55,0.85 12.00,0.85 Z"/><path fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" d="M7.3 12.2l3 3 6.2-6.6"/></svg>{% endif %}{% endmacro %}
+<style>
+    .amis-page {
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 20px;
+        font-family: sans-serif;
+    }
+
+    .amis-page__titre {
+        color: #050505;
+        margin-bottom: 20px;
+    }
+
+    /* ---------- Onglets (2 pages) ---------- */
+    .amis-onglets {
+        display: flex;
+        gap: 8px;
+        border-bottom: 1px solid #e4e6eb;
+        margin-bottom: 20px;
+    }
+
+    .amis-onglet {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: none;
+        background: none;
+        padding: 12px 16px;
+        font: inherit;
+        font-weight: 600;
+        color: #65676b;
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        border-radius: 8px 8px 0 0;
+        margin-bottom: -1px;
+    }
+
+    .amis-onglet:hover { background: #f0f2f5; }
+
+    .amis-onglet.actif {
+        color: #0866FF;
+        border-bottom-color: #0866FF;
+    }
+
+    .amis-onglet__compteur {
+        font-size: 12px;
+        font-weight: 600;
+        background: #e4e6eb;
+        color: #050505;
+        border-radius: 999px;
+        padding: 2px 8px;
+    }
+
+    .amis-onglet.actif .amis-onglet__compteur { background: #e7f3ff; color: #0866FF; }
+
+    .amis-bloc { margin-bottom: 28px; }
+    .amis-bloc__titre {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 14px;
+        font-size: 18px;
+        color: #050505;
+    }
+    .amis-bloc__compteur { font-size: 14px; font-weight: 600; color: #65676b; }
+
+    /* ---------- Pages (une seule affichée à la fois) ---------- */
+    .amis-page-section {
+        display: none;
+    }
+
+    .amis-page-section.actif {
+        display: block;
+    }
+
+    .amis-liste {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .amis-carte {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border: 1px solid #f2f3f5;
+        padding: 15px;
+        border-radius: 12px;
+    }
+
+    .amis-carte__profil {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .amis-carte__avatar {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .amis-carte__avatar-lettre {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        flex-shrink: 0;
+    }
+
+    .amis-carte__avatar-lettre--invitation { background: #0866FF; }
+    .amis-carte__avatar-lettre--ami { background: #42b72a; }
+
+    .amis-carte__nom {
+        font-weight: 600;
+    }
+
+    .amis-carte__actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .amis-btn {
+        border: none;
+        padding: 8px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .amis-btn--accepter { background: #0866FF; color: white; }
+    .amis-btn--refuser  { background: #f0f2f5; color: #050505; }
+    .amis-btn--supprimer{ background: #ffeded; color: #d32f2f; }
+    .amis-btn--ajouter  { background: #e7f3ff; color: #0866FF; }
+    .amis-btn--envoye   { background: #e4e6eb; color: #65676b; cursor: default; }
+
+    .amis-vide {
+        color: #65676b;
+        font-size: 14px;
+        padding: 10px 0;
+    }
+    /* ---------- En-tête + bouton 3 points ---------- */
+    .amis-page__entete {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+    }
+    .amis-page__entete .amis-page__titre { margin-bottom: 0; }
+
+    .amis-dots {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        border: none;
+        background: #e4e6eb;
+        color: #050505;
+        font-size: 24px;
+        font-weight: bold;
+        line-height: 1;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .amis-dots:hover { background: #d8dadf; }
+
+    /* ---------- Grande page « Invitations envoyées » ---------- */
+    .inv-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        z-index: 99999;
+        align-items: center;
+        justify-content: center;
+    }
+    .inv-overlay.ouvert { display: flex; }
+
+    .inv-fenetre {
+        width: 96vw;
+        height: 94vh;
+        background: #ffffff;
+        border-radius: 16px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+    }
+    .inv-fenetre__entete {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid #e4e6eb;
+        flex-shrink: 0;
+    }
+    .inv-fenetre__titre {
+        margin: 0;
+        font-size: 20px;
+        color: #050505;
+    }
+    .inv-fermer {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: none;
+        background: #e4e6eb;
+        color: #050505;
+        font-size: 22px;
+        font-weight: bold;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .inv-fermer:hover { background: #d8dadf; }
+
+    .inv-fenetre__corps {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px 20px 30px;
+    }
+    .inv-liste {
+        max-width: 720px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .inv-carte {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border: 1px solid #f2f3f5;
+        padding: 14px;
+        border-radius: 12px;
+    }
+    .inv-carte__profil {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+    }
+    .inv-carte__avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        object-fit: cover;
+        flex-shrink: 0;
+    }
+    .inv-carte__lettre {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: #0866FF;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        flex-shrink: 0;
+    }
+    .inv-carte__infos { min-width: 0; }
+    .inv-carte__nom {
+        font-weight: 600;
+        color: #050505;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .inv-carte__date { font-size: 13px; color: #65676b; margin-top: 2px; }
+    .inv-carte__depuis { font-size: 12px; color: #0866FF; margin-top: 2px; font-weight: 600; }
+    .inv-annuler {
+        background: #ffeded;
+        color: #d32f2f;
+        border: none;
+        padding: 9px 14px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+    .inv-annuler:disabled { opacity: 0.6; cursor: default; }
+    .inv-message { text-align: center; color: #65676b; padding: 40px 10px; font-size: 15px; }
+
+    .amis-toast {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: #050505;
+        color: #fff;
+        padding: 12px 20px;
+        border-radius: 10px;
+        font-size: 14px;
+        z-index: 100001;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease, transform 0.25s ease;
+        max-width: 90vw;
+    }
+    .amis-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 600px) {
+        .inv-fenetre { width: 100vw; height: 100vh; border-radius: 0; }
+        .inv-carte { flex-wrap: wrap; }
+        .inv-annuler { width: 100%; }
+    }
+
+    /* ---------- AJOUT : grandes photos de profil (format Facebook) ---------- */
+    :root { --avatar-taille: 88px; }
+    .amis-carte__avatar,
+    .amis-carte__avatar-lettre {
+        flex: 0 0 var(--avatar-taille);
+        width: var(--avatar-taille);
+        height: var(--avatar-taille);
+        min-width: var(--avatar-taille);
+        min-height: var(--avatar-taille);
+        max-width: var(--avatar-taille);
+        max-height: var(--avatar-taille);
+        border-radius: 50%;
+    }
+    .amis-carte__avatar { display: block; object-fit: cover; }
+    .amis-carte__avatar-lettre { font-size: 34px; }
+    .inv-carte__avatar,
+    .inv-carte__lettre {
+        flex: 0 0 var(--avatar-taille);
+        width: var(--avatar-taille);
+        height: var(--avatar-taille);
+        min-width: var(--avatar-taille);
+        min-height: var(--avatar-taille);
+        max-width: var(--avatar-taille);
+        max-height: var(--avatar-taille);
+    }
+    .inv-carte__lettre { font-size: 34px; }
+    .amis-carte__profil { gap: 14px; }
+    @media (max-width: 600px) {
+        :root { --avatar-taille: 68px; }
+    }
+    .amis-carte__profil { min-width: 0; }
+    /* AJOUT : la zone photo + nom est cliquable et ouvre le profil */
+    a.amis-carte__profil { text-decoration: none; color: inherit; cursor: pointer; flex: 1; -webkit-tap-highlight-color: transparent; }
+    a.amis-carte__profil:hover .amis-carte__nom { text-decoration: underline; }
+
+    /* ---------- AJOUT : « Amis depuis … » + menu à trois points d'un ami ---------- */
+    .amis-carte__infos { display: flex; flex-direction: column; min-width: 0; }
+    .amis-carte__infos .amis-carte__nom {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .amis-carte__depuis { font-size: 12px; color: #65676b; margin-top: 2px; }
+    .amis-carte__depuis:empty { display: none; }
+
+    .amis-menu-ami { position: relative; flex-shrink: 0; }
+    .amis-dots--petit { width: 36px; height: 36px; font-size: 20px; }
+    .amis-dropdown {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: calc(100% + 6px);
+        min-width: 230px;
+        background: #ffffff;
+        border: 1px solid #e4e6eb;
+        border-radius: 12px;
+        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+        padding: 6px;
+        z-index: 50;
+    }
+    .amis-dropdown.ouvert { display: block; }
+    .amis-dropdown__item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        box-sizing: border-box;
+        border: none;
+        background: none;
+        padding: 10px 12px;
+        border-radius: 8px;
+        font: inherit;
+        font-weight: 500;
+        color: #050505;
+        text-align: left;
+        text-decoration: none;
+        cursor: pointer;
+    }
+    .amis-dropdown__item:hover,
+    .amis-dropdown__item:focus-visible { background: #f0f2f5; outline: none; }
+    .amis-dropdown__item--danger { color: #d32f2f; }
+    .amis-dropdown__item--danger:hover,
+    .amis-dropdown__item--danger:focus-visible { background: #ffeded; }
+    .amis-dropdown__icone { width: 20px; text-align: center; flex-shrink: 0; }
+    .amis-dropdown__sep { height: 1px; background: #e4e6eb; margin: 6px 4px; }
+
+    /* ---------- AJOUT : fenêtre de confirmation / signalement ---------- */
+    .ami-modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        z-index: 100000;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+    }
+    .ami-modal-overlay.ouvert { display: flex; }
+    .ami-modal {
+        width: 100%;
+        max-width: 420px;
+        max-height: 90vh;
+        overflow-y: auto;
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 22px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+    }
+    .ami-modal__titre { margin: 0 0 8px; font-size: 18px; color: #050505; }
+    .ami-modal__texte { margin: 0 0 14px; font-size: 14px; color: #65676b; line-height: 1.4; }
+    .ami-modal__motif {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        color: #050505;
+    }
+    .ami-modal__motif:hover { background: #f0f2f5; }
+    .ami-modal__details {
+        width: 100%;
+        box-sizing: border-box;
+        margin-top: 8px;
+        min-height: 70px;
+        border: 1px solid #e4e6eb;
+        border-radius: 8px;
+        padding: 8px 10px;
+        font: inherit;
+        font-size: 14px;
+        resize: vertical;
+    }
+    .ami-modal__erreur { margin: 10px 0 0; font-size: 13px; color: #d32f2f; }
+    .ami-modal__erreur:empty { display: none; }
+    .ami-modal__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+    .amis-btn:disabled { opacity: 0.6; cursor: default; }
+
+    /* ---------- AJOUT : actions groupées sur les invitations ---------- */
+    .amis-bulk { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .amis-bulk[hidden], .amis-bulk .amis-btn[hidden] { display: none; }
+    .inv-barre {
+        display: flex;
+        justify-content: flex-end;
+        padding: 10px 20px 0;
+        flex-shrink: 0;
+    }
+    /* ---------- AJOUT : finition professionnelle (style Facebook) ---------- */
+    .amis-page {
+        max-width: 860px;
+        padding: 24px 20px 40px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: #050505;
+    }
+    .amis-page__titre { font-size: 26px; font-weight: 700; letter-spacing: -0.2px; }
+    .amis-onglet { font-size: 16px; padding: 14px 18px; transition: background 0.15s ease, color 0.15s ease; }
+    .amis-bloc { margin-bottom: 32px; }
+    .amis-bloc__titre { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+    .amis-bloc__compteur {
+        font-size: 13px; font-weight: 600; color: #fff; background: #e41e3f;
+        border-radius: 999px; padding: 2px 8px; min-width: 20px; text-align: center; box-sizing: border-box;
+    }
+    .amis-bloc__compteur:empty { display: none; }
+
+    .amis-liste { gap: 12px; }
+    .amis-carte {
+        background: #ffffff;
+        border: 1px solid #e4e6eb;
+        border-radius: 12px;
+        padding: 16px;
+        gap: 16px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+        transition: box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+    .amis-carte:hover { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.10); border-color: #d8dadf; }
+    .amis-carte__avatar { outline: 1px solid rgba(0, 0, 0, 0.1); outline-offset: -1px; background: #e4e6eb; }
+    .amis-carte__nom, .amis-carte__nom-lien { font-size: 17px; font-weight: 600; color: #050505; line-height: 1.25; }
+    .amis-carte__depuis { font-size: 13px; margin-top: 3px; }
+
+    /* Carte « riche » : photo à gauche, nom + date + boutons à droite */
+    .amis-carte--riche { align-items: center; justify-content: flex-start; }
+    .amis-carte__avatar-lien { display: block; flex-shrink: 0; line-height: 0; border-radius: 50%; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+    .amis-carte__corps { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+    .amis-carte__ligne { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+    .amis-carte__nom-lien { text-decoration: none; overflow-wrap: anywhere; }
+    .amis-carte__nom-lien:hover { text-decoration: underline; }
+    .amis-carte__temps { font-size: 13px; color: #65676b; white-space: nowrap; flex-shrink: 0; }
+    .amis-carte__temps:empty { display: none; }
+    .amis-carte__sous { font-size: 14px; color: #65676b; }
+    .amis-carte--riche .amis-carte__actions { margin-top: 10px; max-width: 440px; }
+    .amis-carte--riche .amis-carte__actions > * { flex: 1; margin: 0; }
+    .amis-carte--riche .amis-carte__actions .amis-btn { width: 100%; }
+
+    /* Boutons */
+    .amis-btn {
+        height: 38px; padding: 0 16px; font-size: 15px; font-weight: 600; line-height: 1;
+        border-radius: 8px; white-space: nowrap; font-family: inherit;
+    }
+    .amis-btn--accepter:hover { background: #0a5bd6; }
+    .amis-btn--refuser:hover { background: #e4e6eb; }
+    .amis-btn--ajouter:hover { background: #d6e8fd; }
+    .amis-btn--supprimer:hover { background: #ffdcdc; }
+    .amis-btn:active:not(:disabled) { transform: scale(0.98); }
+    .amis-btn:focus-visible, .amis-onglet:focus-visible, .amis-dots:focus-visible, .inv-annuler:focus-visible {
+        outline: 2px solid #0866FF; outline-offset: 2px;
+    }
+    .amis-bulk { gap: 8px; margin-bottom: 18px; }
+
+    /* États vides */
+    .amis-vide {
+        text-align: center; color: #65676b; font-size: 15px;
+        background: #f7f8fa; border-radius: 12px; padding: 32px 16px; margin: 0;
+    }
+
+    /* Fenêtre des invitations envoyées : même finition */
+    .inv-carte {
+        background: #ffffff; border: 1px solid #e4e6eb; border-radius: 12px; padding: 16px; gap: 16px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    }
+    .inv-carte__avatar { outline: 1px solid rgba(0, 0, 0, 0.1); outline-offset: -1px; }
+    .inv-carte__nom { font-size: 17px; }
+    .inv-carte__date { font-size: 13px; }
+    .inv-annuler { height: 38px; padding: 0 16px; font-size: 15px; transition: background 0.2s ease; }
+    .inv-annuler:hover:not(:disabled) { background: #ffdcdc; }
+
+    @media (max-width: 600px) {
+        .amis-page { padding: 16px 12px 32px; }
+        .amis-page__titre { font-size: 22px; }
+        .amis-onglet { padding: 12px 12px; font-size: 15px; }
+        .amis-carte { padding: 12px; gap: 12px; }
+        .amis-carte__nom, .amis-carte__nom-lien { font-size: 16px; }
+        .amis-carte__ligne { flex-direction: column; align-items: flex-start; gap: 2px; }
+        .amis-btn { height: 36px; padding: 0 12px; font-size: 14px; }
+    }
+</style>
+
+<div class="amis-page">
+    <div class="amis-page__entete">
+        <h2 class="amis-page__titre">Suggestions et ami(es)</h2>
+        <button type="button" class="amis-dots" id="btn-invitations-envoyees" onclick="ouvrirInvitationsEnvoyees()" aria-label="Invitations envoyées" title="Invitations envoyées">&#8942;</button>
+    </div>
+
+    <!-- Onglets : 2 pages -->
+    <div class="amis-onglets" role="tablist">
+        <button type="button" class="amis-onglet actif" role="tab" aria-selected="true" data-page="page-decouverte" onclick="ouvrirPage('page-decouverte')">
+            Invitations et suggestions
+        </button>
+        <button type="button" class="amis-onglet" role="tab" aria-selected="false" data-page="page-amis" id="onglet-amis" onclick="ouvrirPage('page-amis')">
+            Mes amis <span class="amis-onglet__compteur">{{ mes_amis|length }}</span>
+        </button>
+    </div>
+
+    <!-- Page 1 : Invitations reçues + Suggestions -->
+    <div id="page-decouverte" class="amis-page-section actif">
+
+        <!-- Bloc : Invitations reçues -->
+        <div id="page-invitations" class="amis-bloc">
+        <h3 class="amis-bloc__titre">Invitations reçues <span class="amis-bloc__compteur" id="compteur-invitations">{{ demandes_recues|length }}</span></h3>
+        <div class="amis-bulk" id="amis-bulk">
+            <button type="button" class="amis-btn amis-btn--accepter" data-bulk="accepter" data-limite="0">Tout accepter</button>
+            <button type="button" class="amis-btn amis-btn--ajouter" data-bulk="accepter" data-limite="10">Accepter les 10 premières</button>
+            <button type="button" class="amis-btn amis-btn--ajouter" data-bulk="accepter" data-limite="20">Accepter les 20 premières</button>
+            <button type="button" class="amis-btn amis-btn--supprimer" data-bulk="refuser" data-limite="0">Tout refuser</button>
+        </div>
+        <div class="amis-liste">
+            {% for req in demandes_recues %}
+            {% set date_inv = req.date_creation or req.date_envoi or req.created_at or req.date_demande or req.date or req.timestamp %}
+            <div class="amis-carte amis-carte--riche" data-demande-id="{{ req.id }}">
+                <a class="amis-carte__avatar-lien" href="{{ url_for('main.voir_profil_ami', user_id=req.emetteur.id) }}" tabindex="-1" aria-hidden="true">
+                    {% if req.emetteur.avatar %}
+                        <img class="amis-carte__avatar" width="88" height="88" alt="" src="{{ url_for('static', filename='uploads/' + req.emetteur.avatar) }}">
+                    {% else %}
+                        <div class="amis-carte__avatar-lettre amis-carte__avatar-lettre--invitation">
+                            {{ req.emetteur.nom_complet[0] | upper if req.emetteur.nom_complet else req.emetteur.username[0] | upper }}
+                        </div>
+                    {% endif %}
+                </a>
+                <div class="amis-carte__corps">
+                    <div class="amis-carte__ligne">
+                        <a class="amis-carte__nom-lien" href="{{ url_for('main.voir_profil_ami', user_id=req.emetteur.id) }}">{{ req.emetteur.nom_complet or req.emetteur.username }}{{ badge_certifie(req.emetteur) }}</a>
+                        <span class="amis-carte__temps" data-demande-date="{% if date_inv %}{{ date_inv.isoformat() if date_inv.isoformat is defined else date_inv }}{% endif %}"></span>
+                    </div>
+                    <div class="amis-carte__sous">veut devenir ton ami.</div>
+                    <div class="amis-carte__actions">
+                        <form action="{{ url_for('main.gerer_invitation', demande_id=req.id, action='accepter') }}" method="POST">
+                            <button type="submit" class="amis-btn amis-btn--accepter">Accepter</button>
+                        </form>
+                        <form action="{{ url_for('main.gerer_invitation', demande_id=req.id, action='refuser') }}" method="POST">
+                            <button type="submit" class="amis-btn amis-btn--refuser">Refuser</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <p class="amis-vide">Aucune invitation reçue pour le moment.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+        <!-- Bloc : Suggestions -->
+        <div id="page-suggestions" class="amis-bloc">
+        <h3 class="amis-bloc__titre">Suggestions d'amis</h3>
+        <div class="amis-liste">
+            {% for suggestion in suggestions %}
+            <div class="amis-carte amis-carte--riche">
+                <a class="amis-carte__avatar-lien" href="{{ url_for('main.voir_profil_ami', user_id=suggestion.id) }}" tabindex="-1" aria-hidden="true">
+                    {% if suggestion.avatar %}
+                        <img class="amis-carte__avatar" width="88" height="88" alt="" src="{{ url_for('static', filename='uploads/' + suggestion.avatar) }}">
+                    {% else %}
+                        <div class="amis-carte__avatar-lettre amis-carte__avatar-lettre--invitation">
+                            {{ suggestion.nom_complet[0] | upper if suggestion.nom_complet else suggestion.username[0] | upper }}
+                        </div>
+                    {% endif %}
+                </a>
+                <div class="amis-carte__corps">
+                    <a class="amis-carte__nom-lien" href="{{ url_for('main.voir_profil_ami', user_id=suggestion.id) }}">{{ suggestion.nom_complet or suggestion.username }}{{ badge_certifie(suggestion) }}</a>
+                    <div class="amis-carte__sous">Personne que tu pourrais connaître</div>
+                    <div class="amis-carte__actions">
+                        <!-- Bouton AJAX qui reste sur la page -->
+                        <button type="button"
+                                class="amis-btn amis-btn--ajouter"
+                                data-user-id="{{ suggestion.id }}"
+                                onclick="envoyerInvitationAJAX({{ suggestion.id }}, this)">
+                            Ajouter
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <p class="amis-vide">Aucune suggestion pour le moment.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    </div><!-- /page-decouverte -->
+
+    <!-- Page 2 : Mes amis -->
+    <div id="page-amis" class="amis-page-section">
+        <div class="amis-liste">
+            {% for ami in mes_amis %}
+            <div class="amis-carte" data-ami-id="{{ ami.id }}" data-ami-nom="{{ ami.nom_complet or ami.username }}">
+                <a class="amis-carte__profil" href="{{ url_for('main.voir_profil_ami', user_id=ami.id) }}">
+                    {% if ami.avatar %}
+                        <img class="amis-carte__avatar" width="88" height="88" alt="" src="{{ url_for('static', filename='uploads/' + ami.avatar) }}">
+                    {% else %}
+                        <div class="amis-carte__avatar-lettre amis-carte__avatar-lettre--ami">
+                            {{ ami.nom_complet[0] | upper if ami.nom_complet else ami.username[0] | upper }}
+                        </div>
+                    {% endif %}
+                    <div class="amis-carte__infos">
+                        <span class="amis-carte__nom">{{ ami.nom_complet or ami.username }}{{ badge_certifie(ami) }}</span>
+                        <span class="amis-carte__depuis" data-ami-depuis="{{ ami.id }}"></span>
+                    </div>
+                </a>
+
+                <!-- Menu à trois points : gérer cet ami -->
+                <div class="amis-menu-ami">
+                    <button type="button" class="amis-dots amis-dots--petit" data-ami-menu-toggle
+                            aria-haspopup="menu" aria-expanded="false"
+                            aria-label="Gérer {{ ami.nom_complet or ami.username }}" title="Gérer cet ami">&#8942;</button>
+                    <div class="amis-dropdown" role="menu">
+                        <a class="amis-dropdown__item" role="menuitem" href="{{ url_for('main.voir_profil_ami', user_id=ami.id) }}">
+                            <span class="amis-dropdown__icone">👤</span> Voir le profil
+                        </a>
+                        <a class="amis-dropdown__item" role="menuitem" href="{{ url_for('main.messagerie', destinataire_id=ami.id) }}">
+                            <span class="amis-dropdown__icone">💬</span> Envoyer un message
+                        </a>
+                        <div class="amis-dropdown__sep"></div>
+                        <button type="button" class="amis-dropdown__item" role="menuitem" data-ami-action="bloquer">
+                            <span class="amis-dropdown__icone">🚫</span> Bloquer cet ami
+                        </button>
+                        <button type="button" class="amis-dropdown__item" role="menuitem" data-ami-action="signaler">
+                            <span class="amis-dropdown__icone">⚠️</span>  signaler
+                        </button>
+                        <button type="button" class="amis-dropdown__item amis-dropdown__item--danger" role="menuitem" data-ami-action="retirer">
+                            <span class="amis-dropdown__icone">✖</span> Retirer des amis
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <p class="amis-vide">Tu n'as pas encore d'amis ajoutés.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Grande page : Invitations envoyées -->
+<div class="inv-overlay" id="inv-overlay">
+    <div class="inv-fenetre" role="dialog" aria-modal="true" aria-labelledby="inv-titre">
+        <div class="inv-fenetre__entete">
+            <h3 class="inv-fenetre__titre" id="inv-titre">Invitations envoyées</h3>
+            <button type="button" class="inv-fermer" onclick="fermerInvitationsEnvoyees()" aria-label="Fermer">&#10005;</button>
+        </div>
+        <div class="inv-barre">
+            <button type="button" class="amis-btn amis-btn--supprimer" id="inv-annuler-toutes">Tout annuler</button>
+        </div>
+        <div class="inv-fenetre__corps">
+            <div class="inv-liste" id="inv-liste"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function ouvrirPage(idPage) {
+        // anciens identifiants : invitations / suggestions sont maintenant sur la même page
+        if (idPage === 'page-invitations' || idPage === 'page-suggestions' || idPage === 'page-menu') idPage = 'page-decouverte';
+        document.querySelectorAll('.amis-page-section').forEach(function (section) {
+            section.classList.remove('actif');
+        });
+        document.getElementById(idPage).classList.add('actif');
+        document.querySelectorAll('.amis-onglet').forEach(function (o) {
+            var actif = o.getAttribute('data-page') === idPage;
+            o.classList.toggle('actif', actif);
+            o.setAttribute('aria-selected', actif ? 'true' : 'false');
+        });
+    }
+
+    // « il y a 3 jours », « il y a 2 semaines », « il y a 3 mois »…
+    function tempsEcoule(d) {
+        var s = Math.max(0, Math.floor((Date.now() - d.getTime()) / 1000));
+        if (s < 60) return "à l'instant";
+        var m = Math.floor(s / 60);
+        if (m < 60) return 'il y a ' + m + (m > 1 ? ' minutes' : ' minute');
+        var h = Math.floor(m / 60);
+        if (h < 24) return 'il y a ' + h + (h > 1 ? ' heures' : ' heure');
+        var j = Math.floor(h / 24);
+        if (j < 7) return 'il y a ' + j + (j > 1 ? ' jours' : ' jour');
+        if (j < 30) { var sem = Math.floor(j / 7); return 'il y a ' + sem + (sem > 1 ? ' semaines' : ' semaine'); }
+        var mois = Math.floor(j / 30);
+        if (mois < 12) return 'il y a ' + mois + ' mois';
+        var ans = Math.max(1, Math.floor(j / 365));
+        return 'il y a ' + ans + (ans > 1 ? ' ans' : ' an');
+    }
+
+    function majTempsInvitations() {
+        document.querySelectorAll('[data-demande-date]').forEach(function (el) {
+            var iso = el.getAttribute('data-demande-date');
+            var d = iso ? new Date(iso) : null;
+            if (d && !isNaN(d.getTime())) {
+                el.textContent = tempsEcoule(d);
+                el.title = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            }
+        });
+    }
+
+    function envoyerInvitationAJAX(userId, btnElement) {
+        // Désactiver le bouton pendant l'envoi
+        btnElement.disabled = true;
+        btnElement.innerText = "Envoi...";
+
+        fetch(`/envoyer_invitation/${userId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                btnElement.innerText = "Envoyé ✓";
+                btnElement.className = "amis-btn amis-btn--envoye";
+                if (window.fnInvitationsInvalider) { window.fnInvitationsInvalider(); }
+                btnElement.disabled = true;
+            } else {
+                alert(data.message || "Information : " + data.status);
+                btnElement.disabled = false;
+                btnElement.innerText = "Ajouter";
+            }
+        })
+        .catch(error => {
+            console.error("Erreur lors de l'envoi de l'invitation :", error);
+            alert("Une erreur est survenue lors de l'envoi.");
+            btnElement.disabled = false;
+            btnElement.innerText = "Ajouter";
+        });
+    }
+    // ---------- Invitations envoyées (grande page) ----------
+    (function () {
+        var URL_LISTE = "{{ url_for('main.api_invitations_envoyees') }}";
+        var URL_ANNULER = "{{ url_for('main.annuler_invitation', demande_id=0) }}";
+        var URL_AVATARS = "{{ url_for('static', filename='uploads/') }}";
+
+        var overlay = document.getElementById('inv-overlay');
+        var liste = document.getElementById('inv-liste');
+        var aJour = false;
+
+        window.fnInvitationsInvalider = function () { aJour = false; };
+
+        function toast(msg) {
+            var t = document.getElementById('amis-toast');
+            if (!t) {
+                t = document.createElement('div');
+                t.id = 'amis-toast';
+                t.className = 'amis-toast';
+                document.body.appendChild(t);
+            }
+            t.textContent = msg;
+            void t.offsetWidth;
+            t.classList.add('show');
+            clearTimeout(t._timer);
+            t._timer = setTimeout(function () { t.classList.remove('show'); }, 2800);
+        }
+
+        function message(texte) {
+            liste.innerHTML = '';
+            var p = document.createElement('div');
+            p.className = 'inv-message';
+            p.textContent = texte;
+            liste.appendChild(p);
+        }
+
+        function dateComplete(d) {
+            var jour = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            var heure = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            return 'Envoyée le ' + jour + ' à ' + heure;
+        }
+
+        function depuisCombienDeTemps(d) {
+            return tempsEcoule(d);
+        }
+
+        function creerCarte(inv) {
+            var carte = document.createElement('div');
+            carte.className = 'inv-carte';
+
+            var profil = document.createElement('div');
+            profil.className = 'inv-carte__profil';
+
+            var av;
+            if (inv.avatar) {
+                av = document.createElement('img');
+                av.className = 'inv-carte__avatar';
+                av.src = URL_AVATARS + inv.avatar;
+                av.alt = '';
+            } else {
+                av = document.createElement('div');
+                av.className = 'inv-carte__lettre';
+                av.textContent = (inv.nom || '?').charAt(0).toUpperCase();
+            }
+
+            var infos = document.createElement('div');
+            infos.className = 'inv-carte__infos';
+            var nom = document.createElement('div');
+            nom.className = 'inv-carte__nom';
+            nom.textContent = inv.nom;
+            infos.appendChild(nom);
+
+            var d = inv.date ? new Date(inv.date) : null;
+            if (d && !isNaN(d.getTime())) {
+                var date = document.createElement('div');
+                date.className = 'inv-carte__date';
+                date.textContent = dateComplete(d);
+                var depuis = document.createElement('div');
+                depuis.className = 'inv-carte__depuis';
+                depuis.textContent = depuisCombienDeTemps(d);
+                infos.appendChild(date);
+                infos.appendChild(depuis);
+            } else {
+                var nd = document.createElement('div');
+                nd.className = 'inv-carte__date';
+                nd.textContent = 'Heure non disponible';
+                infos.appendChild(nd);
+            }
+
+            profil.appendChild(av);
+            profil.appendChild(infos);
+
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'inv-annuler';
+            btn.textContent = "Annuler l'invitation";
+            btn.addEventListener('click', function () {
+                btn.disabled = true;
+                btn.textContent = '...';
+                fetch(URL_ANNULER.replace(/0$/, String(inv.id)), {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin'
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.status === 'success') {
+                        carte.remove();
+                        toast('Invitation annulée.');
+                        if (!liste.querySelector('.inv-carte')) message("Aucune invitation envoyée en attente.");
+                        // Réactive le bouton « Ajouter » si la personne est dans les suggestions
+                        var b = document.querySelector('button[data-user-id="' + inv.user_id + '"]');
+                        if (b) {
+                            b.disabled = false;
+                            b.className = 'amis-btn amis-btn--ajouter';
+                            b.innerText = 'Ajouter';
+                        }
+                    } else {
+                        btn.disabled = false;
+                        btn.textContent = "Annuler l'invitation";
+                        toast(data.message || "Impossible d'annuler.");
+                    }
+                })
+                .catch(function () {
+                    btn.disabled = false;
+                    btn.textContent = "Annuler l'invitation";
+                    toast('Une erreur est survenue. Vérifiez votre connexion.');
+                });
+            });
+
+            carte.appendChild(profil);
+            carte.appendChild(btn);
+            return carte;
+        }
+
+        function charger() {
+            message('Chargement...');
+            fetch(URL_LISTE, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                liste.innerHTML = '';
+                var items = (data && data.invitations) || [];
+                if (!items.length) { message("Aucune invitation envoyée en attente."); }
+                else { items.forEach(function (inv) { liste.appendChild(creerCarte(inv)); }); }
+                aJour = true;
+            })
+            .catch(function () { message('Impossible de charger la liste. Réessaie.'); });
+        }
+
+        window.ouvrirInvitationsEnvoyees = function () {
+            overlay.classList.add('ouvert');
+            document.body.style.overflow = 'hidden';
+            charger();
+        };
+
+        window.fermerInvitationsEnvoyees = function () {
+            overlay.classList.remove('ouvert');
+            document.body.style.overflow = '';
+        };
+
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) window.fermerInvitationsEnvoyees();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && overlay.classList.contains('ouvert')) window.fermerInvitationsEnvoyees();
+        });
+    })();
+</script>
+
+<!-- Fenêtre de confirmation / signalement (gestion d'un ami) -->
+<div class="ami-modal-overlay" id="ami-modal">
+    <div class="ami-modal" role="dialog" aria-modal="true" aria-labelledby="ami-modal-titre">
+        <h3 class="ami-modal__titre" id="ami-modal-titre"></h3>
+        <p class="ami-modal__texte" id="ami-modal-texte"></p>
+        <div id="ami-modal-champs"></div>
+        <p class="ami-modal__erreur" id="ami-modal-erreur"></p>
+        <div class="ami-modal__actions">
+            <button type="button" class="amis-btn amis-btn--refuser" id="ami-modal-annuler">Annuler</button>
+            <button type="button" class="amis-btn amis-btn--accepter" id="ami-modal-confirmer">Confirmer</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ---------- Gestion d'un ami : « Amis depuis … », menu à trois points, blocage, signalement ----------
+    (function () {
+        var URL_DEPUIS = "{{ url_for('main.api_amis_depuis') }}";
+        var URL_RETIRER = "{{ url_for('main.api_ami_retirer', ami_id=0) }}";
+        var URL_BLOQUER = "{{ url_for('main.api_ami_bloquer', ami_id=0) }}";
+        var URL_SIGNALER = "{{ url_for('main.api_ami_signaler', ami_id=0) }}";
+        var URL_TRAITER = "{{ url_for('main.api_invitations_recues_traiter') }}";
+        var URL_ANNULER_TOUTES = "{{ url_for('main.api_invitations_envoyees_annuler_toutes') }}";
+
+        var MOTIFS = [
+            ['faux_compte', 'Faux compte'],
+            ['usurpation', "Usurpation d'identité"],
+            ['harcelement', 'Harcèlement ou intimidation'],
+            ['spam', 'Spam ou arnaque'],
+            ['contenu_inapproprie', 'Contenu inapproprié'],
+            ['autre', 'Autre']
+        ];
+
+        function urlPour(modele, id) { return modele.replace('/0/', '/' + id + '/'); }
+
+        function toast(msg) {
+            var t = document.getElementById('amis-toast');
+            if (!t) {
+                t = document.createElement('div');
+                t.id = 'amis-toast';
+                t.className = 'amis-toast';
+                document.body.appendChild(t);
+            }
+            t.textContent = msg;
+            void t.offsetWidth;
+            t.classList.add('show');
+            clearTimeout(t._timer);
+            t._timer = setTimeout(function () { t.classList.remove('show'); }, 2800);
+        }
+
+        function post(url, corps) {
+            return fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+                body: JSON.stringify(corps || {})
+            }).then(function (r) {
+                return r.json().catch(function () { return { success: false, error: 'Réponse invalide du serveur.' }; });
+            });
+        }
+
+        // ----- « Amis depuis … » -----
+        function dureeAmitie(d) {
+            var j = Math.floor(Math.max(0, Date.now() - d.getTime()) / 86400000);
+            if (j < 1) return "Amis depuis aujourd'hui";
+            if (j < 7) return 'Amis depuis ' + j + (j > 1 ? ' jours' : ' jour');
+            if (j < 30) { var s = Math.floor(j / 7); return 'Amis depuis ' + s + (s > 1 ? ' semaines' : ' semaine'); }
+            if (j < 365) { var m = Math.floor(j / 30); return 'Amis depuis ' + m + ' mois'; }
+            var a = Math.floor(j / 365);
+            return 'Amis depuis ' + a + (a > 1 ? ' ans' : ' an');
+        }
+
+        function chargerDatesAmitie() {
+            if (!document.querySelector('[data-ami-depuis]')) return;
+            fetch(URL_DEPUIS, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                var depuis = (data && data.depuis) || {};
+                document.querySelectorAll('[data-ami-depuis]').forEach(function (el) {
+                    var iso = depuis[el.getAttribute('data-ami-depuis')];
+                    var d = iso ? new Date(iso) : null;
+                    if (d && !isNaN(d.getTime())) el.textContent = dureeAmitie(d);
+                });
+            })
+            .catch(function () { /* sans date : la ligne reste simplement masquée */ });
+        }
+
+        // ----- Menu à trois points -----
+        function fermerMenus() {
+            document.querySelectorAll('.amis-dropdown.ouvert').forEach(function (m) { m.classList.remove('ouvert'); });
+            document.querySelectorAll('[data-ami-menu-toggle][aria-expanded="true"]').forEach(function (b) {
+                b.setAttribute('aria-expanded', 'false');
+            });
+        }
+
+        function basculerMenu(bouton) {
+            var menu = bouton.parentNode.querySelector('.amis-dropdown');
+            var etaitOuvert = menu.classList.contains('ouvert');
+            fermerMenus();
+            if (!etaitOuvert) {
+                menu.classList.add('ouvert');
+                bouton.setAttribute('aria-expanded', 'true');
+            }
+        }
+
+        // ----- Fenêtre de confirmation -----
+        var overlay = document.getElementById('ami-modal');
+        var mTitre = document.getElementById('ami-modal-titre');
+        var mTexte = document.getElementById('ami-modal-texte');
+        var mChamps = document.getElementById('ami-modal-champs');
+        var mErreur = document.getElementById('ami-modal-erreur');
+        var mAnnuler = document.getElementById('ami-modal-annuler');
+        var mOk = document.getElementById('ami-modal-confirmer');
+        var courant = null;
+        var enCours = false;
+
+        function ouvrirModal(cfg) {
+            courant = cfg;
+            enCours = false;
+            mTitre.textContent = cfg.titre;
+            mTexte.textContent = cfg.texte || '';
+            mChamps.innerHTML = '';
+            if (cfg.construireChamps) cfg.construireChamps(mChamps);
+            mErreur.textContent = '';
+            mOk.disabled = false;
+            mOk.textContent = cfg.bouton;
+            mOk.className = 'amis-btn ' + (cfg.danger ? 'amis-btn--supprimer' : 'amis-btn--accepter');
+            overlay.classList.add('ouvert');
+            document.body.style.overflow = 'hidden';
+            mOk.focus();
+        }
+
+        function fermerModal() {
+            overlay.classList.remove('ouvert');
+            document.body.style.overflow = '';
+            courant = null;
+        }
+
+        mAnnuler.addEventListener('click', fermerModal);
+        overlay.addEventListener('click', function (e) { if (e.target === overlay) fermerModal(); });
+        mOk.addEventListener('click', function () {
+            if (!courant || enCours) return;
+            var cfg = courant;
+            var corps = cfg.collecter ? cfg.collecter() : {};
+            if (corps === null) return; // validation refusée (message déjà affiché)
+            enCours = true;
+            mOk.disabled = true;
+            mOk.textContent = '...';
+            mErreur.textContent = '';
+            post(cfg.url, corps).then(function (data) {
+                if (data && data.success) {
+                    fermerModal();
+                    cfg.apres(data);
+                } else {
+                    enCours = false;
+                    mOk.disabled = false;
+                    mOk.textContent = cfg.bouton;
+                    mErreur.textContent = (data && data.error) || 'Une erreur est survenue. Réessaie.';
+                }
+            }).catch(function () {
+                enCours = false;
+                mOk.disabled = false;
+                mOk.textContent = cfg.bouton;
+                mErreur.textContent = 'Une erreur est survenue. Vérifie ta connexion.';
+            });
+        });
+
+        // ----- Effets sur la page après une action réussie -----
+        function majCompteur(delta) {
+            var c = document.querySelector('#onglet-amis .amis-onglet__compteur');
+            if (!c) return;
+            var n = parseInt(c.textContent, 10);
+            if (!isNaN(n)) c.textContent = String(Math.max(0, n + delta));
+        }
+
+        function retirerCarte(carte) {
+            var liste = carte.parentNode;
+            carte.remove();
+            majCompteur(-1);
+            if (!liste.querySelector('.amis-carte')) {
+                var p = document.createElement('p');
+                p.className = 'amis-vide';
+                p.textContent = "Tu n'as pas encore d'amis ajoutés.";
+                liste.appendChild(p);
+            }
+        }
+
+        function lancerAction(action, carte) {
+            var id = carte.getAttribute('data-ami-id');
+            var nom = carte.getAttribute('data-ami-nom') || 'cet ami';
+
+            if (action === 'retirer') {
+                ouvrirModal({
+                    titre: 'Retirer ' + nom + ' de tes amis ?',
+                    texte: 'Vous ne serez plus amis. Vous pourrez lui renvoyer une invitation plus tard.',
+                    bouton: 'Retirer', danger: true,
+                    url: urlPour(URL_RETIRER, id),
+                    apres: function () { retirerCarte(carte); toast(nom + ' a été retiré de tes amis.'); }
+                });
+            } else if (action === 'bloquer') {
+                ouvrirModal({
+                    titre: 'Bloquer ' + nom + ' ?',
+                    texte: "Cette personne ne pourra plus t'envoyer de messages et vous ne serez plus amis. "
+                         + 'Tu pourras la débloquer dans Paramètres > Comptes bloqués.',
+                    bouton: 'Bloquer', danger: true,
+                    url: urlPour(URL_BLOQUER, id),
+                    apres: function () { retirerCarte(carte); toast(nom + ' a été bloqué.'); }
+                });
+            } else if (action === 'signaler') {
+                ouvrirModal({
+                    titre: 'Signaler ' + nom,
+                    texte: 'Pourquoi signales-tu ce profil ? Ton signalement sera examiné par notre équipe.',
+                    bouton: 'Envoyer le signalement', danger: false,
+                    url: urlPour(URL_SIGNALER, id),
+                    construireChamps: function (zone) {
+                        MOTIFS.forEach(function (m, i) {
+                            var label = document.createElement('label');
+                            label.className = 'ami-modal__motif';
+                            var radio = document.createElement('input');
+                            radio.type = 'radio';
+                            radio.name = 'ami-motif';
+                            radio.value = m[0];
+                            if (i === 0) radio.checked = true;
+                            label.appendChild(radio);
+                            label.appendChild(document.createTextNode(m[1]));
+                            zone.appendChild(label);
+                        });
+                        var details = document.createElement('textarea');
+                        details.className = 'ami-modal__details';
+                        details.id = 'ami-motif-details';
+                        details.maxLength = 500;
+                        details.placeholder = 'Détails (facultatif)';
+                        zone.appendChild(details);
+                    },
+                    collecter: function () {
+                        var choisi = overlay.querySelector('input[name="ami-motif"]:checked');
+                        if (!choisi) { mErreur.textContent = 'Choisis un motif.'; return null; }
+                        return { motif: choisi.value, details: document.getElementById('ami-motif-details').value };
+                    },
+                    apres: function () { toast('Merci, ton signalement a été envoyé.'); }
+                });
+            }
+        }
+
+        document.addEventListener('click', function (e) {
+            var toggle = e.target.closest('[data-ami-menu-toggle]');
+            if (toggle) { basculerMenu(toggle); return; }
+            var item = e.target.closest('[data-ami-action]');
+            if (item) {
+                var carte = item.closest('.amis-carte');
+                fermerMenus();
+                if (carte) lancerAction(item.getAttribute('data-ami-action'), carte);
+                return;
+            }
+            if (!e.target.closest('.amis-dropdown')) fermerMenus();
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape') return;
+            if (overlay.classList.contains('ouvert')) fermerModal();
+            else fermerMenus();
+        });
+
+        // ----- Actions groupées sur les invitations reçues -----
+        function cartesInvitations() {
+            return Array.prototype.slice.call(document.querySelectorAll('#page-invitations .amis-carte[data-demande-id]'));
+        }
+
+        function majBarreGroupee() {
+            var total = cartesInvitations().length;
+            var barre = document.getElementById('amis-bulk');
+            if (!barre) return;
+            barre.hidden = total === 0;
+            barre.querySelectorAll('[data-bulk]').forEach(function (b) {
+                var lim = parseInt(b.getAttribute('data-limite'), 10) || 0;
+                b.hidden = lim > 0 && total <= lim; // « 10 premières » seulement s'il y en a plus de 10
+            });
+            var c = document.getElementById('compteur-invitations');
+            if (c) c.textContent = String(total);
+        }
+
+        function lancerGroupe(action, limite) {
+            var cartes = cartesInvitations();
+            if (!cartes.length) { toast('Aucune invitation en attente.'); return; }
+            var cibles = limite > 0 ? cartes.slice(0, limite) : cartes;
+            var n = cibles.length;
+            var pluriel = n > 1 ? 's' : '';
+            var accepter = action === 'accepter';
+            ouvrirModal({
+                titre: accepter ? 'Accepter ' + n + ' invitation' + pluriel + ' ?' : 'Refuser ' + n + ' invitation' + pluriel + ' ?',
+                texte: accepter ? (n > 1 ? 'Ces personnes deviendront tes amis.' : 'Cette personne deviendra ton amie.')
+                                : (n > 1 ? 'Ces invitations seront supprimées de ta liste.' : "Cette invitation sera supprimée de ta liste."),
+                bouton: accepter ? 'Accepter' : 'Refuser', danger: !accepter,
+                url: URL_TRAITER,
+                collecter: function () {
+                    var ids = cibles.map(function (c) { return parseInt(c.getAttribute('data-demande-id'), 10); });
+                    return { action: action, ids: ids };
+                },
+                apres: function (data) {
+                    var faites = (data && data.traitees) || [];
+                    if (accepter) {
+                        // Recharge la page pour afficher les nouveaux amis (liste, dates, menus).
+                        try {
+                            sessionStorage.setItem('amis_retour', JSON.stringify({
+                                page: 'page-amis',
+                                msg: faites.length + (faites.length > 1 ? ' nouveaux amis ajoutés.' : ' nouvel ami ajouté.')
+                            }));
+                        } catch (e) { /* stockage indisponible : on recharge quand même */ }
+                        window.location.reload();
+                        return;
+                    }
+                    cibles.forEach(function (c) {
+                        if (faites.indexOf(parseInt(c.getAttribute('data-demande-id'), 10)) !== -1) c.remove();
+                    });
+                    var liste = document.querySelector('#page-invitations .amis-liste');
+                    if (liste && !liste.querySelector('.amis-carte')) {
+                        var p = document.createElement('p');
+                        p.className = 'amis-vide';
+                        p.textContent = 'Aucune invitation reçue pour le moment.';
+                        liste.appendChild(p);
+                    }
+                    majBarreGroupee();
+                    toast(faites.length + (faites.length > 1 ? ' invitations refusées.' : ' invitation refusée.'));
+                }
+            });
+        }
+
+        var barreGroupee = document.getElementById('amis-bulk');
+        if (barreGroupee) {
+            barreGroupee.addEventListener('click', function (e) {
+                var b = e.target.closest('[data-bulk]');
+                if (b) lancerGroupe(b.getAttribute('data-bulk'), parseInt(b.getAttribute('data-limite'), 10) || 0);
+            });
+        }
+
+        // ----- Annuler toutes les invitations envoyées -----
+        var btnToutAnnuler = document.getElementById('inv-annuler-toutes');
+        if (btnToutAnnuler) {
+            btnToutAnnuler.addEventListener('click', function () {
+                ouvrirModal({
+                    titre: 'Annuler toutes les invitations envoyées ?',
+                    texte: "Toutes tes invitations en attente seront supprimées. Tu pourras les renvoyer plus tard.",
+                    bouton: 'Tout annuler', danger: true,
+                    url: URL_ANNULER_TOUTES,
+                    apres: function (data) {
+                        var liste = document.getElementById('inv-liste');
+                        if (liste) {
+                            liste.innerHTML = '';
+                            var p = document.createElement('div');
+                            p.className = 'inv-message';
+                            p.textContent = 'Aucune invitation envoyée en attente.';
+                            liste.appendChild(p);
+                        }
+                        ((data && data.user_ids) || []).forEach(function (uid) {
+                            var b = document.querySelector('button[data-user-id="' + uid + '"]');
+                            if (b) { b.disabled = false; b.className = 'amis-btn amis-btn--ajouter'; b.innerText = 'Ajouter'; }
+                        });
+                        if (window.fnInvitationsInvalider) window.fnInvitationsInvalider();
+                        var n = (data && data.nombre) || 0;
+                        toast(n ? n + (n > 1 ? ' invitations annulées.' : ' invitation annulée.') : 'Aucune invitation à annuler.');
+                    }
+                });
+            });
+        }
+
+        // ----- Retour sur la bonne page après un rechargement (acceptations groupées) -----
+        try {
+            var retour = sessionStorage.getItem('amis_retour');
+            if (retour) {
+                sessionStorage.removeItem('amis_retour');
+                var r = JSON.parse(retour);
+                if (r.page && document.getElementById(r.page)) ouvrirPage(r.page);
+                if (r.msg) toast(r.msg);
+            }
+        } catch (e) { /* ignoré */ }
+
+        majBarreGroupee();
+        majTempsInvitations();
+        chargerDatesAmitie();
+    })();
+</script>
+{% endblock %}
