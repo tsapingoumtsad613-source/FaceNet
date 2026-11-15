@@ -1,0 +1,42 @@
+PATCH routes.py — 2 ajouts, rien à supprimer ni à modifier d'existant
+=====================================================================
+
+─── AJOUT 1 ───────────────────────────────────────────────────────
+Où : juste après la fonction ouvrir_notification (avant le bloc
+« AIGUILLAGE DES PAIEMENTS DES FORFAITS », vers la ligne 1875).
+Rôle : déclenche, une fois par jour, la création des notifications
+« C'est l'anniversaire de X » pour tous les amis (la fonction existait
+dans anniversaires.py mais n'était appelée nulle part).
+
+@main_bp.before_app_request
+def _declencheur_anniversaires():
+    try:
+        if request.endpoint in (None, 'static') or request.path.startswith('/static/'):
+            return None
+        from anniversaires import notifier_anniversaires_du_jour
+        notifier_anniversaires_du_jour()
+    except Exception as e:
+        print(f"[anniversaires] déclencheur indisponible : {e}")
+    return None
+
+
+─── AJOUT 2 ───────────────────────────────────────────────────────
+Où : dans _resoudre_lien_notification, juste AVANT la ligne
+« # ── 0 ter) Commentaire / réponse / mention … » (vers la ligne 1775).
+Rôle : au clic sur la notification d'anniversaire, l'ami arrive sur la
+page des vœux (au lieu du simple profil) ; le vœu reçu mène à la publication.
+
+        # ── AJOUT : anniversaires ──
+        if genre in ('anniversaire', 'birthday') or verbe == 'anniversaire':
+            pub_cible = int_ou_none(extra.get('pub_id'))
+            if pub_cible:
+                lien = url_publication(pub_cible)
+                if lien:
+                    return lien
+            anniv_uid = int_ou_none(extra.get('anniv_user_id')) or (int_ou_none(cible_id) if cible_type == 'user' else None)
+            if anniv_uid:
+                try:
+                    return url_for('anniv.voeux', user_id=anniv_uid)
+                except Exception:
+                    pass
+            return url_profil(notif.actor_id) or page_notifs
