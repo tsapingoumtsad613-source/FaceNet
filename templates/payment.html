@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Design Responsive pour le paiement */
+    .payment-container {
+        width: 95%; 
+        max-width: 420px; 
+        margin: 20px auto; 
+        font-family: 'Segoe UI', sans-serif; 
+        padding: 20px; 
+        background: #ffffff; 
+        border-radius: 20px; 
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    .method-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    .method-label {
+        padding: 15px;
+        border: 2px solid #ddd;
+        border-radius: 10px;
+        cursor: pointer;
+        text-align: center;
+        font-size: 14px;
+        transition: 0.3s;
+    }
+    .method-label:hover { border-color: #1877f2; }
+    .payment-fields { display: none; padding: 15px; background: #f8f9fa; border-radius: 10px; margin-top: 10px; }
+    
+    /* Input mobile friendly */
+    input[type="text"], input[type="email"] { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+</style>
+
+<div class="payment-container">
+    <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #1877f2; padding-bottom: 15px;">
+        <h2 style="color: #1877f2; margin: 0;">Finalisation</h2>
+        <p style="margin: 5px 0;">Forfait : <strong>{{ forfait.upper() }}</strong></p>
+        <div style="font-size: 32px; font-weight: 800;">{{ montant }} CFA</div>
+    </div>
+
+    <form action="/process_payment" method="POST">
+        <input type="hidden" name="forfait_type" value="{{ forfait }}">
+        <input type="hidden" name="amount" value="{{ montant }}">
+
+        <h4 style="margin-bottom: 15px;">Méthode de paiement</h4>
+        <div class="method-grid">
+            <label class="method-label"><input type="radio" name="method" value="mtn" checked onclick="toggleFields()"> MTN</label>
+            <label class="method-label"><input type="radio" name="method" value="orange" onclick="toggleFields()"> Orange</label>
+            <label class="method-label"><input type="radio" name="method" value="card" onclick="toggleFields()"> Visa/MC</label>
+            <label class="method-label"><input type="radio" name="method" value="paypal" onclick="toggleFields()"> PayPal</label>
+        </div>
+
+        <div id="momo-fields" class="payment-fields" style="display:block;">
+            <label>Numéro de téléphone</label>
+            <input type="text" name="phone" placeholder="6xx xxx xxx">
+        </div>
+
+        <div id="card-fields" class="payment-fields">
+            <input type="text" name="card_number" placeholder="Numéro de carte">
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <input type="text" name="card_expiry" placeholder="MM/AA">
+                <input type="text" name="card_cvv" placeholder="CVV">
+            </div>
+        </div>
+
+        <div id="paypal-fields" class="payment-fields">
+            <label>Email PayPal</label>
+            <input type="email" name="paypal_email" placeholder="email@exemple.com">
+        </div>
+
+        <button type="submit" style="width: 100%; background: #28a745; color: white; padding: 18px; border: none; border-radius: 12px; font-weight: bold; font-size: 16px; margin-top: 20px;">
+            Payer maintenant
+        </button>
+    </form>
+</div>
+
+<script>
+function toggleFields() {
+    const method = document.querySelector('input[name="method"]:checked').value;
+    document.querySelectorAll('.payment-fields').forEach(div => div.style.display = 'none');
+    if (method === 'mtn' || method === 'orange') document.getElementById('momo-fields').style.display = 'block';
+    else if (method === 'card') document.getElementById('card-fields').style.display = 'block';
+    else if (method === 'paypal') document.getElementById('paypal-fields').style.display = 'block';
+}
+</script>
+{% endblock %}

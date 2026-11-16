@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% from '_page_macros.html' import csrf with context %}
+
+{% block title %}Modifier — {{ page.nom }} — FaceNet{% endblock %}
+
+{% block content %}
+{% include '_page_style.html' %}
+<div class="pg-wrap">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}{% if cat in ('success', 'error') %}<div class="pg-flash {{ cat }}">{{ msg }}</div>{% endif %}{% endfor %}
+    {% endwith %}
+
+    <div class="pg-card" style="display:flex;align-items:center;gap:12px;">
+        <a class="pg-back" href="{{ url_for('main.fnpage_profil', page_id=page.id) }}" aria-label="Retour">←</a>
+        <div style="min-width:0;">
+            <h3 style="margin:0;">Modifier la Page</h3>
+            <span style="color:var(--pg-grey);font-size:13px;">{{ page.nom }}</span>
+        </div>
+    </div>
+
+    <form class="pg-card" method="POST" action="{{ url_for('main.fnpage_modifier', page_id=page.id) }}" enctype="multipart/form-data">{{ csrf() }}
+        <div class="pg-edit-couv">
+            <div class="cv" id="pg-prev-couv" style="background-image:url('{{ url_for('static', filename='uploads/' + (page.couverture or 'default_cover.png')) }}');"></div>
+            <label class="pg-cam" style="right:12px;bottom:12px;" title="Changer la couverture"><i class="fa-solid fa-camera"></i>
+                <input type="file" name="couverture" accept="image/*" style="display:none;" onchange="pgPrev(this,'pg-prev-couv')">
+            </label>
+            <div class="av">
+                <div class="ap" id="pg-prev-av" style="background-image:url('{{ url_for('static', filename='uploads/' + (page.avatar or 'default_avatar.png')) }}');"></div>
+                <label class="pg-cam" style="right:-6px;bottom:-2px;width:32px;height:32px;" title="Changer la photo de la Page"><i class="fa-solid fa-camera" style="font-size:13px;"></i>
+                    <input type="file" name="avatar" accept="image/*" style="display:none;" onchange="pgPrev(this,'pg-prev-av')">
+                </label>
+            </div>
+        </div>
+
+        <div class="pg-champ-bloc">
+            <label class="pg-label">Nom de la Page</label>
+            <input class="pg-champ" type="text" value="{{ page.nom }}" disabled>
+        </div>
+        <div class="pg-champ-bloc">
+            <label class="pg-label" for="pg-f-cat">Catégorie</label>
+            <select class="pg-champ" id="pg-f-cat" name="categorie">
+                <option value="">— Choisir —</option>
+                {% if page.categorie and page.categorie not in categories %}<option value="{{ page.categorie }}" selected>{{ page.categorie }}</option>{% endif %}
+                {% for c in categories %}<option value="{{ c }}" {{ 'selected' if page.categorie == c else '' }}>{{ c }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="pg-champ-bloc">
+            <label class="pg-label" for="pg-f-bio">Description</label>
+            <textarea class="pg-champ" id="pg-f-bio" name="bio" rows="4" placeholder="Présentez votre Page…">{{ page.bio or '' }}</textarea>
+        </div>
+
+        <hr class="pg-sep">
+        <div class="pg-champ-bloc"><label class="pg-label" for="pg-f-web">Site web</label><input class="pg-champ" id="pg-f-web" type="text" name="site_web" maxlength="255" value="{{ page.site_web or '' }}" placeholder="https://"></div>
+        <div class="pg-champ-bloc"><label class="pg-label" for="pg-f-mail">E-mail</label><input class="pg-champ" id="pg-f-mail" type="email" name="email" maxlength="150" value="{{ page.email or '' }}"></div>
+        <div class="pg-champ-bloc"><label class="pg-label" for="pg-f-tel">Téléphone</label><input class="pg-champ" id="pg-f-tel" type="tel" name="telephone" maxlength="40" value="{{ page.telephone or '' }}"></div>
+        <div class="pg-champ-bloc"><label class="pg-label" for="pg-f-adr">Adresse</label><input class="pg-champ" id="pg-f-adr" type="text" name="adresse" maxlength="200" value="{{ page.adresse or '' }}"></div>
+        <div style="display:flex;gap:10px;">
+            <div class="pg-champ-bloc" style="flex:1;"><label class="pg-label" for="pg-f-ville">Ville</label><input class="pg-champ" id="pg-f-ville" type="text" name="ville" maxlength="100" value="{{ page.ville or '' }}"></div>
+            <div class="pg-champ-bloc" style="flex:1;"><label class="pg-label" for="pg-f-cp">Code postal</label><input class="pg-champ" id="pg-f-cp" type="text" name="code_postal" maxlength="20" value="{{ page.code_postal or '' }}"></div>
+        </div>
+
+        <div class="pg-actions">
+            <a href="{{ url_for('main.fnpage_profil', page_id=page.id) }}" class="pg-btn s">Annuler</a>
+            <button type="submit" class="pg-btn p">Enregistrer</button>
+        </div>
+    </form>
+</div>
+<script>
+function pgPrev(inp, id) {
+    var f = inp.files && inp.files[0];
+    if (!f) return;
+    var e = document.getElementById(id);
+    if (e) e.style.backgroundImage = "url('" + URL.createObjectURL(f) + "')";
+}
+</script>
+{% endblock %}

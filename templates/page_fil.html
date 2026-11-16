@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from '_page_macros.html' import badge, carte with context %}
+
+{% block title %}Fil d'actualité — {{ page.nom }} — FaceNet{% endblock %}
+
+{% block content %}
+{% include '_page_style.html' %}
+<div class="pg-wrap">
+    <div class="pg-card" style="display:flex;align-items:center;gap:12px;">
+        <a class="pg-back" href="{{ url_for('main.fnpage_profil', page_id=page.id) }}" aria-label="Retour">←</a>
+        <div style="min-width:0;">
+            <h3 style="margin:0;">Fil d'actualité</h3>
+            <span style="color:var(--pg-grey);font-size:13px;">{{ page.nom }}{% if page.verifiee %}{{ badge(14) }}{% endif %}</span>
+        </div>
+    </div>
+
+    <span class="pg-ancre" id="pg-pubs"></span>
+    {% for pub in publications %}{{ carte(pub, mes_likes, False) }}{% else %}
+    <div class="pg-card pg-vide">Aucune publication pour le moment. Suivez d'autres Pages pour remplir ce fil.</div>
+    {% endfor %}
+
+    {% if suggestions %}
+    <div class="pg-card">
+        <h3>Pages à suivre</h3>
+        <div class="pg-liste">
+            {% for s in suggestions %}
+            <div class="pg-item">
+                <a href="{{ url_for('main.fnpage_profil', page_id=s.id) }}"><img src="{{ url_for('static', filename='uploads/' + (s.avatar or 'default_avatar.png')) }}" alt=""></a>
+                <div class="t">
+                    <a href="{{ url_for('main.fnpage_profil', page_id=s.id) }}"><b>{{ s.nom }}{% if s.verifiee %}{{ badge(15) }}{% endif %}</b></a>
+                    <span>{{ s.categorie or 'Page' }} · {{ s.nb_abonnes }} abonné(e)(s)</span>
+                </div>
+                <button type="button" class="pg-btn p" onclick="pgSuivrePage({{ page.id }}, {{ s.id }}, this)">Suivre</button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% include '_page_js.html' %}
+{% endblock %}

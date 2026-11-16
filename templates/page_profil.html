@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% from '_page_macros.html' import badge, badge_gris, carte, csrf with context %}
+
+{% block title %}{{ page.nom }} — FaceNet{% endblock %}
+
+{% block content %}
+{% include '_page_style.html' %}
+<div class="pg-wrap">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}{% if cat in ('success', 'error') %}<div class="pg-flash {{ cat }}">{{ msg }}</div>{% endif %}{% endfor %}
+    {% endwith %}
+
+    <!-- ═══ Couverture ═══ -->
+    <div class="pg-cover" style="background-image:url('{{ url_for('static', filename='uploads/' + (page.couverture or 'default_cover.png')) }}');">
+        <button type="button" class="pg-cover-btn" style="left:10px;" onclick="history.length>1 ? history.back() : (location.href='{{ url_for('main.feed') }}')" aria-label="Retour">←</button>
+        {% if est_proprio %}
+        <a href="{{ url_for('main.fnpage_modifier', page_id=page.id) }}" class="pg-cover-btn" style="right:56px;" title="Modifier la Page" aria-label="Modifier la Page"><i class="fa-solid fa-pen"></i></a>
+        {% endif %}
+        <button type="button" class="pg-cover-btn" style="right:10px;" onclick="pgMenu(event)" title="Options de la Page" aria-label="Options de la Page">•••</button>
+
+        <!-- Menu ••• : entrées propres aux Pages (le reste est dans « Paramètres de la Page ») -->
+        <div class="pg-menu" id="pg-menu" onclick="event.stopPropagation()">
+            {% if est_proprio %}
+            {% if page_active and page_active.id == page.id %}
+            <a href="{{ url_for('main.fnpage_quitter') }}"><span class="ico"><i class="fa-solid fa-right-left"></i></span><span>Revenir à mon profil</span></a>
+            {% else %}
+            <a href="{{ url_for('main.fnpage_basculer', page_id=page.id) }}"><span class="ico"><i class="fa-solid fa-right-left"></i></span><span>Passer à cette Page</span></a>
+            {% endif %}
+            <a href="{{ url_for('main.fnpage_fil', page_id=page.id) }}"><span class="ico"><i class="fa-regular fa-newspaper"></i></span><span>Fil d'actualité de la Page</span></a>
+            <a href="{{ url_for('main.fnpage_parametres', page_id=page.id) }}"><span class="ico"><i class="fa-solid fa-gear"></i></span><span>Paramètres de la Page</span></a>
+            {% endif %}
+            <a href="{{ url_for('main.api_abonnes', page_id=page.id, user_id=current_user.id) }}"><span class="ico"><i class="fa-solid fa-users"></i></span><span>Abonnés</span></a>
+            <button type="button" onclick="pgPartager()"><span class="ico"><i class="fa-solid fa-share"></i></span><span>Partager la Page</span></button>
+            <a href="{{ url_for('main.pages.mes_pages') }}"><span class="ico"><i class="fa-regular fa-flag"></i></span><span>Mes Pages</span></a>
+        </div>
+    </div>
+
+    <!-- ═══ Identité ═══ -->
+    <div class="pg-info">
+        <div class="pg-head">
+            <img class="pg-av" src="{{ url_for('static', filename='uploads/' + (page.avatar or 'default_avatar.png')) }}" alt="{{ page.nom }}">
+            <div style="min-width:0;">
+                <h2 class="pg-nom" onclick="pgModal('pg-verif-modal', true)">{{ page.nom }}{% if page.verifiee %}{{ badge(22) }}{% endif %}</h2>
+            </div>
+        </div>
+        <div class="pg-chips">
+            <span class="pg-chip"><i class="fa-solid fa-tag"></i> {{ page.categorie }}</span>
+            <span class="pg-chip{{ ' creator' if page.type_page == 'creator' else '' }}"><i class="fa-solid fa-{{ 'wand-magic-sparkles' if page.type_page == 'creator' else 'briefcase' }}"></i> {{ 'Creator' if page.type_page == 'creator' else 'Entreprise' }}</span>
+        </div>
+        {% if page.bio %}<p class="pg-bio">{{ page.bio }}</p>{% endif %}
+
+        <div class="pg-stats">
+            <a class="pg-stat" href="{{ url_for('main.api_abonnes', page_id=page.id, user_id=current_user.id) }}"><b class="pg-nb-abonnes">{{ page.nb_abonnes }}</b><span>Abonnés</span></a>
+            <a class="pg-stat" href="#pg-pubs"><b>{{ page.nb_publications }}</b><span>Publications</span></a>
+            <div class="pg-stat"><b>{{ page.date_creation.strftime('%Y') if page.date_creation else '—' }}</b><span>Depuis</span></div>
+        </div>
+
+        <div class="pg-actions">
+            {% if est_proprio %}
+            {% if page_active and page_active.id == page.id %}
+            <a href="{{ url_for('main.fnpage_fil', page_id=page.id) }}" class="pg-btn p"><i class="fa-regular fa-newspaper"></i> Fil d'actualité</a>
+            {% else %}
+            <a href="{{ url_for('main.fnpage_basculer', page_id=page.id) }}" class="pg-btn p"><i class="fa-solid fa-right-left"></i> Passer à cette Page</a>
+            {% endif %}
+            <a href="{{ url_for('main.fnpage_modifier', page_id=page.id) }}" class="pg-btn s"><i class="fa-solid fa-pen"></i> Modifier la Page</a>
+            {% else %}
+            <button type="button" class="pg-btn {{ 's' if suis_abonne else 'p' }}" onclick="pgSuivre({{ page.id }}, this)">{{ '✔️ Abonné(e)' if suis_abonne else '➕ Suivre' }}</button>
+            {% if page.email %}<a href="mailto:{{ page.email }}" class="pg-btn s">✉️ Contacter</a>{% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <nav class="pg-onglets" id="pg-onglets" aria-label="Sections de la Page">
+        <a href="#pg-pubs" class="on" data-ong="pg-pubs">Publications</a>
+        <a href="#pg-apropos" data-ong="pg-apropos">À propos</a>
+        <a href="#pg-abonnes" data-ong="pg-abonnes">Abonnés</a>
+    </nav>
+
+    {% if invite %}
+    <div class="pg-invit" id="pg-invit"><span>👋 Vous êtes invité(e) à aimer cette Page.</span><button type="button" class="pg-btn p" style="flex:0 0 auto;min-width:0;padding:8px 14px;" onclick="pgSuivre({{ page.id }}, document.querySelector('.pg-actions .pg-btn'))">Suivre</button></div>
+    {% endif %}
+
+    <!-- ═══ À propos ═══ -->
+    {% if page.site_web or page.email or page.telephone or page.adresse or page.ville %}
+    <div class="pg-card pg-ancre" id="pg-apropos">
+        <h3>À propos</h3>
+        {% if page.site_web %}<div class="pg-ligne"><i class="fa-solid fa-globe"></i><a href="{{ page.site_web if page.site_web.startswith('http') else 'https://' ~ page.site_web }}" target="_blank" rel="noopener noreferrer" style="color:var(--pg-blue);">{{ page.site_web }}</a></div>{% endif %}
+        {% if page.email %}<div class="pg-ligne"><i class="fa-regular fa-envelope"></i><span>{{ page.email }}</span></div>{% endif %}
+        {% if page.telephone %}<div class="pg-ligne"><i class="fa-solid fa-phone"></i><span>{{ page.telephone }}</span></div>{% endif %}
+        {% if page.adresse or page.ville %}<div class="pg-ligne"><i class="fa-solid fa-location-dot"></i><span>{{ [page.adresse, page.code_postal, page.ville]|select|join(', ') }}</span></div>{% endif %}
+    </div>
+    {% endif %}
+
+    <!-- ═══ Abonnés (aperçu + lien vers la liste complète) ═══ -->
+    <div class="pg-card pg-ancre" id="pg-abonnes">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <h3 style="margin:0;">Abonnés</h3>
+            <a href="{{ url_for('main.api_abonnes', page_id=page.id, user_id=current_user.id) }}" style="color:var(--pg-blue);font-weight:700;font-size:14px;">Voir tout (<span class="pg-nb-abonnes">{{ page.nb_abonnes }}</span>)</a>
+        </div>
+        {% if abonnes_apercu %}
+        <div class="pg-apercu">
+            {% for u in abonnes_apercu %}
+            <a href="{{ url_for('main.profile', username=u.username) }}" title="{{ u.nom_complet or u.username }}"><img src="{{ url_for('static', filename='uploads/' + (u.avatar or 'default_avatar.png')) }}" alt="{{ u.nom_complet or u.username }}"></a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="color:var(--pg-grey);font-size:14px;margin:10px 0 0;">Aucun abonné pour le moment.</p>
+        {% endif %}
+    </div>
+
+    <!-- ═══ Publier (propriétaire) ═══ -->
+    {% if est_proprio %}
+    <form class="pg-card pg-compo" method="POST" action="{{ url_for('main.fnpage_publier', page_id=page.id) }}" enctype="multipart/form-data">{{ csrf() }}
+        <textarea name="contenu" maxlength="5000" placeholder="Quoi de neuf sur {{ page.nom }} ?"></textarea>
+        <div class="pg-compo-bas">
+            <label>📷 Photo / vidéo <input type="file" name="media" accept="image/*,video/*" style="display:none;" onchange="this.parentNode.firstChild.textContent = this.files[0] ? '✅ ' + this.files[0].name.slice(0, 24) + ' ' : '📷 Photo / vidéo ';"></label>
+            <button type="submit" class="pg-btn p">Publier</button>
+        </div>
+    </form>
+    {% endif %}
+
+    <!-- ═══ Publications ═══ -->
+    <span class="pg-ancre" id="pg-pubs"></span>
+    {% for pub in publications %}{{ carte(pub, mes_likes, est_proprio) }}{% else %}
+    <div class="pg-card pg-vide">Aucune publication pour le moment.</div>
+    {% endfor %}
+</div>
+
+<!-- ═══ « Votre page est vérifiée » (même fenêtre que « Votre profil est vérifié ») ═══ -->
+<div class="pg-modal" id="pg-verif-modal" onclick="pgModal('pg-verif-modal', false)">
+    <div class="pg-modal-c" onclick="event.stopPropagation()">
+        <div class="poignee"></div>
+        <h3 style="text-align:center;font-size:18px;font-weight:700;margin:0 0 6px;">{{ page.nom }}</h3>
+        <p style="font-size:14px;color:var(--pg-grey);margin:0 0 18px;text-align:center;line-height:1.5;">Pour veiller à la sécurité de FaceNet, nous affichons des informations sur les Pages.</p>
+        {% if page.verifiee %}
+        <div class="pg-verif">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                {{ badge(30) }}
+                <div>
+                    <strong style="display:block;font-size:14px;">{{ 'Votre page est vérifiée' if est_proprio else 'Cette Page est vérifiée' }}</strong>
+                    <span style="font-size:13px;color:var(--pg-grey);">Les comptes avec un badge Vérifié ont été authentifiés. Il peut s'agir d'abonné Tsapi Verified ou de personnes de marques notables.</span>
+                </div>
+            </div>
+            {% if est_proprio %}<a href="{{ url_for('main.avantages_badge') }}" class="pg-btn p" style="width:100%;">En savoir plus</a>{% endif %}
+        </div>
+        {% elif est_proprio %}
+        <div class="pg-verif">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                {{ badge_gris(30) }}
+                <div><strong style="display:block;font-size:14px;">Votre page n'est pas encore vérifiée</strong><span style="font-size:13px;color:var(--pg-grey);">Obtenez le badge vérifié pour renforcer la confiance de votre communauté.</span></div>
+            </div>
+            <a href="{{ url_for('main.obtention_badge') }}" class="pg-btn p" style="width:100%;">Obtenir le badge vérifié</a>
+        </div>
+        {% endif %}
+        <div class="pg-ligne"><i class="fa-regular fa-calendar-days"></i><span>Page créée en <b>{{ page.date_creation.strftime('%m/%Y') if page.date_creation else '—' }}</b></span></div>
+        <div class="pg-ligne"><i class="fa-regular fa-folder-open"></i><span><b>{{ page.categorie }}</b></span></div>
+        {% if page.owner %}<div class="pg-ligne"><i class="fa-regular fa-circle-user"></i><span>Gérée par <a href="{{ url_for('main.profile', username=page.owner.username) }}" style="color:var(--pg-blue);font-weight:700;">{{ page.owner.nom_complet or page.owner.username }}</a></span></div>{% endif %}
+        <div class="pg-ligne"><i class="fa-solid fa-users"></i><span><b class="pg-nb-abonnes">{{ page.nb_abonnes }}</b> abonné(e)s</span></div>
+        <button type="button" class="pg-btn s" style="width:100%;margin-top:14px;" onclick="pgModal('pg-verif-modal', false)">Fermer</button>
+    </div>
+</div>
+{% include '_page_js.html' %}
+{% endblock %}

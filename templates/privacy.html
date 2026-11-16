@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FaceNet - Politique de Confidentialité</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="py-8 px-4 sm:px-6 lg:px-8 text-gray-800">
+
+    <div class="max-w-3xl mx-auto glass-card rounded-2xl shadow-xl overflow-hidden p-6 sm:p-10">
+        
+        <!-- En-tête / Branding -->
+        <header class="border-b border-gray-200 pb-6 mb-8 text-center sm:text-left">
+            <div class="flex items-center justify-center sm:justify-start space-x-3 mb-2">
+                <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-md">
+                    F
+                </div>
+                <h1 class="text-2xl font-extrabold text-gray-900 tracking-tight">FaceNet</h1>
+            </div>
+            <p class="text-sm font-semibold text-blue-600 uppercase tracking-wider">Politique de Confidentialité</p>
+            <!-- Indication en cours de finalisation -->
+            <p class="text-xs text-gray-500 mt-1">Dernière mise à jour : <span id="policy-date" class="italic text-amber-600 font-medium">En cours de finalisation</span></p>
+        </header>
+
+        <!-- Intro -->
+        <p class="text-base text-gray-600 leading-relaxed mb-8">
+            Bienvenue sur <strong class="text-gray-900">FaceNet</strong>, le réseau social pensé pour connecter les utilisateurs avec leurs amis et leur famille. La protection de vos données personnelles et de votre vie privée est une priorité absolue.
+        </p>
+
+        <!-- Accordéon / Sections -->
+        <div class="space-y-4" id="privacy-accordion">
+
+            <!-- Section 1 -->
+            <div class="border border-gray-200 rounded-xl overflow-hidden transition-all duration-200 bg-white shadow-sm">
+                <button onclick="toggleSection('sec1')" class="w-full text-left p-4 font-semibold text-gray-900 flex justify-between items-center bg-gray-50 hover:bg-gray-100 transition">
+                    <span>1. Éditeur et Responsable du traitement</span>
+                    <span id="icon-sec1" class="transform transition-transform duration-200 text-gray-500">▼</span>
+                </button>
+                <div id="sec1" class="p-4 text-sm text-gray-600 space-y-2">
+                    <p>L'application FaceNet est éditée et exploitée par :</p>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li><strong>Éditeur :</strong> Tsapi Ngoumtsa Desmond</li>
+                        <li><strong>Localisation :</strong> Bafoussam, Cameroun</li>
+                        <li><strong>Contact support :</strong> <a href="mailto:Support.facenet@gmail.com" class="text-blue-600 underline">Support.facenet@gmail.com</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Section 2 -->
+            <div class="border border-gray-200 rounded-xl overflow-hidden transition-all duration-200 bg-white shadow-sm">
+                <button onclick="toggleSection('sec2')" class="w-full text-left p-4 font-semibold text-gray-900 flex justify-between items-center bg-gray-50 hover:bg-gray-100 transition">
+                    <span>2. Informations et données collectées</span>
+                    <span id="icon-sec2" class="transform transition-transform duration-200 text-gray-500">▼</span>
+                </button>
+                <div id="sec2" class="p-4 text-sm text-gray-600 space-y-2 hidden">
+                    <p>Dans le cadre de l'utilisation de FaceNet, nous collectons les données suivantes :</p>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li><strong>Données de compte :</strong> Adresse e-mail ou numéro de téléphone, nom d'utilisateur, mot de passe sécurisé (chiffré).</li>
+                        <li><strong>Profil utilisateur :</strong> Photo de profil, biographie et informations publiques du profil.</li>
+                        <li><strong>Contenus générés :</strong> Photos, publications, commentaires et messages privés partagés sur la plateforme.</li>
+                        <li><strong>Données techniques :</strong> Adresse IP, type d'appareil et journaux de connexion afin d'assurer la sécurité et le fonctionnement du service.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Section 3 -->
+            <div class="border border-gray-200 rounded-xl overflow-hidden transition-all duration-200 bg-white shadow-sm">
+                <button onclick="toggleSection('sec3')" class="w-full text-left p-4 font-semibold text-gray-900 flex justify-between items-center bg-gray-50 hover:bg-gray-100 transition">
+                    <span>3. Utilisation de vos données</span>
+                    <span id="icon-sec3" class="transform transition-transform duration-200 text-gray-500">▼</span>
+                </button>
+                <div id="sec3" class="p-4 text-sm text-gray-600 space-y-2 hidden">
+                    <p>Vos informations personnelles sont utilisées uniquement pour :</p>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>Créer et gérer votre compte utilisateur.</li>
+                        <li>Vous permettre de publier, chatter et interagir avec vos proches.</li>
+                        <li>Assurer la sécurité du réseau social et prévenir les fraudes ou comportements abusifs.</li>
+                        <li>Améliorer les performances et les fonctionnalités de FaceNet.</li>
+                    </ul>
+                    <p class="text-xs font-semibold text-emerald-600 mt-2">🔒 Vos données ne sont jamais vendues à des entreprises tierces.</p>
+                </div>
+            </div>
+
+            <!-- Section 4 -->
+            <div class="border border-gray-200 rounded-xl overflow-hidden transition-all duration-200 bg-white shadow-sm">
+                <button onclick="toggleSection('sec4')" class="w-full text-left p-4 font-semibold text-gray-900 flex justify-between items-center bg-gray-50 hover:bg-gray-100 transition">
+                    <span>4. Modération et règles de communauté</span>
+                    <span id="icon-sec4" class="transform transition-transform duration-200 text-gray-500">▼</span>
+                </button>
+                <div id="sec4" class="p-4 text-sm text-gray-600 space-y-2 hidden">
+                    <p>En tant que réseau social, FaceNet interdit strictly :</p>
+                    <ul class="list-disc pl-5 space-y-1 text-red-600">
+                        <li>Les discours haineux, diffamatoires ou incitant à la violence.</li>
+                        <li>Les contenus à caractère pornographique ou explicite.</li>
+                        <li>Le harcèlement et l'usurpation d'identité.</li>
+                    </ul>
+                    <p class="mt-2">FaceNet met à disposition des outils permettant de <strong>signaler tout contenu inapproprié</strong> ou de <strong>bloquer un utilisateur</strong>.</p>
+                </div>
+            </div>
+
+            <!-- Section 5 -->
+            <div class="border border-gray-200 rounded-xl overflow-hidden transition-all duration-200 bg-white shadow-sm">
+                <button onclick="toggleSection('sec5')" class="w-full text-left p-4 font-semibold text-gray-900 flex justify-between items-center bg-gray-50 hover:bg-gray-100 transition">
+                    <span>5. Vos droits et suppression du compte</span>
+                    <span id="icon-sec5" class="transform transition-transform duration-200 text-gray-500">▼</span>
+                </button>
+                <div id="sec5" class="p-4 text-sm text-gray-600 space-y-2 hidden">
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li><strong>Droit d'accès et de rectification :</strong> Vous pouvez modifier vos informations à tout moment depuis les paramètres de votre profil.</li>
+                        <li><strong>Suppression des données :</strong> Vous pouvez demander la suppression définitive de votre compte et de l'ensemble de vos données associées à tout moment depuis l'application ou en contactant notre support.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Section 6 (Contact) -->
+            <div class="border border-gray-200 rounded-xl overflow-hidden transition-all duration-200 bg-blue-50/50 shadow-sm">
+                <button onclick="toggleSection('sec6')" class="w-full text-left p-4 font-semibold text-blue-900 flex justify-between items-center bg-blue-100/50 hover:bg-blue-100 transition">
+                    <span>6. Contact</span>
+                    <span id="icon-sec6" class="transform transition-transform duration-200 text-blue-500">▼</span>
+                </button>
+                <div id="sec6" class="p-4 text-sm text-gray-700">
+                    <p>Pour toute question concernant la présente Politique de confidentialité ou pour exercer vos droits, contactez-nous directement :</p>
+                    <a href="mailto:Support.facenet@gmail.com" class="inline-flex items-center mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium text-xs hover:bg-blue-700 transition shadow">
+                        📧 Support.facenet@gmail.com
+                    </a>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Pied de page -->
+        <footer class="mt-8 pt-6 border-t border-gray-200 text-center text-xs text-gray-400">
+            &copy; FaceNet. Tous droits réservés. Bafoussam, Cameroun.
+        </footer>
+
+    </div>
+
+    <!-- Script JavaScript -->
+    <script>
+        function toggleSection(id) {
+            const element = document.getElementById(id);
+            const icon = document.getElementById('icon-' + id);
+            
+            if (element.classList.contains('hidden')) {
+                element.classList.remove('hidden');
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                element.classList.add('hidden');
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        /* 
+           Pour la mise en production future :
+           Décommente le code ci-dessous pour afficher automatiquement la date exacte du jour de publication !
+        */
+        /*
+        document.getElementById('policy-date').textContent = new Date().toLocaleDateString('fr-FR', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+        document.getElementById('policy-date').classList.remove('italic', 'text-amber-600');
+        */
+    </script>
+</body>
+</html>

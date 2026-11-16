@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0f1b4d">
+<title>Profil verrouillé — FaceNet</title>
+<style>
+    :root { --txt:#0f172a; --gray:#5b6478; --blue:#1877f2; --violet:#6c4bff; --red:#e5314f; --green:#16a05a; --card:rgba(255,255,255,.92); --tile:#eef2ff; --line:#e3e7f3; }
+    @media (prefers-color-scheme: dark) { :root { --txt:#eef1ff; --gray:#aab3d1; --card:rgba(24,28,52,.88); --tile:rgba(255,255,255,.07); --line:rgba(255,255,255,.12); } }
+    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    html, body { margin:0; min-height:100%; }
+    body { min-height:100vh; min-height:100dvh; display:flex; align-items:center; justify-content:center;
+           padding:max(20px, env(safe-area-inset-top)) 18px max(20px, env(safe-area-inset-bottom));
+           font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:var(--txt);
+           background:radial-gradient(1200px 700px at 15% -10%, #3b5bff 0%, transparent 60%),
+                      radial-gradient(900px 600px at 110% 110%, #8b46ff 0%, transparent 55%),
+                      linear-gradient(160deg,#0f1b4d,#1b2a78 55%,#2b1d6e); overflow-x:hidden; }
+    .orb { position:fixed; border-radius:50%; filter:blur(60px); opacity:.35; pointer-events:none; animation:drift 14s ease-in-out infinite alternate; }
+    .orb.a { width:280px; height:280px; background:#4db6ff; top:-80px; left:-60px; }
+    .orb.b { width:320px; height:320px; background:#a06bff; bottom:-120px; right:-80px; animation-delay:-6s; }
+    @keyframes drift { to { transform:translate(30px,40px) scale(1.12); } }
+
+    .box { position:relative; width:100%; max-width:440px; background:var(--card); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+           border:1px solid var(--line); border-radius:26px; padding:34px 24px 24px; text-align:center;
+           box-shadow:0 30px 80px rgba(8,12,48,.45); animation:rise .6s cubic-bezier(.2,.8,.2,1) both; }
+    @keyframes rise { from { opacity:0; transform:translateY(22px) scale(.97); } to { opacity:1; transform:none; } }
+
+    .av { position:relative; width:118px; height:118px; margin:0 auto 16px; }
+    .av::before { content:""; position:absolute; inset:-7px; border-radius:50%;
+                  background:conic-gradient(from 0deg,#4db6ff,#6c4bff,#e5314f,#4db6ff); animation:spin 6s linear infinite; }
+    .av::after { content:""; position:absolute; inset:-3px; border-radius:50%; background:var(--card); }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .av img { position:relative; z-index:1; width:118px; height:118px; border-radius:50%; object-fit:cover; display:block; filter:grayscale(.45) brightness(.92); background:#c9d0ea; }
+    .av .lock { position:absolute; z-index:2; right:-6px; bottom:-4px; width:44px; height:44px; border-radius:50%;
+                background:linear-gradient(145deg,#ff5a76,#d4223f); display:flex; align-items:center; justify-content:center;
+                border:4px solid var(--card); box-shadow:0 6px 16px rgba(229,49,79,.5); animation:pulse 2.4s ease-in-out infinite; }
+    .av .lock svg { width:20px; height:20px; fill:#fff; }
+    @keyframes pulse { 50% { transform:scale(1.09); } }
+
+    h1 { font-size:24px; line-height:1.2; margin:0 0 4px; font-weight:800; letter-spacing:-.2px; }
+    .nom { color:var(--gray); font-size:15px; margin:0 0 18px; font-weight:600; }
+    .msg { font-size:17px; font-weight:700; line-height:1.5; margin:0 0 20px; }
+    .msg small { display:block; margin-top:6px; font-weight:500; font-size:14px; color:var(--gray); }
+
+    .count { background:var(--tile); border:1px solid var(--line); border-radius:18px; padding:14px 12px 12px; margin:0 0 20px; }
+    .count .lab { font-size:12.5px; color:var(--gray); font-weight:700; text-transform:uppercase; letter-spacing:.7px; margin:0 0 10px; }
+    .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+    .tile { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 0 8px; }
+    .tile b { display:block; font-size:24px; font-variant-numeric:tabular-nums; line-height:1.1; }
+    .tile span { font-size:11px; color:var(--gray); font-weight:600; }
+    .count .date { margin:11px 0 0; font-size:13.5px; color:var(--gray); line-height:1.4; }
+    .infini { font-size:15px; font-weight:700; padding:6px 4px 2px; line-height:1.5; }
+    .infini i { font-style:normal; display:block; font-size:34px; line-height:1; margin-bottom:6px; }
+
+    button, a.btn { display:block; width:100%; padding:15px 18px; border-radius:14px; border:0; font:inherit; font-weight:800; font-size:15.5px; cursor:pointer; text-decoration:none; text-align:center; transition:transform .12s ease, box-shadow .2s ease, opacity .2s; }
+    button:active, a.btn:active { transform:scale(.98); }
+    .primary { color:#fff; background:linear-gradient(135deg,#1877f2,#6c4bff); box-shadow:0 10px 24px rgba(60,80,255,.38); }
+    .primary:disabled { opacity:.6; cursor:not-allowed; box-shadow:none; }
+    .ghost { background:transparent; color:var(--blue); margin-top:6px; font-weight:700; }
+    .feedback { min-height:20px; margin:12px 0 0; font-size:14px; line-height:1.45; }
+    .feedback.err { color:var(--red); }
+    .sent { display:none; margin-top:14px; padding:16px; border-radius:16px; background:rgba(22,160,90,.12); border:1px solid rgba(22,160,90,.35); color:var(--green); font-weight:700; font-size:14.5px; line-height:1.5; animation:rise .4s both; }
+    .sent .tick { width:46px; height:46px; margin:0 auto 8px; border-radius:50%; background:var(--green); display:flex; align-items:center; justify-content:center; }
+    .sent .tick svg { width:24px; height:24px; stroke:#fff; stroke-width:3; fill:none; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:30; stroke-dashoffset:30; animation:draw .5s .15s forwards; }
+    @keyframes draw { to { stroke-dashoffset:0; } }
+    .sent small { display:block; font-weight:500; color:var(--gray); margin-top:4px; }
+    .free { display:none; margin-top:14px; padding:16px; border-radius:16px; background:rgba(22,160,90,.12); border:1px solid rgba(22,160,90,.35); color:var(--green); font-weight:800; }
+
+    details { margin-top:14px; text-align:left; border-top:1px solid var(--line); padding-top:12px; }
+    summary { cursor:pointer; font-size:13.5px; font-weight:700; color:var(--gray); list-style:none; text-align:center; }
+    summary::-webkit-details-marker { display:none; }
+    details input { width:100%; margin:12px 0 8px; padding:13px 14px; border-radius:12px; border:1px solid var(--line); background:var(--tile); color:var(--txt); font:inherit; font-size:15px; }
+    details button { background:var(--txt); color:var(--card); padding:13px 16px; font-size:14.5px; }
+    .foot { margin:18px 0 0; font-size:12px; color:var(--gray); display:flex; gap:6px; justify-content:center; align-items:center; }
+    @media (max-width:360px) { .tile b { font-size:20px; } .box { padding:28px 16px 20px; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="orb a" aria-hidden="true"></div><div class="orb b" aria-hidden="true"></div>
+<main class="box" role="main">
+    <div class="av">
+        <img src="{{ avatar_url }}" alt="Photo de profil de {{ nom }}" onerror="this.style.visibility='hidden'">
+        <div class="lock" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg></div>
+    </div>
+    <h1>Profil verrouillé</h1>
+    <p class="nom">{{ nom }}</p>
+    <p class="msg">{{ message }}<small>Votre mot de passe est correct, mais l'accès est suspendu par votre parent ou tuteur.</small></p>
+
+    <section class="count" id="count" aria-live="polite">
+        {% if indefini %}
+        <div class="infini"><i aria-hidden="true">&#8734;</i>Le blocage reste actif jusqu'à ce que votre parent ou tuteur le lève.</div>
+        {% else %}
+        <p class="lab">Déblocage dans</p>
+        <div class="tiles" id="tiles">
+            <div class="tile"><b id="t-j">0</b><span>jours</span></div>
+            <div class="tile"><b id="t-h">0</b><span>heures</span></div>
+            <div class="tile"><b id="t-m">0</b><span>minutes</span></div>
+            <div class="tile"><b id="t-s">0</b><span>secondes</span></div>
+        </div>
+        <p class="date" id="date"></p>
+        {% endif %}
+    </section>
+
+    <button type="button" class="primary" id="ask">Demander l'autorisation à mon parent</button>
+    <p class="feedback err" id="err" role="alert"></p>
+    <div class="sent" id="sent" role="status">
+        <div class="tick"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+        Votre demande a été envoyée à votre parent.
+        <small>Il reçoit une notification. Cette page se met à jour dès qu'il lève le blocage.</small>
+    </div>
+    <div class="free" id="free" role="status">&#127881; Le blocage est levé : vous pouvez vous reconnecter.</div>
+
+    {% if mdp_tuteur %}
+    <details>
+        <summary>Je suis le parent ou tuteur</summary>
+        <input type="password" id="mdp" autocomplete="current-password" placeholder="Mot de passe du tuteur" aria-label="Mot de passe du tuteur">
+        <button type="button" id="unlock">Déverrouiller ce profil</button>
+        <p class="feedback err" id="err2" role="alert"></p>
+    </details>
+    {% endif %}
+
+    <a class="btn ghost" href="/login" id="back">Retour à la connexion</a>
+    <p class="foot">&#128737; Protection parentale FaceNet</p>
+</main>
+<script>
+(function () {
+    'use strict';
+    var FIN = {{ fin_ms|tojson }}, SERVEUR = {{ serveur_ms|tojson }}, INDEFINI = {{ 'true' if indefini else 'false' }}, TOKEN = {{ csrf_token|tojson }};
+    var $ = function (id) { return document.getElementById(id); };
+    var decalage = SERVEUR - Date.now();            // l'heure du serveur fait foi (pas celle du téléphone)
+    var timer = null;
+
+    function libere() {
+        clearInterval(timer); clearInterval(poll);
+        $('free').style.display = 'block'; $('ask').style.display = 'none'; $('sent').style.display = 'none';
+        var c = $('count'); if (c) { c.style.display = 'none'; }
+        var back = $('back'); back.className = 'btn primary'; back.textContent = 'Me reconnecter';
+    }
+    function tick() {
+        var reste = Math.max(0, FIN - (Date.now() + decalage));
+        var s = Math.floor(reste / 1000);
+        $('t-j').textContent = Math.floor(s / 86400);
+        $('t-h').textContent = Math.floor(s % 86400 / 3600);
+        $('t-m').textContent = Math.floor(s % 3600 / 60);
+        $('t-s').textContent = s % 60;
+        if (reste <= 0) { clearInterval(timer); check(); }
+    }
+    if (!INDEFINI) {
+        try { $('date').textContent = 'Jusqu’au ' + new Date(FIN).toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'short' }) + '.'; } catch (e) {}
+        tick(); timer = setInterval(tick, 1000);
+    }
+
+    $('ask').addEventListener('click', function () {
+        var b = this; b.disabled = true; $('err').textContent = '';
+        fetch('/profil-verrouille/demande-autorisation', { method: 'POST', credentials: 'same-origin',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-FN-CSRF': TOKEN }, body: '{}' })
+            .then(function (r) { return r.json().catch(function () { return { success: false, error: 'Réponse invalide du serveur.' }; }); })
+            .then(function (d) {
+                if (d.redirect && !d.success) { location.href = d.redirect; return; }
+                if (d.success) { b.style.display = 'none'; $('sent').style.display = 'block'; }
+                else { $('err').textContent = d.error || 'Envoi impossible pour le moment.'; b.disabled = false; }
+            })
+            .catch(function () { $('err').textContent = 'Connexion impossible. Réessayez.'; b.disabled = false; });
+    });
+
+    var u = $('unlock');
+    if (u) {
+        u.addEventListener('click', function () {
+            var pw = $('mdp').value; $('err2').textContent = '';
+            if (!pw) { $('err2').textContent = 'Saisissez le mot de passe du tuteur.'; return; }
+            u.disabled = true;
+            fetch('/profil-verrouille/action', { method: 'POST', credentials: 'same-origin',
+                  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-FN-CSRF': TOKEN },
+                  body: JSON.stringify({ action: 'deverrouiller', password: pw }) })
+                .then(function (r) { return r.json().catch(function () { return { success: false, error: 'Réponse invalide du serveur.' }; }); })
+                .then(function (d) {
+                    if (d.success) { location.href = d.redirect || '/login'; return; }
+                    $('err2').textContent = d.error || 'Déverrouillage impossible.'; u.disabled = false;
+                })
+                .catch(function () { $('err2').textContent = 'Connexion impossible. Réessayez.'; u.disabled = false; });
+        });
+    }
+
+    /* Le parent a levé le blocage (ou l'heure est passée) : la page le détecte seule. */
+    function check() {
+        fetch('/profil-verrouille/etat', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+            .then(function (r) { return r.json(); })
+            .then(function (d) { if (d && d.locked === false) { libere(); } })
+            .catch(function () {});
+    }
+    var poll = setInterval(check, 15000);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% if csrf_token is defined %}<meta name="csrf-token" content="{{ csrf_token() }}">{% endif %}
+  <title>Modération des signalements</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:#f0f2f5;font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;color:#1c1e21}
+    header{background:#fff;border-bottom:1px solid #dadde1;padding:14px 16px}
+    header h1{margin:0;font-size:1.2rem}
+    nav{display:flex;gap:8px;margin-top:10px}
+    nav a{padding:7px 14px;border-radius:18px;background:#e4e6eb;color:#1c1e21;text-decoration:none;font-size:.9rem}
+    nav a.on{background:#1877f2;color:#fff}
+    main{max-width:720px;margin:0 auto;padding:14px}
+    .card{background:#fff;border-radius:10px;padding:14px;margin-bottom:12px;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+    .top{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+    .tag{font-weight:600}
+    .meta{color:#65676b;font-size:.85rem;margin-top:2px}
+    .snap{margin:10px 0;padding:10px;background:#f0f2f5;border-radius:8px;white-space:pre-wrap;word-break:break-word;font-size:.92rem}
+    .det{font-size:.9rem;margin:6px 0}
+    textarea{width:100%;min-height:56px;padding:8px;border:1px solid #ccd0d5;border-radius:8px;font:inherit;margin-top:6px}
+    .rest{margin-top:10px;padding:10px;border:1px solid #ccd0d5;border-radius:8px;background:#fafbfc;font-size:.9rem}
+    .rest strong{display:block;margin-bottom:6px}
+    .rest select,.rest input{padding:8px;border:1px solid #ccd0d5;border-radius:8px;font:inherit;background:#fff;margin-top:4px}
+    .rest input{width:110px;margin-left:6px}
+    .rest small{display:block;color:#65676b;margin-top:6px}
+    .strikes{display:inline-block;padding:2px 10px;border-radius:12px;background:#e4e6eb;font-weight:600}
+    .strikes.alerte{background:#fdecea;color:#c0392b}
+    .acc-opts{display:block;margin-top:6px}
+    .acc-opts[hidden]{display:none}
+    .actions{display:flex;gap:8px;margin-top:10px}
+    .actions button{flex:1;padding:10px;border:0;border-radius:8px;font-weight:600;font-size:.95rem;cursor:pointer}
+    .ok{background:#c0392b;color:#fff}
+    .no{background:#e4e6eb;color:#1c1e21}
+    .actions button:disabled{opacity:.5;cursor:wait}
+    .empty{text-align:center;color:#65676b;padding:40px 0}
+    .done{font-size:.9rem;color:#65676b;margin-top:8px}
+    a.prof{color:#1877f2;text-decoration:none}
+    .media{margin:8px 0}
+    .media img,.media video{display:block;max-width:100%;max-height:420px;margin:6px 0;border-radius:8px;background:#000}
+    .media audio{width:100%;margin:6px 0}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Signalements</h1>
+  <nav>
+    <a href="?status=pending"  class="{{ 'on' if status == 'pending' }}">En attente</a>
+    <a href="?status=approved" class="{{ 'on' if status == 'approved' }}">Approuvés</a>
+    <a href="?status=rejected" class="{{ 'on' if status == 'rejected' }}">Rejetés</a>
+  </nav>
+</header>
+
+<main>
+  {% for r in items %}
+  <article class="card" id="rep-{{ r.id }}">
+    <div class="top">
+      <span class="tag">{{ r.type }} · {{ r.reason }}</span>
+      <span class="meta">{{ r.created_at }}</span>
+    </div>
+    <div class="meta">
+      Signalé par {{ r.reporter }} — {{ 'propriétaire' if r.type_key == 'group' else 'auteur' }} :
+      <a class="prof" href="/profil/{{ r.reported_id }}" target="_blank" rel="noopener">{{ r.reported }}</a>
+    </div>
+    {% if r.target_id %}<div class="meta">ID du contenu signalé : #{{ r.target_id }}</div>{% endif %}
+    {% if r.snapshot %}<div class="snap">{{ r.snapshot }}</div>{% endif %}
+    {% if r.media %}
+    <div class="media">
+      {% for m in r.media %}
+        {% if m.kind == 'video' %}<video src="{{ m.url }}" controls preload="metadata"></video>
+        {% elif m.kind == 'image' %}<a href="{{ m.url }}" target="_blank" rel="noopener"><img src="{{ m.url }}" alt="Contenu signalé" loading="lazy"></a>{% if m.nom %}<div class="meta">{{ m.nom }}</div>{% endif %}
+        {% elif m.kind == 'audio' %}<audio src="{{ m.url }}" controls preload="none"></audio>
+        {% else %}<a class="prof" href="{{ m.url }}" target="_blank" rel="noopener">Ouvrir le fichier{% if m.nom %} : {{ m.nom }}{% endif %}</a>{% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if r.details %}<div class="det"><strong>Précisions du signaleur :</strong> {{ r.details }}</div>{% endif %}
+
+    {% if status == 'pending' %}
+
+      <div class="rest">
+        <strong>Infractions confirmées pour cet utilisateur :
+          <span class="strikes {{ 'alerte' if r.strikes + 1 >= seuil }}">{{ r.strikes }}</span></strong>
+        {% if r.protege %}
+          <small>Compte protégé (modérateur, administrateur ou Centre d'assistance) : aucune sanction de compte possible.</small>
+        {% elif r.sanction_possible %}
+          <div>Ce serait sa {{ r.strikes + 1 }}ᵉ infraction : vous pouvez sanctionner le compte.</div>
+          <select class="acc" onchange="basculerCompte(this)">
+            <option value="warning">Avertissement seul</option>
+            <option value="restriction">Restreindre le compte</option>
+            <option value="deletion">Supprimer le compte de la plateforme</option>
+          </select>
+          <span class="acc-opts" hidden>
+            <select class="acc-dur" onchange="basculerPerso(this)">
+              <option value="24">24 heures</option>
+              <option value="72">3 jours</option>
+              <option value="168" selected>7 jours</option>
+              <option value="720">30 jours</option>
+              <option value="2160">90 jours</option>
+              <option value="custom">Durée personnalisée…</option>
+            </select>
+            <input type="number" class="acc-custom" min="1" max="8760" placeholder="Heures" hidden>
+          </span>
+          <small>Sans choix, un avertissement est envoyé.</small>
+        {% else %}
+          <small>Approuver enverra l'avertissement n° {{ r.strikes + 1 }}. Une sanction de compte est possible à partir de la {{ seuil }}ᵉ infraction.</small>
+        {% endif %}
+      </div>
+
+      {% if r.type_key == 'message' %}
+      <div class="rest">
+        <strong>Restriction de messagerie si vous approuvez</strong>
+        <select class="dur" onchange="basculerPerso(this)">
+          <option value="0">Aucune restriction</option>
+          <option value="1">1 heure</option>
+          <option value="24">24 heures</option>
+          <option value="72">3 jours</option>
+          <option value="168">7 jours</option>
+          <option value="720">30 jours</option>
+          <option value="custom">Durée personnalisée…</option>
+        </select>
+        <input type="number" class="dur-custom" min="1" max="8760" placeholder="Heures" hidden>
+        <small>L'auteur du message ne pourra plus écrire à d'autres utilisateurs pendant la durée choisie.</small>
+      </div>
+      {% endif %}
+
+      <textarea placeholder="Note interne (facultatif)" maxlength="1000"></textarea>
+      <div class="actions">
+        <button class="ok" onclick="decider({{ r.id }}, 'approved', this)">Approuver le signalement</button>
+        <button class="no" onclick="decider({{ r.id }}, 'rejected', this)">Rejeter</button>
+      </div>
+    {% else %}
+      {% if r.violation %}<div class="done">{{ r.violation }}</div>{% endif %}
+      {% if r.restriction %}<div class="done">Restriction de messagerie appliquée : {{ r.restriction }}</div>{% endif %}
+      {% if r.note %}<div class="done">Note du modérateur : {{ r.note }}</div>{% endif %}
+    {% endif %}
+  </article>
+  {% else %}
+  <p class="empty">Aucun signalement {{ {'pending':'en attente','approved':'approuvé','rejected':'rejeté'}[status] }}.</p>
+  {% endfor %}
+</main>
+
+<script>
+function basculerPerso(select) {
+  const champ = select.parentElement.querySelector('input[type=number]');
+  champ.hidden = select.value !== 'custom';
+  if (!champ.hidden) champ.focus();
+}
+
+function basculerCompte(select) {
+  const options = select.parentElement.querySelector('.acc-opts');
+  options.hidden = select.value !== 'restriction';
+}
+
+function libelleDuree(h) {
+  if (h >= 48 && h % 24 === 0) return (h / 24) + ' jours';
+  return h + (h > 1 ? ' heures' : ' heure');
+}
+
+// Lit une durée (liste + champ « personnalisé ») ; renvoie null si invalide.
+function lireDuree(select, champ) {
+  const h = select.value === 'custom' ? parseInt(champ.value, 10) : parseInt(select.value, 10);
+  return (h >= 1 && h <= 8760) ? h : null;
+}
+
+async function decider(id, decision, btn) {
+  const carte = document.getElementById('rep-' + id);
+  let restrictionHeures = 0, compteAction = 'warning', compteHeures = 0;
+
+  if (decision === 'approved') {
+    // Restriction de messagerie (signalements de messages)
+    const dur = carte.querySelector('.dur');
+    if (dur) {
+      restrictionHeures = dur.value === 'custom'
+        ? parseInt(carte.querySelector('.dur-custom').value, 10)
+        : parseInt(dur.value, 10);
+      if (!(restrictionHeures >= 0 && restrictionHeures <= 8760)) {
+        alert('Indique une durée valide en heures (de 1 à 8760).');
+        return;
+      }
+      if (restrictionHeures > 0 &&
+          !confirm("Approuver et empêcher cet utilisateur d'envoyer des messages pendant " +
+                   libelleDuree(restrictionHeures) + " ?")) return;
+    }
+
+    // Sanction de compte (à partir de la 3e infraction)
+    const acc = carte.querySelector('.acc');
+    if (acc) {
+      compteAction = acc.value;
+      if (compteAction === 'restriction') {
+        compteHeures = lireDuree(carte.querySelector('.acc-dur'), carte.querySelector('.acc-custom'));
+        if (!compteHeures) {
+          alert('Indique une durée valide en heures (de 1 à 8760).');
+          return;
+        }
+        if (!confirm('Restreindre ce compte pendant ' + libelleDuree(compteHeures) +
+                     ' ? Il ne pourra plus publier, commenter ni envoyer de messages.')) return;
+      } else if (compteAction === 'deletion') {
+        if (!confirm("Supprimer ce compte de la plateforme ? L'utilisateur ne pourra plus se connecter.")) return;
+      }
+    }
+  }
+
+  const boutons = carte.querySelectorAll('button');
+  boutons.forEach(b => b.disabled = true);
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+  try {
+    const res = await fetch('/moderation/signalements/' + id + '/decision', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json', ...(csrf && {'X-CSRFToken': csrf})},
+      body: JSON.stringify({
+        decision,
+        note: carte.querySelector('textarea').value,
+        restriction_hours: restrictionHeures,
+        account_action: compteAction,
+        account_restriction_hours: compteHeures
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Erreur ' + res.status);
+    location.reload();
+  } catch (e) {
+    alert(e.message);
+    boutons.forEach(b => b.disabled = false);
+  }
+}
+</script>
+</body>
+</html>

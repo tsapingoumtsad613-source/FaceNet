@@ -1,0 +1,95 @@
+<!-- ══════════════════════════════════════════════════════════════════════
+     PATCH ADDITIF pour feed.html — menu ⋮ des publications
+     À COLLER tel quel juste AVANT la ligne :
+         {# AJOUT ADDITIF : modale de signalement (même système que profile.html) #}
+     (donc APRÈS le script « options supplémentaires du menu ⋮ »).
+     Aucune fonction existante n'est supprimée : les deux fonctions ci-dessous
+     remplacent seulement les anciennes versions « sur cet appareil ».
+═══════════════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+    'use strict';
+    var CLE_LOCAL = 'fn_feed_auteurs_masques';
+
+    function idCourant() { try { return currentPostOptionsId || null; } catch (e) { return null; } }
+    function carte() { var id = idCourant(); return id ? document.getElementById('publication-' + id) : null; }
+    function fermer() { if (typeof closePostOptions === 'function') closePostOptions(); }
+    function avis(m) { if (typeof showFacenetToast === 'function') showFacenetToast(m); else alert(m); }
+    function post(url) {
+        return fetch(url, { method: 'POST', credentials: 'same-origin' })
+            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); });
+    }
+    function listeLocale() {
+        try { var a = JSON.parse(localStorage.getItem(CLE_LOCAL) || '[]'); return Array.isArray(a) ? a : []; }
+        catch (e) { return []; }
+    }
+
+    /* Masquer l'auteur : enregistré en base (suit le compte, pas l'appareil) */
+    window.fnOptMasquerAuteur = function () {
+        var c = carte(), id = idCourant();
+        if (!c || !id) return;
+        var auteur = c.dataset.authorId;
+        if (!auteur) { avis("Impossible d'identifier l'auteur."); return; }
+        if (!confirm('Ne plus voir les publications de cet auteur dans votre fil ?')) return;
+        post('/api/publication/' + encodeURIComponent(id) + '/masquer-auteur')
+            .then(function (x) {
+                if (!x.ok || !x.d.success) throw new Error(x.d.error || 'Action refusée');
+                fermer();
+                document.querySelectorAll('[id^="publication-"]').forEach(function (el) {
+                    if (/^publication-\d+$/.test(el.id) && el.dataset.authorId === auteur) {
+                        el.style.display = 'none';
+                        el.dataset.fnAuteurMasque = '1';
+                    }
+                });
+                avis('Les publications de cet auteur sont masquées. Vous pouvez les réafficher depuis ce même menu.');
+            })
+            .catch(function (err) { avis(err.message || "Impossible de masquer cet auteur."); });
+    };
+
+    /* Réafficher tous les auteurs masqués */
+    window.fnOptReafficherAuteurs = function () {
+        if (!confirm('Réafficher tous les auteurs masqués ?')) return;
+        post('/api/fil/auteurs-masques/retirer')
+            .then(function (x) {
+                if (!x.ok || !x.d.success) throw new Error(x.d.error || 'Action refusée');
+                try { localStorage.removeItem(CLE_LOCAL); } catch (e) { }
+                fermer();
+                document.querySelectorAll('[data-fn-auteur-masque]').forEach(function (el) {
+                    el.style.display = '';
+                    delete el.dataset.fnAuteurMasque;
+                });
+                avis('Les auteurs masqués réapparaîtront dans votre fil.');
+            })
+            .catch(function (err) { avis(err.message || 'Impossible de réafficher les auteurs.'); });
+    };
+
+    /* Le bouton « Réafficher » ne s'affiche que s'il y a vraiment des auteurs masqués */
+    var precedente = window.openPostOptions;
+    if (typeof precedente === 'function') {
+        window.openPostOptions = function () {
+            var r = precedente.apply(this, arguments);
+            try {
+                var btn = document.getElementById('fn-opt-unhide-authors');
+                if (btn) {
+                    fetch('/api/fil/auteurs-masques', { credentials: 'same-origin' })
+                        .then(function (res) { return res.ok ? res.json() : null; })
+                        .then(function (d) {
+                            if (d && d.success) btn.style.display = (d.nombre > 0 || listeLocale().length > 0) ? 'flex' : 'none';
+                        })
+                        .catch(function () { });
+                }
+            } catch (e) { }
+            return r;
+        };
+    }
+
+    /* Texte honnête : ce n'est plus limité à l'appareil */
+    function corrigerTexte() {
+        var b = document.getElementById('fn-opt-hide-author');
+        var sub = b && b.querySelector('.post-options-sub');
+        if (sub) sub.textContent = "Elles n'apparaîtront plus dans votre fil, sur tous vos appareils.";
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', corrigerTexte);
+    else corrigerTexte();
+})();
+</script>

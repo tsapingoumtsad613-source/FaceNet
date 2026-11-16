@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from '_page_macros.html' import badge with context %}
+
+{% block title %}Mes Pages — FaceNet{% endblock %}
+
+{% block content %}
+{% include '_page_style.html' %}
+<div class="pg-wrap">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}{% if cat in ('success', 'error') %}<div class="pg-flash {{ cat }}">{{ msg }}</div>{% endif %}{% endfor %}
+    {% endwith %}
+
+    <div class="pg-card" style="display:flex;align-items:center;gap:12px;">
+        <a class="pg-back" href="{{ url_for('main.feed') }}" aria-label="Retour">←</a>
+        <h3 style="margin:0;flex:1;">Mes Pages</h3>
+        <a class="pg-btn p" href="/pages/creer" style="flex:0 0 auto;min-width:0;padding:9px 16px;font-size:14px;"><i class="fa-solid fa-plus"></i> Créer</a>
+    </div>
+
+    <div class="pg-card">
+        <h3>Pages que je gère</h3>
+        {% if mes_pages %}
+        <div class="pg-liste">
+            {% for p in mes_pages %}
+            <div class="pg-item">
+                <a href="{{ url_for('main.fnpage_profil', page_id=p.id) }}"><img src="{{ url_for('static', filename='uploads/' + (p.avatar or 'default_avatar.png')) }}" alt=""></a>
+                <div class="t">
+                    <a href="{{ url_for('main.fnpage_profil', page_id=p.id) }}"><b>{{ p.nom }}{% if p.verifiee %}{{ badge(15) }}{% endif %}</b></a>
+                    <span>{{ p.categorie or 'Page' }} · {{ p.nb_abonnes }} abonné(e)(s){% if page_active and page_active.id == p.id %} · active{% endif %}</span>
+                </div>
+                <a class="pg-btn s" href="{{ url_for('main.fnpage_profil', page_id=p.id) }}">Voir</a>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="pg-vide">Vous ne gérez encore aucune Page.</div>
+        {% endif %}
+    </div>
+
+    {% if pages_suivies %}
+    <div class="pg-card">
+        <h3>Pages que je suis</h3>
+        <div class="pg-liste">
+            {% for p in pages_suivies %}
+            <div class="pg-item">
+                <a href="{{ url_for('main.fnpage_profil', page_id=p.id) }}"><img src="{{ url_for('static', filename='uploads/' + (p.avatar or 'default_avatar.png')) }}" alt=""></a>
+                <div class="t">
+                    <a href="{{ url_for('main.fnpage_profil', page_id=p.id) }}"><b>{{ p.nom }}{% if p.verifiee %}{{ badge(15) }}{% endif %}</b></a>
+                    <span>{{ p.categorie or 'Page' }} · {{ p.nb_abonnes }} abonné(e)(s)</span>
+                </div>
+                <a class="pg-btn s" href="{{ url_for('main.fnpage_profil', page_id=p.id) }}">Voir</a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,2447 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <title>Tsapi Verified | FaceNet</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://unpkg.com/libphonenumber-js@1/bundle/libphonenumber-max.js"></script>
+
+    <style>
+        /* ═══════════════════════════════════════════════════════════════════
+           MODE "PAGE BADGE"  —  CSS chargé UNIQUEMENT sur cette page.
+           Il cache le header + la nav du bas + les toasts, et libère tout
+           l'espace pour le contenu. Aucune autre page n'est affectée.
+           ═══════════════════════════════════════════════════════════════════ */
+        body > .fn-header,
+        body > .facenet-nav-bottom,
+        body > #notification-container {
+            display: none !important;
+        }
+
+        body > main.facenet-container {
+            max-width: 100% !important;
+            width: 100% !important;
+            padding-bottom: 0 !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            margin: 0 !important;
+        }
+
+        /* ═══════════════ fin du bloc "mode page badge" ═══════════════ */
+
+        :root, [data-theme="light"] {
+            --fn-blue: #0866FF;
+            --fn-blue-hover: #0052cc;
+            --fn-bg: #F0F2F5;
+            --fn-gray: #65676B;
+            --fn-border: #E4E6EB;
+            --white: #ffffff;
+            --text-dark: #1C1E21;
+            --card-shadow: rgba(0, 0, 0, 0.08);
+            --card-shadow-hover: rgba(8, 102, 255, 0.15);
+            --input-bg: #FAFAFA;
+            --section-bg: #F7F9FA;
+            --success-color: #12883B;
+            --error-color: #D92D20;
+            --fb-verified: #1877f2;
+            --placeholder-bg: #EAF1FB;
+            --placeholder-skin: #F2C9A0;
+            --placeholder-shirt: #4A76C9;
+        }
+        [data-theme="dark"] {
+            --fn-bg: #18191A;
+            --white: #242526;
+            --text-dark: #E4E6EB;
+            --fn-border: #3E4042;
+            --fn-gray: #B0B3B8;
+            --card-shadow: rgba(0, 0, 0, 0.35);
+            --card-shadow-hover: rgba(69, 153, 255, 0.25);
+            --input-bg: #3A3B3C;
+            --section-bg: #1E2021;
+            --success-color: #34C759;
+            --error-color: #FF453A;
+            --placeholder-bg: #2A2F38;
+            --placeholder-skin: #C99B72;
+            --placeholder-shirt: #3E5C99;
+        }
+        body {
+            background: var(--fn-bg);
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text-dark);
+            transition: background 0.3s ease, color 0.3s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .forfait-page-wrap {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 12px 60px 12px;
+            box-sizing: border-box;
+        }
+
+        /* ═══ Croix de fermeture (haut gauche, sobre, s'adapte au thème) ═══ */
+        .fn-close-badge {
+            width: 100%;
+            max-width: 620px;
+            margin: 0 auto 16px auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-start;
+            background: transparent;
+            border: none;
+            padding: 8px 4px;
+            cursor: pointer;
+            color: var(--text-dark);
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+            align-self: flex-start;
+        }
+        .fn-close-badge:hover {
+            transform: translateX(-3px);
+            opacity: 0.7;
+        }
+        .fn-close-badge:active {
+            transform: scale(0.94);
+        }
+        .fn-close-badge svg {
+            width: 26px;
+            height: 26px;
+            stroke: currentColor;
+            stroke-width: 2.6;
+            stroke-linecap: round;
+            display: block;
+        }
+        /* ═══════════════ fin croix de fermeture ═══════════════ */
+
+        .fn-parcours-steps {
+            width: 100%;
+            max-width: 620px;
+            margin: 0 auto 18px auto;
+            background: var(--white);
+            border: 1px solid var(--fn-border);
+            border-radius: 14px;
+            padding: 14px 18px;
+            box-shadow: 0 2px 10px var(--card-shadow);
+        }
+        .fn-parcours-titre {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 12px;
+        }
+        .fn-parcours-titre i { color: var(--fn-blue); }
+        .fn-parcours-barre {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .fn-parcours-etape {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            background: var(--input-bg);
+            color: var(--fn-gray);
+            border: 1px solid var(--fn-border);
+            white-space: nowrap;
+        }
+        .fn-parcours-etape.active {
+            background: var(--fn-blue);
+            color: #fff;
+            border-color: var(--fn-blue);
+        }
+        .fn-parcours-etape.faite {
+            background: var(--success-color);
+            color: #fff;
+            border-color: var(--success-color);
+        }
+        .fn-parcours-fleche { color: var(--fn-gray); font-size: 11px; }
+
+        .tsapi-card-wrapper {
+            max-width: 620px;
+            width: 100%;
+            margin: 0 auto;
+            background: var(--white);
+            border-radius: 24px;
+            box-shadow: 0 16px 48px var(--card-shadow);
+            overflow: hidden;
+            border: 1px solid var(--fn-border);
+        }
+        .tsapi-premium-header {
+            height: 190px;
+            background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 25%, #0866FF 60%, #7209b7 85%, #f72585 100%);
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-start;
+            padding: 0 0 20px 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        .tsapi-premium-header::before {
+            content: '';
+            position: absolute;
+            top: -40px; right: -40px;
+            width: 200px; height: 200px;
+            background: radial-gradient(circle, rgba(255, 215, 0, 0.35) 0%, rgba(255, 255, 255, 0) 70%);
+            border-radius: 50%;
+            filter: blur(10px);
+        }
+        .tsapi-premium-header::after {
+            content: '';
+            position: absolute;
+            bottom: -30px; right: 80px;
+            width: 140px; height: 140px;
+            background: radial-gradient(circle, rgba(72, 149, 239, 0.4) 0%, rgba(255, 255, 255, 0) 70%);
+            border-radius: 50%;
+        }
+        .header-decor-shapes { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+        .header-decor-shapes .shape-circle {
+            position: absolute;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 50%;
+        }
+        .shape-1 { width: 300px; height: 300px; top: -100px; right: -50px; }
+        .shape-2 { width: 180px; height: 180px; top: 10px; right: 120px; border-color: rgba(247, 37, 133, 0.3) !important; }
+        .header-decor-shapes .star-glow {
+            position: absolute;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+            animation: pulseGlow 3s infinite alternate;
+        }
+        .star-1 { top: 25px; left: 40%; font-size: 16px; color: #ffd700; }
+        .star-2 { top: 70px; right: 25%; font-size: 10px; color: #4cc9f0; }
+        .star-3 { top: 30px; right: 10%; font-size: 14px; color: #f72585; }
+        @keyframes pulseGlow {
+            0% { opacity: 0.3; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1.2); }
+        }
+        .fireworks-canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .firework-text {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0.7);
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: #ffffff;
+            text-shadow: 0 0 10px rgba(255,255,255,0.8), 0 0 24px rgba(76,201,240,0.9), 0 2px 6px rgba(0,0,0,0.4);
+            opacity: 0;
+            z-index: 2;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .firework-text.is-visible {
+            animation: fireworkTextPop 2.4s ease-out;
+        }
+        @keyframes fireworkTextPop {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+            15% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+            25% { transform: translate(-50%, -50%) scale(1); }
+            80% { opacity: 1; }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.001ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+        .tsapi-avatar-container {
+            position: relative;
+            width: 90px; height: 90px;
+            border-radius: 22px;
+            background: linear-gradient(145deg, #ffffff, #e6eef8);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.25), 0 0 0 4px rgba(255, 255, 255, 0.8), 0 0 20px rgba(8, 102, 255, 0.4);
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: -52px;
+            z-index: 2;
+            transform: rotate(-3deg);
+            transition: transform 0.3s ease;
+        }
+        .tsapi-avatar-container:hover { transform: rotate(0deg) scale(1.05); }
+        [data-theme="dark"] .tsapi-avatar-container {
+            background: linear-gradient(145deg, #242526, #1a1a1b);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5), 0 0 0 4px rgba(255, 255, 255, 0.15), 0 0 20px rgba(8, 102, 255, 0.3);
+        }
+        .tsapi-avatar-container .main-badge-icon {
+            width: 58px;
+            height: 58px;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 8px rgba(8, 102, 255, 0.4));
+        }
+        .tsapi-content-area { padding: 65px 20px 30px 20px; text-align: left; }
+        .tsapi-verified-title {
+            font-size: 24px; font-weight: 800;
+            color: var(--text-dark);
+            margin: 0 0 6px 0;
+            letter-spacing: -0.5px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .tsapi-verified-subtitle {
+            color: var(--fn-gray);
+            font-size: 14px;
+            margin: 0 0 20px 0;
+            line-height: 1.5;
+        }
+
+        .fn-selected-profile {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin: 0 0 20px;
+            padding: 14px;
+            border: 1px solid var(--fn-border);
+            border-radius: 14px;
+            background: var(--input-bg);
+        }
+        .fn-avatar-preview {
+            flex: 0 0 auto;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            overflow: hidden;
+            background: var(--placeholder-bg);
+            border: 2px solid var(--fn-border);
+            box-shadow: 0 2px 8px var(--card-shadow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .fn-avatar-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .fn-avatar-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--placeholder-bg);
+        }
+        .fn-avatar-placeholder svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .fn-avatar-placeholder svg .ph-head {
+            fill: var(--placeholder-skin);
+        }
+        .fn-avatar-placeholder svg .ph-shirt {
+            fill: var(--placeholder-shirt);
+        }
+
+        .fn-profile-info { flex: 1 1 auto; min-width: 0; }
+        .fn-selected-profile .fn-name {
+            font-weight: 800;
+            color: var(--text-dark);
+            font-size: 15px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: nowrap;
+            max-width: 100%;
+        }
+        .fn-selected-profile .fn-name .fn-name-text {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+        .fn-selected-profile .fn-name .fn-badge-svg {
+            width: 17px;
+            height: 17px;
+            flex: 0 0 auto;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .fn-selected-profile small {
+            display: block;
+            margin-top: 3px;
+            color: var(--fn-gray);
+            font-size: 12px;
+        }
+
+        .tsapi-step-block {
+            background: var(--section-bg);
+            border: 1px solid var(--fn-border);
+            border-radius: 18px;
+            padding: 18px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+        .form-section-title {
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 14px;
+            color: var(--text-dark);
+            display: flex; align-items: center; gap: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .tsapi-plans-scroll-container {
+            display: flex !important;
+            flex-direction: row !important;
+            gap: 12px;
+            width: 100%;
+            overflow-x: auto !important;
+            overflow-y: visible;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            padding: 8px 4px 12px 4px;
+            box-sizing: border-box;
+        }
+        .tsapi-plans-scroll-container::-webkit-scrollbar { height: 6px; }
+        .tsapi-plans-scroll-container::-webkit-scrollbar-thumb {
+            background: var(--fn-border);
+            border-radius: 10px;
+        }
+        .tsapi-plan-card {
+            flex: 0 0 78% !important;
+            min-width: 230px !important;
+            max-width: 270px !important;
+            scroll-snap-align: start;
+            box-sizing: border-box;
+            border: 2px solid var(--fn-border);
+            border-radius: 16px;
+            padding: 16px;
+            position: relative;
+            cursor: pointer;
+            background: var(--white);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+        }
+        .tsapi-plan-card:hover { border-color: var(--fn-blue); }
+        .tsapi-plan-card.selected {
+            border-color: var(--fn-blue);
+            background: rgba(8, 102, 255, 0.05);
+            box-shadow: 0 6px 16px var(--card-shadow-hover);
+        }
+        [data-theme="dark"] .tsapi-plan-card.selected {
+            background: rgba(69, 153, 255, 0.12);
+            border-color: #4599FF;
+        }
+        .tsapi-plan-card.is-essential {
+            border-color: rgba(255, 149, 0, 0.45);
+        }
+        .tsapi-plan-card.is-essential.selected {
+            border-color: var(--fn-blue);
+            box-shadow: 0 6px 16px var(--card-shadow-hover), 0 0 0 2px rgba(255, 149, 0, 0.25);
+        }
+        .tsapi-plan-essential-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: linear-gradient(135deg, #ffd700 0%, #ff9500 100%);
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 3px 10px;
+            border-radius: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 6px rgba(255, 149, 0, 0.4);
+            animation: essentialTagPulse 2.4s ease-in-out infinite;
+        }
+        .tsapi-plan-essential-tag i { font-size: 10px; }
+        @keyframes essentialTagPulse {
+            0%, 100% { box-shadow: 0 2px 6px rgba(255, 149, 0, 0.4); }
+            50%      { box-shadow: 0 2px 12px rgba(255, 149, 0, 0.75); }
+        }
+        .tsapi-plan-radio {
+            position: absolute;
+            top: 14px; right: 14px;
+            width: 18px; height: 18px;
+            accent-color: var(--fn-blue);
+            cursor: pointer;
+        }
+        .tsapi-plan-name { font-size: 16px; font-weight: 700; color: var(--text-dark); margin: 0 0 4px 0; }
+        .tsapi-plan-price { font-size: 18px; font-weight: 800; color: var(--fn-blue); margin-bottom: 10px; }
+        .tsapi-plan-features { font-size: 12px; color: var(--fn-gray); line-height: 1.6; margin: 0; padding-left: 14px; }
+        .tsapi-plan-features li { margin-bottom: 3px; }
+        .tsapi-plan-features .ico-ok { color: var(--success-color); margin-right: 5px; }
+        .tsapi-plan-features .ico-no { color: var(--error-color); margin-right: 5px; }
+
+        .tsapi-input-group { margin-bottom: 16px; position: relative; }
+        .tsapi-input-group label {
+            display: block; font-weight: 600;
+            margin-bottom: 6px;
+            font-size: 13px;
+            color: var(--text-dark);
+        }
+        .tsapi-input-group select,
+        .tsapi-input-group input[type="text"],
+        .tsapi-input-group input[type="tel"],
+        .tsapi-input-group input[type="email"] {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1.5px solid var(--fn-border);
+            border-radius: 10px;
+            font-size: 14px;
+            box-sizing: border-box;
+            background: var(--input-bg);
+            color: var(--text-dark);
+            font-family: inherit;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        .tsapi-input-group select:focus,
+        .tsapi-input-group input:focus {
+            border-color: var(--fn-blue);
+            box-shadow: 0 0 0 3px rgba(8, 102, 255, 0.12);
+        }
+        .card-type-icon {
+            position: absolute;
+            right: 14px; top: 38px;
+            font-size: 20px;
+            color: var(--fn-gray);
+        }
+        .tsapi-input-row { display: flex; gap: 12px; margin-top: 12px; }
+        .tsapi-input-row .tsapi-input-group { flex: 1; margin-bottom: 0; }
+        .upload-feedback {
+            font-size: 12px;
+            margin-top: 6px;
+            font-weight: 500;
+            color: var(--fn-gray);
+        }
+        .upload-feedback.error { color: var(--error-color); font-weight: 600; }
+
+        .accepted-cards {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 0 0 8px 0;
+            flex-wrap: wrap;
+        }
+        .accepted-cards .card-logo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 24px;
+            border-radius: 4px;
+            background: #fff;
+            border: 1px solid rgba(0,0,0,0.08);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+        .accepted-cards .card-logo svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        [data-theme="dark"] .accepted-cards .card-logo {
+            background: #f3f4f6;
+            border-color: rgba(255,255,255,0.15);
+        }
+
+        .info-tip {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 6px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--fn-gray);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 800;
+            cursor: pointer;
+            user-select: none;
+            vertical-align: middle;
+            transition: background 0.15s ease, transform 0.15s ease;
+            flex: 0 0 auto;
+        }
+        .info-tip:hover { background: #4b4d51; }
+        .info-tip:focus { outline: 2px solid var(--fn-blue); outline-offset: 2px; }
+        .info-tip.active { background: var(--fn-blue); }
+
+        .info-tip-tooltip {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 260px;
+            max-width: 85vw;
+            background: #1c1e21;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 500;
+            line-height: 1.5;
+            padding: 12px 14px;
+            border-radius: 12px;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.35);
+            z-index: 2147483647;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-6px);
+            transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
+            text-align: left;
+            pointer-events: none;
+            box-sizing: border-box;
+        }
+        .info-tip-tooltip.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        .info-tip-tooltip strong {
+            display: block;
+            margin-bottom: 6px;
+            color: #ffd700;
+            font-size: 12px;
+            font-weight: 800;
+        }
+        .info-tip-tooltip ul {
+            margin: 0;
+            padding-left: 16px;
+            list-style: disc;
+        }
+        .info-tip-tooltip li { margin: 2px 0; }
+        .info-tip-tooltip .tip-note {
+            display: block;
+            margin-top: 8px;
+            font-size: 11px;
+            color: #b0b3b8;
+            font-style: italic;
+        }
+
+        .phone-fixed-row {
+            display: flex;
+            align-items: stretch;
+            border: 1.5px solid var(--fn-border);
+            border-radius: 10px;
+            background: var(--input-bg);
+            overflow: hidden;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .phone-fixed-row:focus-within {
+            border-color: var(--fn-blue);
+            box-shadow: 0 0 0 3px rgba(8, 102, 255, 0.12);
+        }
+        .phone-fixed-prefix {
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--text-dark);
+            background: var(--section-bg);
+            border-right: 1.5px solid var(--fn-border);
+            white-space: nowrap;
+        }
+        .phone-fixed-row input[type="tel"] {
+            flex: 1 1 auto;
+            min-width: 0;
+            border: none !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            background: transparent;
+            padding: 12px 14px;
+            font-size: 14px;
+            font-family: inherit;
+            color: var(--text-dark);
+            outline: none;
+        }
+
+        .phone-status {
+            min-height: 20px;
+            margin-top: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .phone-status.ok { color: var(--success-color); }
+        .phone-status.error { color: var(--error-color); }
+
+        .btn-subscribe-tsapi {
+            background: var(--fn-blue);
+            color: #ffffff;
+            border: none;
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(8, 102, 255, 0.3);
+            transition: all 0.2s ease;
+        }
+        .btn-subscribe-tsapi:hover {
+            background: var(--fn-blue-hover);
+            transform: translateY(-1px);
+        }
+        .btn-subscribe-tsapi:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+    </style>
+
+    <style>
+        .tsapi-premium-header { align-items: center; justify-content: center; padding: 0; }
+        .tsapi-avatar-container { margin-bottom: 0; }
+        .tsapi-content-area { padding-top: 28px; }
+        .accepted-cards .card-logo,
+        [data-theme="dark"] .accepted-cards .card-logo { width: 38px; height: 24px; background: transparent; border: none; box-shadow: none; border-radius: 4px; }
+    </style>
+
+    <style>
+        .momo-op-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 6px; }
+        .momo-op-card {
+            display: flex; align-items: center; gap: 10px;
+            width: 100%; padding: 12px; text-align: left;
+            border: 1.5px solid var(--fn-border); border-radius: 12px;
+            background: var(--input-bg); color: var(--text-dark);
+            font-family: inherit; font-size: 13px; font-weight: 600; line-height: 1.25;
+            cursor: pointer; box-sizing: border-box;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, transform 0.15s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .momo-op-card:hover { border-color: var(--fn-blue); }
+        .momo-op-card:active { transform: scale(0.98); }
+        .momo-op-card:focus-visible { outline: 2px solid var(--fn-blue); outline-offset: 2px; }
+        .momo-op-card.selected {
+            border-color: var(--fn-blue); background: var(--white);
+            box-shadow: 0 0 0 3px rgba(8, 102, 255, 0.14);
+        }
+        .momo-op-badge {
+            flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 800; letter-spacing: 0.2px;
+        }
+        .momo-op-name { flex: 1 1 auto; min-width: 0; }
+        .momo-op-check { flex: 0 0 auto; color: var(--fn-blue); font-size: 16px; opacity: 0; transition: opacity 0.2s ease; }
+        .momo-op-card.selected .momo-op-check { opacity: 1; }
+    </style>
+    <style>
+        /* Signature Tsapi (reprise de login.html) — placée tout en haut de la page */
+        .top-signature { width: 100%; max-width: 620px; margin: 0 auto 4px auto; padding: 0 0 6px; }
+        .footer-signature { display: flex; justify-content: center; align-items: center; background: transparent; }
+        .sig-container { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: transparent; animation: sigFadeUp .8s ease both; }
+        .sig-from { font-size: 16px; color: #3f434a; font-weight: 600; letter-spacing: 1.6px; line-height: 1; }
+        [data-theme="dark"] .sig-from { color: #b0b3b8; }
+        .sig-brand { display: flex; align-items: center; justify-content: center; gap: 9px; }
+        .sig-icon { width: 32px; height: auto; display: block; filter: drop-shadow(0 2px 4px rgba(0,100,224,0.25)); transition: transform .5s ease; }
+        .sig-container:hover .sig-icon { transform: rotate(-6deg) scale(1.07); }
+        .sig-text { font-size: 21px; font-weight: 700; color: #0064e0; letter-spacing: -0.6px; line-height: 1; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        @supports ((-webkit-background-clip: text) or (background-clip: text)) {
+            .sig-text { background: linear-gradient(90deg, #0064e0, #0a8bff); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        }
+        @keyframes sigFadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+        @media (prefers-reduced-motion: reduce) { .sig-container { animation: none; } .sig-icon { transition: none; } }
+    </style>
+
+    <style>
+        /* ═══ Finition "grand réseau social" — surcouche visuelle uniquement ═══ */
+        .forfait-page-wrap { padding-top: 16px; }
+        .fn-parcours-steps, .tsapi-card-wrapper { border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,.1), 0 2px 12px var(--card-shadow); }
+        .tsapi-card-wrapper { border-radius: 14px; }
+        .tsapi-step-block { border-radius: 12px; background: var(--section-bg); }
+        .tsapi-plan-card { border-radius: 12px; }
+        .tsapi-input-group select, .tsapi-input-group input[type="text"], .tsapi-input-group input[type="tel"], .tsapi-input-group input[type="email"] { border-radius: 8px; padding: 13px 14px; font-size: 15px; }
+        .tsapi-verified-title { font-size: 26px; }
+        .btn-subscribe-tsapi { border-radius: 8px; padding: 14px 16px; font-size: 17px; font-weight: 700; box-shadow: none; letter-spacing: .1px; }
+        .btn-subscribe-tsapi:hover { box-shadow: 0 2px 8px rgba(8,102,255,.35); }
+        .btn-subscribe-tsapi:focus-visible { outline: 3px solid rgba(8,102,255,.4); outline-offset: 2px; }
+
+        .fn-consent { margin: 14px 2px 0; font-size: 12px; line-height: 1.5; color: var(--fn-gray); text-align: center; }
+        .fn-consent a, .fn-footer a { color: var(--fn-blue); text-decoration: none; font-weight: 600; }
+        .fn-consent a:hover, .fn-footer a:hover { text-decoration: underline; }
+
+        .fn-secure-line { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; font-size: 12px; color: var(--fn-gray); }
+        .fn-secure-line i { color: var(--success-color); }
+
+        .fn-help-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 12px; padding: 11px 16px; box-sizing: border-box; border-radius: 8px; border: none; background: rgba(8,102,255,.1); color: var(--fn-blue); font-weight: 700; font-size: 14px; text-decoration: none; transition: background .2s ease; }
+        .fn-help-btn:hover { background: rgba(8,102,255,.18); }
+
+        .fn-footer { width: 100%; max-width: 620px; margin: 22px auto 0; padding: 16px 8px 0; border-top: 1px solid var(--fn-border); text-align: center; font-size: 12px; color: var(--fn-gray); box-sizing: border-box; }
+        .fn-footer-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; margin-bottom: 10px; }
+        .fn-footer-links a { font-weight: 500; }
+        .fn-footer-copy { opacity: .85; }
+
+        @media (max-width: 480px) {
+            .forfait-page-wrap { padding: 12px 8px 40px; }
+            .tsapi-content-area { padding-left: 14px; padding-right: 14px; }
+            .tsapi-step-block { padding: 14px; }
+            .tsapi-verified-title { font-size: 22px; }
+            .tsapi-input-row { flex-direction: column; gap: 0; }
+            .tsapi-input-row .tsapi-input-group { margin-bottom: 16px; }
+        }
+    </style>
+
+    <style>
+        /* ═══ Refonte "feuille de forfaits" (onglets + avantages en cartes + barre fixe) ═══ */
+        .fn-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+        .forfait-page-wrap { display: block; min-height: 100vh; padding: 14px 10px 240px; align-items: initial; }
+        .fn-sheet { position: relative; max-width: 620px; margin: 0 auto; background: var(--white); border: 1px solid var(--fn-border); border-radius: 26px; overflow: hidden; box-shadow: 0 2px 24px var(--card-shadow); padding-bottom: 28px; }
+
+        .fn-hero-bg { position: absolute; left: 0; right: 0; top: 0; height: 250px; background: linear-gradient(120deg, #2437c9 0%, #0866FF 55%, #45a7ff 100%); overflow: hidden; pointer-events: none; }
+        .fn-hero-bg::after { content: ''; position: absolute; inset: 0; z-index: 0; background: linear-gradient(180deg, transparent 25%, var(--white) 74%); }
+
+        .fn-topbar { position: relative; z-index: 3; display: flex; align-items: center; gap: 12px; padding: 16px 16px 84px; }
+        .fn-x-btn { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%; border: none; background: rgba(255,255,255,.9); color: #1C1E21; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.18); transition: transform .15s ease, background .2s ease; -webkit-tap-highlight-color: transparent; }
+        .fn-x-btn:hover { background: #fff; }
+        .fn-x-btn:active { transform: scale(.94); }
+        .fn-x-btn:focus-visible, .fn-tab:focus-visible { outline: 3px solid rgba(255,255,255,.9); outline-offset: 2px; }
+        .fn-x-btn svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; display: block; }
+        .fn-tabs { flex: 1 1 auto; min-width: 0; display: flex; gap: 2px; padding: 5px; border-radius: 999px; background: rgba(255,255,255,.72); border: 1px solid rgba(255,255,255,.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        .fn-tabs::-webkit-scrollbar { display: none; }
+        .fn-tab { flex: 0 0 auto; border: none; background: transparent; color: #4b4d51; font-family: inherit; font-size: 15px; font-weight: 600; line-height: 1; padding: 11px 15px; border-radius: 999px; cursor: pointer; white-space: nowrap; transition: background .2s ease, color .2s ease; -webkit-tap-highlight-color: transparent; }
+        .fn-tab.is-active { background: #fff; color: #1C1E21; box-shadow: 0 1px 4px rgba(0,0,0,.2); }
+        [data-theme="dark"] .fn-x-btn { background: rgba(36,37,38,.88); color: #E4E6EB; }
+        [data-theme="dark"] .fn-tabs { background: rgba(36,37,38,.72); border-color: rgba(255,255,255,.12); }
+        [data-theme="dark"] .fn-tab { color: #B0B3B8; }
+        [data-theme="dark"] .fn-tab.is-active { background: #3A3B3C; color: #E4E6EB; }
+
+        .fn-brand { position: relative; z-index: 2; padding-top: 6px; }
+        .fn-brand .top-signature { margin-bottom: 0; }
+
+        .fn-plan-panel { display: none; position: relative; z-index: 2; }
+        .fn-plan-panel.is-active { display: block; animation: fnFade .25s ease; }
+        @keyframes fnFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+        .fn-hero { text-align: center; padding: 8px 20px 4px; }
+        .fn-hero .tsapi-plan-essential-tag { margin-bottom: 10px; }
+        .fn-hero-title { font-size: 36px; line-height: 1.1; font-weight: 500; letter-spacing: -.8px; margin: 4px 0 12px; color: var(--text-dark); }
+        .fn-accent { color: var(--fn-blue); }
+        .fn-hero-sub { font-size: 17px; line-height: 1.4; margin: 0 0 10px; color: var(--text-dark); }
+        .fn-hero-price { font-size: 15px; color: var(--fn-gray); margin: 0; }
+        .fn-hero-price strong { font-size: 28px; font-weight: 800; letter-spacing: -.5px; color: var(--text-dark); }
+        .fn-hero-count { display: inline-flex; align-items: center; gap: 6px; margin: 14px 0 0; padding: 7px 14px; border-radius: 999px; background: rgba(8,102,255,.1); color: var(--fn-blue); font-size: 13px; font-weight: 700; }
+        .fn-row-desc { display: block; margin-top: 3px; font-size: 13px; line-height: 1.4; color: var(--fn-gray); font-weight: 400; }
+        .fn-row:active { background: var(--section-bg); }
+        .fn-chip { display: inline-block; margin-left: 6px; padding: 2px 9px; border-radius: 999px; background: rgba(8,102,255,.12); color: var(--fn-blue); font-size: 11px; font-weight: 700; letter-spacing: .2px; vertical-align: middle; white-space: nowrap; }
+        .fn-chip.is-human { background: rgba(18,136,59,.14); color: var(--success-color); }
+        .fn-tab:active { transform: scale(.96); }
+        .fn-hl h3, .fn-section-h { letter-spacing: -.2px; }
+
+        .fn-highlights { list-style: none; margin: 30px 0 0; padding: 0 22px; display: flex; flex-direction: column; gap: 26px; }
+        .fn-hl { display: flex; gap: 16px; align-items: flex-start; }
+        .fn-hl-ico { flex: 0 0 46px; width: 46px; display: flex; justify-content: center; padding-top: 2px; color: var(--text-dark); }
+        .fn-hl-ico svg { width: 42px; height: 42px; display: block; }
+        .fn-hl h3 { font-size: 20px; font-weight: 500; line-height: 1.25; margin: 0 0 6px; color: var(--text-dark); }
+        .fn-hl p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--fn-gray); }
+
+        .fn-section-h { font-size: 22px; font-weight: 500; margin: 36px 22px 4px; color: var(--text-dark); }
+        .fn-group-h { font-size: 17px; font-weight: 500; color: var(--fn-gray); margin: 22px 22px 10px; }
+        .fn-rows { list-style: none; margin: 0 16px; padding: 0; border: 1.5px solid var(--fn-border); border-radius: 16px; overflow: hidden; }
+        .fn-row { display: flex; align-items: center; gap: 14px; padding: 16px; border-top: 1px solid var(--fn-border); font-size: 16px; color: var(--text-dark); }
+        .fn-row:first-child { border-top: none; }
+        .fn-row-ico { flex: 0 0 26px; text-align: center; font-size: 20px; }
+        .fn-row-label { flex: 1 1 auto; min-width: 0; line-height: 1.3; }
+        .fn-row-state { flex: 0 0 auto; display: inline-flex; align-items: center; }
+        .fn-ok { color: var(--fn-blue); font-size: 21px; }
+        .fn-off { color: var(--fn-gray); font-size: 15px; }
+        .fn-row.is-off { color: var(--fn-gray); }
+        .fn-row.is-off .fn-row-ico, .fn-row.is-off .fn-row-label { opacity: .55; }
+
+        .fn-block { margin: 30px 16px 0; position: relative; z-index: 2; }
+        .fn-block .fn-parcours-steps { margin: 0; box-shadow: none; border-radius: 14px; max-width: none; }
+        .fn-block .fn-selected-profile { margin: 0; border-radius: 16px; }
+        .fn-block .tsapi-step-block { margin-bottom: 0; border-radius: 16px; }
+        .fn-block .fn-help-btn { margin-top: 0; }
+
+        .fn-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; background: var(--white); border-top: 1px solid var(--fn-border); box-shadow: 0 -6px 20px rgba(0,0,0,.08); padding: 14px 16px calc(12px + env(safe-area-inset-bottom, 0px)); }
+        .fn-bar-inner { max-width: 620px; margin: 0 auto; text-align: center; }
+        .fn-bar-consent { margin: 0 0 12px; font-size: 13px; line-height: 1.5; color: var(--fn-gray); }
+        .fn-bar-consent a { color: var(--fn-blue); text-decoration: none; }
+        .fn-bar-consent a:hover { text-decoration: underline; }
+        .btn-subscribe-tsapi.fn-pill-btn { border-radius: 999px; padding: 17px 16px; font-size: 18px; font-weight: 600; box-shadow: none; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-subscribe-tsapi.fn-pill-btn:hover { box-shadow: 0 3px 10px rgba(8,102,255,.35); }
+        .fn-bar-note { margin: 10px 0 0; font-size: 13px; color: var(--fn-gray); }
+        .fn-bar-note i { color: var(--success-color); margin-right: 4px; }
+        .fn-submit-feedback { margin: 0 0 10px; padding: 10px 12px; border-radius: 10px; background: rgba(217,45,32,.1); color: var(--error-color); font-size: 13px; font-weight: 600; text-align: left; line-height: 1.4; }
+        .fn-submit-feedback[hidden] { display: none; }
+
+        @media (max-width: 480px) {
+            .forfait-page-wrap { padding: 0 0 250px; }
+            .fn-sheet { border-radius: 0 0 22px 22px; border-left: none; border-right: none; border-top: none; }
+            .fn-hero-title { font-size: 32px; }
+            .fn-tab { padding: 11px 13px; font-size: 14px; }
+        }
+    </style>
+
+    <style>
+        /* Flèche dynamique devant chaque avantage : mène à sa page d'explication */
+        .fn-go { flex: 0 0 auto; align-self: center; width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+                 background: rgba(8,102,255,.12); color: var(--fn-blue); text-decoration: none; font-size: 15px;
+                 transition: background .2s ease, color .2s ease, transform .2s ease; -webkit-tap-highlight-color: transparent; }
+        .fn-go i { animation: fnArrowNudge 1.4s ease-in-out infinite; }
+        .fn-go:hover { background: var(--fn-blue); color: #fff; transform: scale(1.1); }
+        .fn-go:active { transform: scale(.92); }
+        .fn-go:focus-visible { outline: 3px solid rgba(8,102,255,.45); outline-offset: 2px; }
+        @keyframes fnArrowNudge { 0%, 100% { transform: translateX(-2px); } 50% { transform: translateX(4px); } }
+        @media (prefers-reduced-motion: reduce) { .fn-go i { animation: none; } }
+    </style>
+
+<script>
+/* ── Photo de profil : affichée dès l'ouverture et mise à jour automatiquement, sans actualiser la page ── */
+(function () {
+    var courant = null;               /* « url|version » de la photo affichée */
+    var enCours = false;
+
+    function boite() { return document.querySelector('.fn-avatar-preview'); }
+    function ph() { return document.getElementById('fnAvatarPh'); }
+    function img() { return document.getElementById('fnAvatarImg'); }
+    function montrerPlaceholder() {
+        var i = img(), p = ph();
+        if (i) i.style.display = 'none';
+        if (p) p.style.display = '';
+    }
+
+    /* Définie tout de suite (le onerror de l'image peut se déclencher avant la fin du chargement de la page). */
+    window.fnAvatarFallback = function (el) {
+        var raw = (el.getAttribute('data-raw') || '').replace(/^\/+/, '').replace(/^static\//, '');
+        var essais = (el._essais = el._essais || ['uploads/', 'uploads/profile_pics/', 'profile_pics/', 'uploads/profiles/', 'images/']);
+        if (essais.length && raw && !/^(https?:|data:)/.test(el.getAttribute('data-raw') || '')) { el.src = '/static/' + essais.shift() + raw; return; }
+        el.onerror = null;
+        montrerPlaceholder();
+    };
+
+    function afficher(url, version) {
+        var box = boite(), p = ph();
+        if (!box || !p) return;
+        var i = img();
+        if (!i) {
+            i = document.createElement('img');
+            i.id = 'fnAvatarImg'; i.className = 'fn-avatar-img'; i.alt = 'Photo de profil';
+            box.insertBefore(i, p);
+        }
+        i._essais = null;
+        i.setAttribute('data-raw', url);
+        i.onerror = function () { window.fnAvatarFallback(i); };
+        i.onload = function () { i.style.display = ''; var q = ph(); if (q) q.style.display = 'none'; };
+        i.style.display = '';
+        i.src = version ? url + (url.indexOf('?') === -1 ? '?v=' : '&v=') + version : url;
+    }
+
+    function rafraichir() {
+        if (enCours) return;
+        enCours = true;
+        fetch("{{ url_for('main.ma_photo') }}", { credentials: 'same-origin', cache: 'no-store', headers: { 'Accept': 'application/json' } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (d) {
+                if (!d) return;
+                if (!d.url) { if (courant !== '') { courant = ''; montrerPlaceholder(); } return; }
+                var cle = d.url + '|' + (d.v || '');
+                if (cle !== courant) { courant = cle; afficher(d.url, d.v); }
+            })
+            .catch(function () {})
+            .then(function () { enCours = false; });
+    }
+
+    function demarrer() {
+        if (!boite() || !ph()) return;       /* ce script est dans <head> : on attend que la page existe */
+        rafraichir();                                                        /* dès l'ouverture de la page */
+        window.addEventListener('pageshow', function (e) { if (e.persisted) rafraichir(); });   /* retour arrière */
+        document.addEventListener('visibilitychange', function () { if (!document.hidden) rafraichir(); });
+        window.addEventListener('focus', rafraichir);
+        window.addEventListener('storage', function (e) { if (e.key === 'fn_photo_updated') rafraichir(); });  /* photo changée dans un autre onglet */
+        setInterval(function () { if (!document.hidden) rafraichir(); }, 20000);
+    }
+
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', demarrer); } else { demarrer(); }
+})();
+</script>
+
+    <style>
+        /* Glisser à gauche / à droite pour changer de forfait */
+        @keyframes fnInFromRight { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+        @keyframes fnInFromLeft  { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+        .fn-plan-panel.is-active.from-right { animation: fnInFromRight .28s ease; }
+        .fn-plan-panel.is-active.from-left  { animation: fnInFromLeft .28s ease; }
+    </style>
+
+    <style>
+        /* Aperçu du profil en haut : grand rond pour la photo, nom (et badge) dessous */
+        .fn-block.fn-profile-top { margin: 4px 16px 18px; }
+        .fn-profile-top .fn-selected-profile { flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center;
+                                                padding: 6px 8px 4px; border: none; background: transparent; border-radius: 0; }
+        .fn-profile-top .fn-avatar-preview { width: 116px; height: 116px; border-width: 4px; border-color: var(--white);
+                                              box-shadow: 0 0 0 2px var(--fn-blue), 0 8px 24px var(--card-shadow); }
+        .fn-profile-top .fn-profile-info { flex: 0 0 auto; width: 100%; max-width: 100%; display: flex; flex-direction: column; align-items: center; }
+        .fn-profile-top .fn-selected-profile .fn-name { font-size: 22px; font-weight: 800; letter-spacing: -.3px; justify-content: center; gap: 8px; max-width: 100%; }
+        .fn-profile-top .fn-selected-profile .fn-name .fn-name-text { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; max-width: 100%; }
+        .fn-profile-top .fn-selected-profile .fn-name .fn-badge-svg { width: 24px; height: 24px; }
+        .fn-profile-top .fn-selected-profile small { margin-top: 6px; font-size: 13px; line-height: 1.4; max-width: 420px; }
+        .fn-profile-top .fn-badge-svg.fn-pop { animation: fnBadgePop .6s ease; }
+        @keyframes fnBadgePop { 0% { transform: scale(1); } 40% { transform: scale(1.45) rotate(-8deg); } 100% { transform: scale(1); } }
+        @media (prefers-reduced-motion: reduce) { .fn-profile-top .fn-badge-svg.fn-pop { animation: none; } }
+    </style>
+
+    <style>
+        /* Barre d'avancement de la vérification (sans libellés ni numéros) */
+        .fn-progress { display: flex; gap: 8px; margin: 2px 0 12px; }
+        .fn-progress-seg { flex: 1 1 0; height: 8px; border-radius: 999px; background: var(--fn-border); position: relative; overflow: hidden; }
+        .fn-progress-seg.is-active { background: linear-gradient(90deg, var(--fn-blue), #45a7ff); }
+        .fn-progress-seg.is-active::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
+                                            transform: translateX(-100%); animation: fnProgressShine 2.2s ease-in-out infinite; }
+        @keyframes fnProgressShine { to { transform: translateX(100%); } }
+        .fn-progress-note { margin: 0; font-size: 12.5px; line-height: 1.4; color: var(--fn-gray); }
+        @media (prefers-reduced-motion: reduce) { .fn-progress-seg.is-active::after { animation: none; display: none; } }
+    </style>
+
+    <style>
+        /* Logos officiels des opérateurs (si les fichiers sont présents) */
+        .momo-op-badge.has-logo { width: 46px; height: 34px; border-radius: 8px; background: #fff !important; border: 1px solid var(--fn-border); overflow: hidden; padding: 3px; box-sizing: border-box; }
+        .momo-op-logo { width: 100%; height: 100%; object-fit: contain; display: block; }
+    </style>
+{% endblock %}
+
+{% block content %}
+
+{% set user_nom_complet = (current_user.nom_complet if current_user.is_authenticated and current_user.nom_complet else 'Utilisateur FaceNet') %}
+{% set ph = namespace(v='') %}
+{% if current_user.is_authenticated %}
+    {# 1) noms courants #}
+    {% for champ in ['photo_profil', 'photo_profile', 'profile_photo', 'profile_picture', 'profile_pic', 'profile_image', 'photo', 'avatar', 'image_profil', 'photo_url', 'image', 'picture', 'pic'] %}
+        {% if not ph.v and current_user[champ] is defined and current_user[champ] %}
+            {% set ph.v = current_user[champ] %}
+        {% endif %}
+    {% endfor %}
+    {# 2) sinon : on parcourt les colonnes du modèle User et on prend celle qui ressemble à une photo #}
+    {% if not ph.v and current_user.__table__ is defined %}
+        {% for col in current_user.__table__.columns %}
+            {% set cn = col.name|lower %}
+            {% if not ph.v and ('photo' in cn or 'avatar' in cn or 'pic' in cn or 'image' in cn or 'img' in cn) and 'cover' not in cn and 'couverture' not in cn and 'banner' not in cn %}
+                {% set val = current_user[col.name] %}
+                {% if val and val is string %}{% set ph.v = val %}{% endif %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endif %}
+{% set user_photo = ph.v %}
+
+<div class="forfait-page-wrap">
+
+    <div class="fn-sheet">
+
+        <!-- Bandeau dégradé (feu d'artifice conservé) -->
+        <div class="fn-hero-bg" aria-hidden="true">
+            <div class="header-decor-shapes">
+                <div class="shape-circle shape-1"></div>
+                <div class="shape-circle shape-2"></div>
+                <i class="fas fa-star star-glow star-1"></i>
+                <i class="fas fa-sparkles star-glow star-2"></i>
+                <i class="fas fa-certificate star-glow star-3"></i>
+            </div>
+            <canvas id="tsapiFireworksCanvas" class="fireworks-canvas" aria-hidden="true"></canvas>
+            <div id="tsapiFireworkText" class="firework-text" aria-hidden="true">Tsapi Verified</div>
+        </div>
+
+        <!-- Barre du haut : croix (retour au profil) + onglets des forfaits -->
+        <div class="fn-topbar">
+            <button type="button" class="fn-x-btn" id="fn-close-badge-btn" aria-label="Fermer et retourner au profil" title="Retour au profil">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M6 6 L18 18 M18 6 L6 18"/></svg>
+            </button>
+            <div class="fn-tabs" role="tablist" aria-label="Choix du forfait">
+      <button type="button" role="tab" class="fn-tab is-active" data-plan="4500" aria-selected="true" aria-controls="fn-panel-4500" onclick="selectPlan('4500')">Standard</button>
+      <button type="button" role="tab" class="fn-tab" data-plan="12000" aria-selected="false" aria-controls="fn-panel-12000" onclick="selectPlan('12000')">Premium</button>
+      <button type="button" role="tab" class="fn-tab" data-plan="78000" aria-selected="false" aria-controls="fn-panel-78000" onclick="selectPlan('78000')">Max</button>
+      <button type="button" role="tab" class="fn-tab" data-plan="100000" aria-selected="false" aria-controls="fn-panel-100000" onclick="selectPlan('100000')">Max Plus</button>
+            </div>
+        </div>
+
+        <div class="fn-brand">
+            <!-- ═══ Signature Tsapi (tout en haut) ═══ -->
+    <div class="footer-signature top-signature">
+            <div class="sig-container">
+                <div class="sig-brand">
+                    <svg class="sig-icon" viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Logo Tsapi">
+                        <defs>
+                            <linearGradient id="sigGradTop" x1="6" y1="6" x2="46" y2="46" gradientUnits="userSpaceOnUse">
+                                <stop offset="0" stop-color="#00b2ff"/>
+                                <stop offset="0.55" stop-color="#0a6cf0"/>
+                                <stop offset="1" stop-color="#0038a8"/>
+                            </linearGradient>
+                        </defs>
+                        <path d="M22.8,36.6 L22.4,36.2 L22.0,35.7 L21.7,35.2 L21.3,34.8 L21.0,34.3 L20.6,33.8 L20.3,33.2 L20.0,32.7 L19.7,32.2 L19.4,31.7 L19.1,31.1 L18.9,30.6 L18.6,30.0 L18.4,29.5 L18.2,28.9 L18.0,28.3 L17.8,27.8 L17.6,27.2 L17.5,26.6 L17.3,26.1 L17.2,25.5 L17.1,24.9 L17.0,24.3 L16.9,23.8 L16.9,23.2 L16.8,22.6 L16.8,22.1 L16.8,21.5 L16.8,21.0 L16.8,20.4 L16.8,19.9 L16.9,19.3 L16.9,18.8 L17.0,18.3 L17.1,17.8 L17.2,17.3 L17.3,16.8 L17.4,16.3 L17.6,15.8 L17.7,15.4 L17.9,14.9 L18.1,14.5 L18.3,14.0 L18.5,13.6 L18.7,13.2 L19.0,12.8 L19.2,12.4 L19.4,12.1 L19.7,11.7 L20.0,11.4 L20.3,11.1 L20.6,10.8 L20.9,10.5 L21.2,10.3 L21.5,10.0 L21.8,9.8 L22.1,9.6 L22.5,9.4 L22.8,9.2 L23.1,9.0 L23.5,8.9 L23.8,8.8 L24.2,8.7 L24.6,8.6 L24.9,8.5 L25.3,8.5 L25.6,8.4 L26.0,8.4 L26.4,8.4 L26.7,8.5 L27.1,8.5 L27.4,8.6 L27.8,8.7 L28.2,8.8 L28.5,8.9 L28.9,9.0 L29.2,9.2 L29.5,9.4 L29.9,9.6 L30.2,9.8 L30.5,10.0 L30.8,10.3 L31.1,10.5 L31.4,10.8 L31.7,11.1 L32.0,11.4 L32.3,11.7 L32.6,12.1 L32.8,12.4 L33.0,12.8 L33.3,13.2 L33.5,13.6 L33.7,14.0 L33.9,14.5 L34.1,14.9 L34.3,15.4 L34.4,15.8 L34.6,16.3 L34.7,16.8 L34.8,17.3 L34.9,17.8 L35.0,18.3 L35.1,18.8 L35.1,19.3 M34.0,28.3 L33.8,28.9 L33.6,29.5 L33.4,30.0 L33.1,30.6 L32.9,31.1 L32.6,31.7 L32.3,32.2 L32.0,32.7 L31.7,33.2 L31.4,33.8 L31.0,34.3 L30.7,34.8 L30.3,35.2 L30.0,35.7 L29.6,36.2 L29.2,36.6 L28.8,37.1 L28.4,37.5 L28.0,37.9 L27.6,38.3 L27.1,38.7 L26.7,39.1 L26.2,39.5 L25.8,39.8 L25.3,40.2 L24.9,40.5 L24.4,40.8 L23.9,41.1 L23.4,41.4 L23.0,41.6 L22.5,41.9 L22.0,42.1 L21.5,42.3 L21.0,42.5 L20.5,42.7 L20.0,42.9 L19.5,43.0 L19.1,43.1 L18.6,43.3 L18.1,43.4 L17.6,43.4 L17.1,43.5 L16.7,43.5 L16.2,43.6 L15.7,43.6 L15.3,43.6 L14.8,43.6 L14.4,43.5 L14.0,43.5 L13.6,43.4 L13.1,43.3 L12.7,43.2 L12.3,43.1 L12.0,43.0 L11.6,42.8 L11.2,42.6 L10.9,42.5 L10.5,42.3 L10.2,42.1 L9.9,41.8 L9.6,41.6 L9.3,41.4 L9.1,41.1 L8.8,40.9 L8.6,40.6 L8.4,40.3 L8.1,40.0 L8.0,39.7 L7.8,39.4 L7.6,39.0 L7.5,38.7 L7.4,38.3 L7.3,38.0 L7.2,37.6 L7.1,37.3 L7.0,36.9 L7.0,36.5 L7.0,36.1 L7.0,35.7 L7.0,35.4 L7.1,35.0 L7.1,34.6 L7.2,34.2 L7.3,33.8 L7.4,33.4 L7.5,33.0 L7.7,32.6 L7.9,32.2 L8.0,31.8 L8.2,31.4 L8.5,31.0 L8.7,30.6 L9.0,30.2 L9.2,29.8 L9.5,29.4 L9.8,29.1 L10.2,28.7 L10.5,28.3 L10.9,28.0 L11.2,27.6 L11.6,27.3 L12.0,26.9 L12.4,26.6 L12.9,26.3 M21.2,22.8 L21.8,22.7 L22.4,22.6 L23.0,22.5 L23.6,22.4 L24.2,22.4 L24.8,22.3 L25.4,22.3 L26.0,22.3 L26.6,22.3 L27.2,22.3 L27.8,22.4 L28.4,22.4 L29.0,22.5 L29.6,22.6 L30.2,22.7 L30.8,22.8 L31.4,22.9 L32.0,23.0 L32.5,23.2 L33.1,23.4 L33.7,23.5 L34.2,23.7 L34.7,23.9 L35.3,24.2 L35.8,24.4 L36.3,24.6 L36.8,24.9 L37.3,25.1 L37.8,25.4 L38.3,25.7 L38.7,26.0 L39.1,26.3 L39.6,26.6 L40.0,26.9 L40.4,27.3 L40.8,27.6 L41.1,28.0 L41.5,28.3 L41.8,28.7 L42.2,29.1 L42.5,29.4 L42.8,29.8 L43.0,30.2 L43.3,30.6 L43.5,31.0 L43.8,31.4 L44.0,31.8 L44.1,32.2 L44.3,32.6 L44.5,33.0 L44.6,33.4 L44.7,33.8 L44.8,34.2 L44.9,34.6 L44.9,35.0 L45.0,35.4 L45.0,35.7 L45.0,36.1 L45.0,36.5 L45.0,36.9 L44.9,37.3 L44.8,37.6 L44.7,38.0 L44.6,38.3 L44.5,38.7 L44.4,39.0 L44.2,39.4 L44.0,39.7 L43.9,40.0 L43.6,40.3 L43.4,40.6 L43.2,40.9 L42.9,41.1 L42.7,41.4 L42.4,41.6 L42.1,41.8 L41.8,42.1 L41.5,42.3 L41.1,42.5 L40.8,42.6 L40.4,42.8 L40.0,43.0 L39.7,43.1 L39.3,43.2 L38.9,43.3 L38.4,43.4 L38.0,43.5 L37.6,43.5 L37.2,43.6 L36.7,43.6 L36.3,43.6 L35.8,43.6 L35.3,43.5 L34.9,43.5 L34.4,43.4 L33.9,43.4 L33.4,43.3 L32.9,43.1 L32.5,43.0 L32.0,42.9 L31.5,42.7 L31.0,42.5 L30.5,42.3 L30.0,42.1" fill="none" stroke="url(#sigGradTop)" stroke-width="5.4" stroke-linecap="butt" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="sig-text">Tsapi</span>
+                </div>
+            </div>
+        </div>
+        </div>
+
+<div class="fn-block fn-profile-top">
+            <div class="fn-selected-profile" aria-label="Aperçu de votre profil">
+                <div class="fn-avatar-preview">
+                    {% set _pp = user_photo or current_user.profile_picture or current_user.profile_image or current_user.profile_pic or current_user.photo_profil or current_user.photo or current_user.avatar or current_user.avatar_url or current_user.image_file or current_user.picture %}
+                    {% set _src = '' %}
+                    {% if _pp and _pp is string and _pp != 'default_avatar.png' %}
+                        {% if _pp.startswith('http') or _pp.startswith('/') or _pp.startswith('data:') %}{% set _src = _pp %}
+                        {% elif _pp.startswith('static/') %}{% set _src = '/' ~ _pp %}
+                        {% elif '/' in _pp %}{% set _src = url_for('static', filename=_pp) %}
+                        {% else %}{% set _src = url_for('static', filename='uploads/' ~ _pp) %}
+                        {% endif %}
+                    {% endif %}
+                    {% if _src %}
+                        <img src="{{ _src }}" alt="Photo de profil" class="fn-avatar-img" id="fnAvatarImg" data-raw="{{ _pp }}" onerror="fnAvatarFallback(this)">
+                    {% endif %}
+                    <div class="fn-avatar-placeholder" id="fnAvatarPh" {% if _src %}style="display:none"{% endif %} aria-label="Aucune photo de profil">
+                            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <rect width="100" height="100" fill="var(--placeholder-bg)"/>
+                                <path class="ph-shirt" d="M 50,58 C 28,58 12,72 12,92 L 12,100 L 88,100 L 88,92 C 88,72 72,58 50,58 Z"/>
+                                <path fill="#ffffff" opacity="0.85" d="M 50,58 L 42,70 L 50,74 L 58,70 Z"/>
+                                <circle class="ph-head" cx="50" cy="36" r="18"/>
+                                <path fill="#3a2c22" d="M 32,34 C 32,22 40,14 50,14 C 60,14 68,22 68,34 C 68,28 62,22 50,22 C 38,22 32,28 32,34 Z"/>
+                            </svg>
+                        </div>
+                </div>
+                <div class="fn-profile-info">
+                    <div class="fn-name">
+                        <span class="fn-name-text">{{ user_nom_complet or current_user.nom_complet }}</span>
+                        <svg class="fn-badge-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-label="Compte vérifié" role="img">
+                            <path fill="var(--fb-verified)" d="M 12.00,0.85 C 12.45,0.85 12.94,1.45 13.34,1.79 C 13.75,2.13 14.01,2.76 14.45,2.87 C 14.88,2.99 15.42,2.57 15.94,2.48 C 16.46,2.40 17.19,2.12 17.57,2.34 C 17.96,2.57 18.09,3.33 18.27,3.83 C 18.45,4.32 18.37,5.00 18.68,5.32 C 19.00,5.63 19.68,5.55 20.17,5.73 C 20.67,5.91 21.43,6.04 21.66,6.42 C 21.88,6.81 21.60,7.54 21.52,8.06 C 21.43,8.58 21.01,9.12 21.13,9.55 C 21.24,9.99 21.87,10.25 22.21,10.66 C 22.55,11.06 23.15,11.55 23.15,12.00 C 23.15,12.45 22.55,12.94 22.21,13.34 C 21.87,13.75 21.24,14.01 21.13,14.45 C 21.01,14.88 21.43,15.42 21.52,15.94 C 21.60,16.46 21.88,17.19 21.66,17.57 C 21.43,17.96 20.67,18.09 20.17,18.27 C 19.68,18.45 19.00,18.37 18.68,18.68 C 18.37,19.00 18.45,19.68 18.27,20.17 C 18.09,20.67 17.96,21.43 17.57,21.66 C 17.19,21.88 16.46,21.60 15.94,21.52 C 15.42,21.43 14.88,21.01 14.45,21.13 C 14.01,21.24 13.75,21.87 13.34,22.21 C 12.94,22.55 12.45,23.15 12.00,23.15 C 11.55,23.15 11.06,22.55 10.66,22.21 C 10.25,21.87 9.99,21.24 9.55,21.13 C 9.12,21.01 8.58,21.43 8.06,21.52 C 7.54,21.60 6.81,21.88 6.43,21.66 C 6.04,21.43 5.91,20.67 5.73,20.17 C 5.55,19.68 5.63,19.00 5.32,18.68 C 5.00,18.37 4.32,18.45 3.83,18.27 C 3.33,18.09 2.57,17.96 2.34,17.58 C 2.12,17.19 2.40,16.46 2.48,15.94 C 2.57,15.42 2.99,14.88 2.87,14.45 C 2.76,14.01 2.13,13.75 1.79,13.34 C 1.45,12.94 0.85,12.45 0.85,12.00 C 0.85,11.55 1.45,11.06 1.79,10.66 C 2.13,10.25 2.76,9.99 2.87,9.55 C 2.99,9.12 2.57,8.58 2.48,8.06 C 2.40,7.54 2.12,6.81 2.34,6.42 C 2.57,6.04 3.33,5.91 3.83,5.73 C 4.32,5.55 5.00,5.63 5.32,5.32 C 5.63,5.00 5.55,4.32 5.73,3.83 C 5.91,3.33 6.04,2.57 6.42,2.34 C 6.81,2.12 7.54,2.40 8.06,2.48 C 8.58,2.57 9.12,2.99 9.55,2.87 C 9.99,2.76 10.25,2.13 10.66,1.79 C 11.06,1.45 11.55,0.85 12.00,0.85 Z"/>
+                            <path fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" d="M7.3 12.2l3 3 6.2-6.6"/>
+                        </svg>
+                    </div>
+                    <small>Tout le monde verra directement les modifications apportées à votre profil</small>
+                </div>
+            </div>
+        </div>
+
+        <section class="fn-plan-panel is-active" id="fn-panel-4500" data-plan="4500" role="tabpanel" aria-label="Forfait Standard">
+  <div class="fn-hero">
+    <div class="tsapi-plan-essential-tag"><i class="fas fa-star" aria-hidden="true"></i> Notre forfait essentiel</div>
+    <h1 class="fn-hero-title">Verified <span class="fn-accent">Standard</span></h1>
+    <p class="fn-hero-sub">Renforcez votre présence. Améliorez votre contenu.</p>
+    <p class="fn-hero-price"><strong>4 500 FCFA</strong> / mois</p>
+    <p class="fn-hero-count"><i class="fas fa-circle-check" aria-hidden="true"></i> 3 avantages inclus sur 11</p>
+  </div>
+  <ul class="fn-highlights">
+    <li class="fn-hl"><span class="fn-hl-ico"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="none" stroke="var(--fn-blue)" stroke-width="1.1" stroke-linejoin="round" d="M 12.00,0.85 C 12.45,0.85 12.94,1.45 13.34,1.79 C 13.75,2.13 14.01,2.76 14.45,2.87 C 14.88,2.99 15.42,2.57 15.94,2.48 C 16.46,2.40 17.19,2.12 17.57,2.34 C 17.96,2.57 18.09,3.33 18.27,3.83 C 18.45,4.32 18.37,5.00 18.68,5.32 C 19.00,5.63 19.68,5.55 20.17,5.73 C 20.67,5.91 21.43,6.04 21.66,6.42 C 21.88,6.81 21.60,7.54 21.52,8.06 C 21.43,8.58 21.01,9.12 21.13,9.55 C 21.24,9.99 21.87,10.25 22.21,10.66 C 22.55,11.06 23.15,11.55 23.15,12.00 C 23.15,12.45 22.55,12.94 22.21,13.34 C 21.87,13.75 21.24,14.01 21.13,14.45 C 21.01,14.88 21.43,15.42 21.52,15.94 C 21.60,16.46 21.88,17.19 21.66,17.57 C 21.43,17.96 20.67,18.09 20.17,18.27 C 19.68,18.45 19.00,18.37 18.68,18.68 C 18.37,19.00 18.45,19.68 18.27,20.17 C 18.09,20.67 17.96,21.43 17.57,21.66 C 17.19,21.88 16.46,21.60 15.94,21.52 C 15.42,21.43 14.88,21.01 14.45,21.13 C 14.01,21.24 13.75,21.87 13.34,22.21 C 12.94,22.55 12.45,23.15 12.00,23.15 C 11.55,23.15 11.06,22.55 10.66,22.21 C 10.25,21.87 9.99,21.24 9.55,21.13 C 9.12,21.01 8.58,21.43 8.06,21.52 C 7.54,21.60 6.81,21.88 6.43,21.66 C 6.04,21.43 5.91,20.67 5.73,20.17 C 5.55,19.68 5.63,19.00 5.32,18.68 C 5.00,18.37 4.32,18.45 3.83,18.27 C 3.33,18.09 2.57,17.96 2.34,17.58 C 2.12,17.19 2.40,16.46 2.48,15.94 C 2.57,15.42 2.99,14.88 2.87,14.45 C 2.76,14.01 2.13,13.75 1.79,13.34 C 1.45,12.94 0.85,12.45 0.85,12.00 C 0.85,11.55 1.45,11.06 1.79,10.66 C 2.13,10.25 2.76,9.99 2.87,9.55 C 2.99,9.12 2.57,8.58 2.48,8.06 C 2.40,7.54 2.12,6.81 2.34,6.42 C 2.57,6.04 3.33,5.91 3.83,5.73 C 4.32,5.55 5.00,5.63 5.32,5.32 C 5.63,5.00 5.55,4.32 5.73,3.83 C 5.91,3.33 6.04,2.57 6.42,2.34 C 6.81,2.12 7.54,2.40 8.06,2.48 C 8.58,2.57 9.12,2.99 9.55,2.87 C 9.99,2.76 10.25,2.13 10.66,1.79 C 11.06,1.45 11.55,0.85 12.00,0.85 Z"/><path fill="none" stroke="var(--fn-blue)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M7.6 12.2l3 3 5.8-6.2"/></svg></span><div><h3>Obtenez un badge bleu vérifié</h3><p>Un badge bleu s'affiche à côté de votre nom sur votre profil pour montrer que votre compte est authentique.</p></div><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='badge-bleu') }}" aria-label="Voir le détail : Obtenez un badge bleu vérifié" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-hl"><span class="fn-hl-ico"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 2.6 4.6 5.6v5.9c0 4.6 3 8.1 7.4 9.9 4.4-1.8 7.4-5.3 7.4-9.9V5.6z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7.9 16.4c.9-2.1 2.4-3.1 4.1-3.1s3.2 1 4.1 3.1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><div><h3>Protection contre l'usurpation d'identité</h3><p>Nous aidons à empêcher que quelqu'un se fasse passer pour vous sur FaceNet.</p></div><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='protection-usurpation') }}" aria-label="Voir le détail : Protection contre l'usurpation d'identité" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-hl"><span class="fn-hl-ico"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7.2 12.3l3.2 3.2 6.4-6.8" fill="none" stroke="var(--fn-blue)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><h3>Boostez votre visibilité dans les commentaires</h3><p>Vos commentaires sont mis en avant pour être vus par plus de monde.</p></div><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='visibilite-commentaires') }}" aria-label="Voir le détail : Boostez votre visibilité dans les commentaires" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+  </ul>
+  <h2 class="fn-section-h">Découvrir tous les avantages</h2>
+  <h3 class="fn-group-h">Affichez l'authenticité de votre profil</h3>
+  <ul class="fn-rows">
+    <li class="fn-row"><i class="fas fa-circle-check fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Badge bleu vérifié sur le profil<small class="fn-row-desc">Affiché à côté de votre nom sur votre profil.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='badge-bleu') }}" aria-label="Voir le détail : Badge bleu vérifié sur le profil" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row"><i class="fas fa-shield-halved fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Protection contre l'usurpation d'identité<small class="fn-row-desc">Aide à empêcher qu'on se fasse passer pour vous.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='protection-usurpation') }}" aria-label="Voir le détail : Protection contre l'usurpation d'identité" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row"><i class="fas fa-comments fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Boost visibilité commentaires<small class="fn-row-desc">Vos commentaires sont plus visibles.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='visibilite-commentaires') }}" aria-label="Voir le détail : Boost visibilité commentaires" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+  </ul>
+  <h3 class="fn-group-h">Soyez trouvé et mis en avant</h3>
+  <ul class="fn-rows">
+    <li class="fn-row is-off"><i class="fas fa-magnifying-glass fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Recherche prioritaire dans FaceNet<small class="fn-row-desc">Votre profil remonte dans les résultats de recherche.</small></span><span class="fn-row-state"><i class="fas fa-lock fn-off" aria-hidden="true"></i><span class="fn-sr">Non inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='recherche-prioritaire') }}" aria-label="Voir le détail : Recherche prioritaire dans FaceNet" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row is-off"><i class="fas fa-bolt fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Réponse plus rapide à tous vos problèmes<small class="fn-row-desc">Vos demandes passent devant les autres.</small></span><span class="fn-row-state"><i class="fas fa-lock fn-off" aria-hidden="true"></i><span class="fn-sr">Non inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='reponse-rapide') }}" aria-label="Voir le détail : Réponse plus rapide à tous vos problèmes" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row is-off"><i class="fas fa-bullhorn fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Visibilité maximale (posts, reels, stories)<small class="fn-row-desc">Plus de portée pour vos publications, reels et stories.</small></span><span class="fn-row-state"><i class="fas fa-lock fn-off" aria-hidden="true"></i><span class="fn-sr">Non inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='visibilite-maximale') }}" aria-label="Voir le détail : Visibilité maximale (posts, reels, stories)" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+  </ul>
+  <h3 class="fn-group-h">Obtenez de l'aide quand vous en avez besoin</h3>
+  <ul class="fn-rows">
+    <li class="fn-row is-off"><i class="fas fa-envelope fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Support prioritaire par email<small class="fn-row-desc">Vos demandes passent en priorité.</small></span><span class="fn-row-state"><i class="fas fa-lock fn-off" aria-hidden="true"></i><span class="fn-sr">Non inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='support-email') }}" aria-label="Voir le détail : Support prioritaire par email" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row is-off"><i class="fas fa-headset fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Support 24/7<small class="fn-row-desc">Une aide disponible à toute heure.</small></span><span class="fn-row-state"><i class="fas fa-lock fn-off" aria-hidden="true"></i><span class="fn-sr">Non inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='support-24-7') }}" aria-label="Voir le détail : Support 24/7" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row is-off"><i class="fas fa-chart-line fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Statistiques avancées de votre profil<small class="fn-row-desc">Comprenez qui vous voit et ce qui fonctionne.</small></span><span class="fn-row-state"><i class="fas fa-lock fn-off" aria-hidden="true"></i><span class="fn-sr">Non inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='statistiques-avancees') }}" aria-label="Voir le détail : Statistiques avancées de votre profil" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+  </ul>
+  <h3 class="fn-group-h">Protégez votre compte et profitez</h3>
+  <ul class="fn-rows">
+    <li class="fn-row is-off"><i class="fas fa-user-shield fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Protection renforcée du compte<small class="fn-row-desc">Une sécurité supplémentaire pour votre compte.</small></span><span class="fn-row-state"><i class="fas fa-lock fn-off" aria-hidden="true"></i><span class="fn-sr">Non inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='protection-renforcee') }}" aria-label="Voir le détail : Protection renforcée du compte" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row is-off"><i class="fas fa-ticket fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Invitations à des événements exclusifs<small class="fn-row-desc">Accès à des événements réservés.</small></span><span class="fn-row-state"><i class="fas fa-lock fn-off" aria-hidden="true"></i><span class="fn-sr">Non inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='evenements-exclusifs') }}" aria-label="Voir le détail : Invitations à des événements exclusifs" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+  </ul>
+</section>
+
+<section class="fn-plan-panel" id="fn-panel-12000" data-plan="12000" role="tabpanel" aria-label="Forfait Premium">
+  <div class="fn-hero">
+    <h1 class="fn-hero-title">Verified <span class="fn-accent">Premium</span></h1>
+    <p class="fn-hero-sub">Renforcez votre présence. Améliorez votre contenu.</p>
+    <p class="fn-hero-price"><strong>12 000 FCFA</strong> / mois</p>
+    <p class="fn-hero-count"><i class="fas fa-circle-check" aria-hidden="true"></i> 5 avantages inclus sur 11</p>
+  </div>
+  <ul class="fn-highlights">
+    <li class="fn-hl"><span class="fn-hl-ico"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="none" stroke="var(--fn-blue)" stroke-width="1.1" stroke-linejoin="round" d="M 12.00,0.85 C 12.45,0.85 12.94,1.45 13.34,1.79 C 13.75,2.13 14.01,2.76 14.45,2.87 C 14.88,2.99 15.42,2.57 15.94,2.48 C 16.46,2.40 17.19,2.12 17.57,2.34 C 17.96,2.57 18.09,3.33 18.27,3.83 C 18.45,4.32 18.37,5.00 18.68,5.32 C 19.00,5.63 19.68,5.55 20.17,5.73 C 20.67,5.91 21.43,6.04 21.66,6.42 C 21.88,6.81 21.60,7.54 21.52,8.06 C 21.43,8.58 21.01,9.12 21.13,9.55 C 21.24,9.99 21.87,10.25 22.21,10.66 C 22.55,11.06 23.15,11.55 23.15,12.00 C 23.15,12.45 22.55,12.94 22.21,13.34 C 21.87,13.75 21.24,14.01 21.13,14.45 C 21.01,14.88 21.43,15.42 21.52,15.94 C 21.60,16.46 21.88,17.19 21.66,17.57 C 21.43,17.96 20.67,18.09 20.17,18.27 C 19.68,18.45 19.00,18.37 18.68,18.68 C 18.37,19.00 18.45,19.68 18.27,20.17 C 18.09,20.67 17.96,21.43 17.57,21.66 C 17.19,21.88 16.46,21.60 15.94,21.52 C 15.42,21.43 14.88,21.01 14.45,21.13 C 14.01,21.24 13.75,21.87 13.34,22.21 C 12.94,22.55 12.45,23.15 12.00,23.15 C 11.55,23.15 11.06,22.55 10.66,22.21 C 10.25,21.87 9.99,21.24 9.55,21.13 C 9.12,21.01 8.58,21.43 8.06,21.52 C 7.54,21.60 6.81,21.88 6.43,21.66 C 6.04,21.43 5.91,20.67 5.73,20.17 C 5.55,19.68 5.63,19.00 5.32,18.68 C 5.00,18.37 4.32,18.45 3.83,18.27 C 3.33,18.09 2.57,17.96 2.34,17.58 C 2.12,17.19 2.40,16.46 2.48,15.94 C 2.57,15.42 2.99,14.88 2.87,14.45 C 2.76,14.01 2.13,13.75 1.79,13.34 C 1.45,12.94 0.85,12.45 0.85,12.00 C 0.85,11.55 1.45,11.06 1.79,10.66 C 2.13,10.25 2.76,9.99 2.87,9.55 C 2.99,9.12 2.57,8.58 2.48,8.06 C 2.40,7.54 2.12,6.81 2.34,6.42 C 2.57,6.04 3.33,5.91 3.83,5.73 C 4.32,5.55 5.00,5.63 5.32,5.32 C 5.63,5.00 5.55,4.32 5.73,3.83 C 5.91,3.33 6.04,2.57 6.42,2.34 C 6.81,2.12 7.54,2.40 8.06,2.48 C 8.58,2.57 9.12,2.99 9.55,2.87 C 9.99,2.76 10.25,2.13 10.66,1.79 C 11.06,1.45 11.55,0.85 12.00,0.85 Z"/><path fill="none" stroke="var(--fn-blue)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M7.6 12.2l3 3 5.8-6.2"/></svg></span><div><h3>Obtenez un badge bleu vérifié</h3><p>Un badge bleu s'affiche à côté de votre nom sur votre profil pour montrer que votre compte est authentique.</p></div><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='badge-bleu') }}" aria-label="Voir le détail : Obtenez un badge bleu vérifié" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-hl"><span class="fn-hl-ico"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 2.6 4.6 5.6v5.9c0 4.6 3 8.1 7.4 9.9 4.4-1.8 7.4-5.3 7.4-9.9V5.6z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7.9 16.4c.9-2.1 2.4-3.1 4.1-3.1s3.2 1 4.1 3.1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><div><h3>Protection contre l'usurpation d'identité</h3><p>Nous aidons à empêcher que quelqu'un se fasse passer pour vous sur FaceNet.</p></div><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='protection-usurpation') }}" aria-label="Voir le détail : Protection contre l'usurpation d'identité" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-hl"><span class="fn-hl-ico"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7.2 12.3l3.2 3.2 6.4-6.8" fill="none" stroke="var(--fn-blue)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><h3>Boostez votre visibilité dans les commentaires</h3><p>Vos commentaires sont mis en avant pour être vus par plus de monde.</p></div><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='visibilite-commentaires') }}" aria-label="Voir le détail : Boostez votre visibilité dans les commentaires" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+  </ul>
+  <h2 class="fn-section-h">Découvrir tous les avantages</h2>
+  <h3 class="fn-group-h">Affichez l'authenticité de votre profil</h3>
+  <ul class="fn-rows">
+    <li class="fn-row"><i class="fas fa-circle-check fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Badge bleu vérifié sur le profil<small class="fn-row-desc">Affiché à côté de votre nom sur votre profil.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='badge-bleu') }}" aria-label="Voir le détail : Badge bleu vérifié sur le profil" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row"><i class="fas fa-shield-halved fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Protection contre l'usurpation d'identité<small class="fn-row-desc">Aide à empêcher qu'on se fasse passer pour vous.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='protection-usurpation') }}" aria-label="Voir le détail : Protection contre l'usurpation d'identité" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row"><i class="fas fa-comments fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Boost visibilité commentaires<small class="fn-row-desc">Vos commentaires sont plus visibles.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='visibilite-commentaires') }}" aria-label="Voir le détail : Boost visibilité commentaires" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+  </ul>
+  <h3 class="fn-group-h">Soyez trouvé et mis en avant</h3>
+  <ul class="fn-rows">
+    <li class="fn-row"><i class="fas fa-magnifying-glass fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Recherche prioritaire dans FaceNet<small class="fn-row-desc">Votre profil remonte dans les résultats de recherche.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='recherche-prioritaire') }}" aria-label="Voir le détail : Recherche prioritaire dans FaceNet" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row is-off"><i class="fas fa-bolt fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Réponse plus rapide à tous vos problèmes<small class="fn-row-desc">Vos demandes passent devant les autres.</small></span><span class="fn-row-state"><i class="fas fa-lock fn-off" aria-hidden="true"></i><span class="fn-sr">Non inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='reponse-rapide') }}" aria-label="Voir le détail : Réponse plus rapide à tous vos problèmes" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row is-off"><i class="fas fa-bullhorn fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Visibilité maximale (posts, reels, stories)<small class="fn-row-desc">Plus de portée pour vos publications, reels et stories.</small></span><span class="fn-row-state"><i class="fas fa-lock fn-off" aria-hidden="true"></i><span class="fn-sr">Non inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='visibilite-maximale') }}" aria-label="Voir le détail : Visibilité maximale (posts, reels, stories)" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+  </ul>
+  <h3 class="fn-group-h">Obtenez de l'aide quand vous en avez besoin</h3>
+  <ul class="fn-rows">
+    <li class="fn-row"><i class="fas fa-envelope fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Support prioritaire par email<small class="fn-row-desc">Vos demandes passent en priorité.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='support-email') }}" aria-label="Voir le détail : Support prioritaire par email" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row is-off"><i class="fas fa-headset fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Support 24/7<small class="fn-row-desc">Une aide disponible à toute heure.</small></span><span class="fn-row-state"><i class="fas fa-lock fn-off" aria-hidden="true"></i><span class="fn-sr">Non inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='support-24-7') }}" aria-label="Voir le détail : Support 24/7" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row is-off"><i class="fas fa-chart-line fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Statistiques avancées de votre profil<small class="fn-row-desc">Comprenez qui vous voit et ce qui fonctionne.</small></span><span class="fn-row-state"><i class="fas fa-lock fn-off" aria-hidden="true"></i><span class="fn-sr">Non inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='statistiques-avancees') }}" aria-label="Voir le détail : Statistiques avancées de votre profil" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+  </ul>
+  <h3 class="fn-group-h">Protégez votre compte et profitez</h3>
+  <ul class="fn-rows">
+    <li class="fn-row is-off"><i class="fas fa-user-shield fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Protection renforcée du compte<small class="fn-row-desc">Une sécurité supplémentaire pour votre compte.</small></span><span class="fn-row-state"><i class="fas fa-lock fn-off" aria-hidden="true"></i><span class="fn-sr">Non inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='protection-renforcee') }}" aria-label="Voir le détail : Protection renforcée du compte" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row is-off"><i class="fas fa-ticket fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Invitations à des événements exclusifs<small class="fn-row-desc">Accès à des événements réservés.</small></span><span class="fn-row-state"><i class="fas fa-lock fn-off" aria-hidden="true"></i><span class="fn-sr">Non inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='evenements-exclusifs') }}" aria-label="Voir le détail : Invitations à des événements exclusifs" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+  </ul>
+</section>
+
+<section class="fn-plan-panel" id="fn-panel-78000" data-plan="78000" role="tabpanel" aria-label="Forfait Max">
+  <div class="fn-hero">
+    <h1 class="fn-hero-title">Verified <span class="fn-accent">Max</span></h1>
+    <p class="fn-hero-sub">Renforcez votre présence. Améliorez votre contenu.</p>
+    <p class="fn-hero-price"><strong>78 000 FCFA</strong> / mois</p>
+    <p class="fn-hero-count"><i class="fas fa-circle-check" aria-hidden="true"></i> 8 avantages inclus sur 11</p>
+  </div>
+  <ul class="fn-highlights">
+    <li class="fn-hl"><span class="fn-hl-ico"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="none" stroke="var(--fn-blue)" stroke-width="1.1" stroke-linejoin="round" d="M 12.00,0.85 C 12.45,0.85 12.94,1.45 13.34,1.79 C 13.75,2.13 14.01,2.76 14.45,2.87 C 14.88,2.99 15.42,2.57 15.94,2.48 C 16.46,2.40 17.19,2.12 17.57,2.34 C 17.96,2.57 18.09,3.33 18.27,3.83 C 18.45,4.32 18.37,5.00 18.68,5.32 C 19.00,5.63 19.68,5.55 20.17,5.73 C 20.67,5.91 21.43,6.04 21.66,6.42 C 21.88,6.81 21.60,7.54 21.52,8.06 C 21.43,8.58 21.01,9.12 21.13,9.55 C 21.24,9.99 21.87,10.25 22.21,10.66 C 22.55,11.06 23.15,11.55 23.15,12.00 C 23.15,12.45 22.55,12.94 22.21,13.34 C 21.87,13.75 21.24,14.01 21.13,14.45 C 21.01,14.88 21.43,15.42 21.52,15.94 C 21.60,16.46 21.88,17.19 21.66,17.57 C 21.43,17.96 20.67,18.09 20.17,18.27 C 19.68,18.45 19.00,18.37 18.68,18.68 C 18.37,19.00 18.45,19.68 18.27,20.17 C 18.09,20.67 17.96,21.43 17.57,21.66 C 17.19,21.88 16.46,21.60 15.94,21.52 C 15.42,21.43 14.88,21.01 14.45,21.13 C 14.01,21.24 13.75,21.87 13.34,22.21 C 12.94,22.55 12.45,23.15 12.00,23.15 C 11.55,23.15 11.06,22.55 10.66,22.21 C 10.25,21.87 9.99,21.24 9.55,21.13 C 9.12,21.01 8.58,21.43 8.06,21.52 C 7.54,21.60 6.81,21.88 6.43,21.66 C 6.04,21.43 5.91,20.67 5.73,20.17 C 5.55,19.68 5.63,19.00 5.32,18.68 C 5.00,18.37 4.32,18.45 3.83,18.27 C 3.33,18.09 2.57,17.96 2.34,17.58 C 2.12,17.19 2.40,16.46 2.48,15.94 C 2.57,15.42 2.99,14.88 2.87,14.45 C 2.76,14.01 2.13,13.75 1.79,13.34 C 1.45,12.94 0.85,12.45 0.85,12.00 C 0.85,11.55 1.45,11.06 1.79,10.66 C 2.13,10.25 2.76,9.99 2.87,9.55 C 2.99,9.12 2.57,8.58 2.48,8.06 C 2.40,7.54 2.12,6.81 2.34,6.42 C 2.57,6.04 3.33,5.91 3.83,5.73 C 4.32,5.55 5.00,5.63 5.32,5.32 C 5.63,5.00 5.55,4.32 5.73,3.83 C 5.91,3.33 6.04,2.57 6.42,2.34 C 6.81,2.12 7.54,2.40 8.06,2.48 C 8.58,2.57 9.12,2.99 9.55,2.87 C 9.99,2.76 10.25,2.13 10.66,1.79 C 11.06,1.45 11.55,0.85 12.00,0.85 Z"/><path fill="none" stroke="var(--fn-blue)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M7.6 12.2l3 3 5.8-6.2"/></svg></span><div><h3>Obtenez un badge bleu vérifié</h3><p>Un badge bleu s'affiche à côté de votre nom sur votre profil pour montrer que votre compte est authentique.</p></div><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='badge-bleu') }}" aria-label="Voir le détail : Obtenez un badge bleu vérifié" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-hl"><span class="fn-hl-ico"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 2.6 4.6 5.6v5.9c0 4.6 3 8.1 7.4 9.9 4.4-1.8 7.4-5.3 7.4-9.9V5.6z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7.9 16.4c.9-2.1 2.4-3.1 4.1-3.1s3.2 1 4.1 3.1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><div><h3>Protection contre l'usurpation d'identité</h3><p>Nous aidons à empêcher que quelqu'un se fasse passer pour vous sur FaceNet.</p></div><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='protection-usurpation') }}" aria-label="Voir le détail : Protection contre l'usurpation d'identité" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-hl"><span class="fn-hl-ico"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7.2 12.3l3.2 3.2 6.4-6.8" fill="none" stroke="var(--fn-blue)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><h3>Boostez votre visibilité dans les commentaires</h3><p>Vos commentaires sont mis en avant pour être vus par plus de monde.</p></div><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='visibilite-commentaires') }}" aria-label="Voir le détail : Boostez votre visibilité dans les commentaires" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+  </ul>
+  <h2 class="fn-section-h">Découvrir tous les avantages</h2>
+  <h3 class="fn-group-h">Affichez l'authenticité de votre profil</h3>
+  <ul class="fn-rows">
+    <li class="fn-row"><i class="fas fa-circle-check fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Badge bleu vérifié sur le profil<small class="fn-row-desc">Affiché à côté de votre nom sur votre profil.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='badge-bleu') }}" aria-label="Voir le détail : Badge bleu vérifié sur le profil" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row"><i class="fas fa-shield-halved fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Protection contre l'usurpation d'identité<small class="fn-row-desc">Aide à empêcher qu'on se fasse passer pour vous.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='protection-usurpation') }}" aria-label="Voir le détail : Protection contre l'usurpation d'identité" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row"><i class="fas fa-comments fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Boost visibilité commentaires<small class="fn-row-desc">Vos commentaires sont plus visibles.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='visibilite-commentaires') }}" aria-label="Voir le détail : Boost visibilité commentaires" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+  </ul>
+  <h3 class="fn-group-h">Soyez trouvé et mis en avant</h3>
+  <ul class="fn-rows">
+    <li class="fn-row"><i class="fas fa-magnifying-glass fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Recherche prioritaire dans FaceNet<small class="fn-row-desc">Votre profil remonte dans les résultats de recherche.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='recherche-prioritaire') }}" aria-label="Voir le détail : Recherche prioritaire dans FaceNet" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row"><i class="fas fa-bolt fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Réponse plus rapide à tous vos problèmes<small class="fn-row-desc">Vos demandes passent devant les autres.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='reponse-rapide') }}" aria-label="Voir le détail : Réponse plus rapide à tous vos problèmes" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row is-off"><i class="fas fa-bullhorn fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Visibilité maximale (posts, reels, stories)<small class="fn-row-desc">Plus de portée pour vos publications, reels et stories.</small></span><span class="fn-row-state"><i class="fas fa-lock fn-off" aria-hidden="true"></i><span class="fn-sr">Non inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='visibilite-maximale') }}" aria-label="Voir le détail : Visibilité maximale (posts, reels, stories)" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+  </ul>
+  <h3 class="fn-group-h">Obtenez de l'aide quand vous en avez besoin</h3>
+  <ul class="fn-rows">
+    <li class="fn-row"><i class="fas fa-envelope fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Support prioritaire par email<small class="fn-row-desc">Vos demandes passent en priorité.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='support-email') }}" aria-label="Voir le détail : Support prioritaire par email" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row"><i class="fas fa-headset fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Support 24/7 <span class="fn-chip">Assistant IA</span><small class="fn-row-desc">Réponses assurées par notre assistant IA, à toute heure.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='support-24-7') }}" aria-label="Voir le détail : Support 24/7" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row is-off"><i class="fas fa-chart-line fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Statistiques avancées de votre profil<small class="fn-row-desc">Comprenez qui vous voit et ce qui fonctionne.</small></span><span class="fn-row-state"><i class="fas fa-lock fn-off" aria-hidden="true"></i><span class="fn-sr">Non inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='statistiques-avancees') }}" aria-label="Voir le détail : Statistiques avancées de votre profil" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+  </ul>
+  <h3 class="fn-group-h">Protégez votre compte et profitez</h3>
+  <ul class="fn-rows">
+    <li class="fn-row"><i class="fas fa-user-shield fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Protection renforcée du compte<small class="fn-row-desc">Une sécurité supplémentaire pour votre compte.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='protection-renforcee') }}" aria-label="Voir le détail : Protection renforcée du compte" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row is-off"><i class="fas fa-ticket fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Invitations à des événements exclusifs<small class="fn-row-desc">Accès à des événements réservés.</small></span><span class="fn-row-state"><i class="fas fa-lock fn-off" aria-hidden="true"></i><span class="fn-sr">Non inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='evenements-exclusifs') }}" aria-label="Voir le détail : Invitations à des événements exclusifs" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+  </ul>
+</section>
+
+<section class="fn-plan-panel" id="fn-panel-100000" data-plan="100000" role="tabpanel" aria-label="Forfait Max Plus">
+  <div class="fn-hero">
+    <h1 class="fn-hero-title">Verified <span class="fn-accent">Max Plus</span></h1>
+    <p class="fn-hero-sub">Renforcez votre présence. Améliorez votre contenu.</p>
+    <p class="fn-hero-price"><strong>100 000 FCFA</strong> / mois</p>
+    <p class="fn-hero-count"><i class="fas fa-circle-check" aria-hidden="true"></i> 11 avantages inclus sur 11</p>
+  </div>
+  <ul class="fn-highlights">
+    <li class="fn-hl"><span class="fn-hl-ico"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="none" stroke="var(--fn-blue)" stroke-width="1.1" stroke-linejoin="round" d="M 12.00,0.85 C 12.45,0.85 12.94,1.45 13.34,1.79 C 13.75,2.13 14.01,2.76 14.45,2.87 C 14.88,2.99 15.42,2.57 15.94,2.48 C 16.46,2.40 17.19,2.12 17.57,2.34 C 17.96,2.57 18.09,3.33 18.27,3.83 C 18.45,4.32 18.37,5.00 18.68,5.32 C 19.00,5.63 19.68,5.55 20.17,5.73 C 20.67,5.91 21.43,6.04 21.66,6.42 C 21.88,6.81 21.60,7.54 21.52,8.06 C 21.43,8.58 21.01,9.12 21.13,9.55 C 21.24,9.99 21.87,10.25 22.21,10.66 C 22.55,11.06 23.15,11.55 23.15,12.00 C 23.15,12.45 22.55,12.94 22.21,13.34 C 21.87,13.75 21.24,14.01 21.13,14.45 C 21.01,14.88 21.43,15.42 21.52,15.94 C 21.60,16.46 21.88,17.19 21.66,17.57 C 21.43,17.96 20.67,18.09 20.17,18.27 C 19.68,18.45 19.00,18.37 18.68,18.68 C 18.37,19.00 18.45,19.68 18.27,20.17 C 18.09,20.67 17.96,21.43 17.57,21.66 C 17.19,21.88 16.46,21.60 15.94,21.52 C 15.42,21.43 14.88,21.01 14.45,21.13 C 14.01,21.24 13.75,21.87 13.34,22.21 C 12.94,22.55 12.45,23.15 12.00,23.15 C 11.55,23.15 11.06,22.55 10.66,22.21 C 10.25,21.87 9.99,21.24 9.55,21.13 C 9.12,21.01 8.58,21.43 8.06,21.52 C 7.54,21.60 6.81,21.88 6.43,21.66 C 6.04,21.43 5.91,20.67 5.73,20.17 C 5.55,19.68 5.63,19.00 5.32,18.68 C 5.00,18.37 4.32,18.45 3.83,18.27 C 3.33,18.09 2.57,17.96 2.34,17.58 C 2.12,17.19 2.40,16.46 2.48,15.94 C 2.57,15.42 2.99,14.88 2.87,14.45 C 2.76,14.01 2.13,13.75 1.79,13.34 C 1.45,12.94 0.85,12.45 0.85,12.00 C 0.85,11.55 1.45,11.06 1.79,10.66 C 2.13,10.25 2.76,9.99 2.87,9.55 C 2.99,9.12 2.57,8.58 2.48,8.06 C 2.40,7.54 2.12,6.81 2.34,6.42 C 2.57,6.04 3.33,5.91 3.83,5.73 C 4.32,5.55 5.00,5.63 5.32,5.32 C 5.63,5.00 5.55,4.32 5.73,3.83 C 5.91,3.33 6.04,2.57 6.42,2.34 C 6.81,2.12 7.54,2.40 8.06,2.48 C 8.58,2.57 9.12,2.99 9.55,2.87 C 9.99,2.76 10.25,2.13 10.66,1.79 C 11.06,1.45 11.55,0.85 12.00,0.85 Z"/><path fill="none" stroke="var(--fn-blue)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M7.6 12.2l3 3 5.8-6.2"/></svg></span><div><h3>Obtenez un badge bleu vérifié</h3><p>Un badge bleu s'affiche à côté de votre nom sur votre profil pour montrer que votre compte est authentique.</p></div><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='badge-bleu') }}" aria-label="Voir le détail : Obtenez un badge bleu vérifié" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-hl"><span class="fn-hl-ico"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 2.6 4.6 5.6v5.9c0 4.6 3 8.1 7.4 9.9 4.4-1.8 7.4-5.3 7.4-9.9V5.6z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7.9 16.4c.9-2.1 2.4-3.1 4.1-3.1s3.2 1 4.1 3.1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><div><h3>Protection contre l'usurpation d'identité</h3><p>Nous aidons à empêcher que quelqu'un se fasse passer pour vous sur FaceNet.</p></div><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='protection-usurpation') }}" aria-label="Voir le détail : Protection contre l'usurpation d'identité" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-hl"><span class="fn-hl-ico"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7.2 12.3l3.2 3.2 6.4-6.8" fill="none" stroke="var(--fn-blue)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><h3>Boostez votre visibilité dans les commentaires</h3><p>Vos commentaires sont mis en avant pour être vus par plus de monde.</p></div><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='visibilite-commentaires') }}" aria-label="Voir le détail : Boostez votre visibilité dans les commentaires" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+  </ul>
+  <h2 class="fn-section-h">Découvrir tous les avantages</h2>
+  <h3 class="fn-group-h">Affichez l'authenticité de votre profil</h3>
+  <ul class="fn-rows">
+    <li class="fn-row"><i class="fas fa-circle-check fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Badge bleu vérifié sur le profil<small class="fn-row-desc">Affiché à côté de votre nom sur votre profil.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='badge-bleu') }}" aria-label="Voir le détail : Badge bleu vérifié sur le profil" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row"><i class="fas fa-shield-halved fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Protection contre l'usurpation d'identité<small class="fn-row-desc">Aide à empêcher qu'on se fasse passer pour vous.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='protection-usurpation') }}" aria-label="Voir le détail : Protection contre l'usurpation d'identité" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row"><i class="fas fa-comments fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Boost visibilité commentaires<small class="fn-row-desc">Vos commentaires sont plus visibles.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='visibilite-commentaires') }}" aria-label="Voir le détail : Boost visibilité commentaires" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+  </ul>
+  <h3 class="fn-group-h">Soyez trouvé et mis en avant</h3>
+  <ul class="fn-rows">
+    <li class="fn-row"><i class="fas fa-magnifying-glass fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Recherche prioritaire dans FaceNet<small class="fn-row-desc">Votre profil remonte dans les résultats de recherche.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='recherche-prioritaire') }}" aria-label="Voir le détail : Recherche prioritaire dans FaceNet" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row"><i class="fas fa-bolt fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Réponse plus rapide à tous vos problèmes<small class="fn-row-desc">Vos demandes passent devant les autres.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='reponse-rapide') }}" aria-label="Voir le détail : Réponse plus rapide à tous vos problèmes" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row"><i class="fas fa-bullhorn fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Visibilité maximale (posts, reels, stories)<small class="fn-row-desc">Plus de portée pour vos publications, reels et stories.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='visibilite-maximale') }}" aria-label="Voir le détail : Visibilité maximale (posts, reels, stories)" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+  </ul>
+  <h3 class="fn-group-h">Obtenez de l'aide quand vous en avez besoin</h3>
+  <ul class="fn-rows">
+    <li class="fn-row"><i class="fas fa-envelope fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Support prioritaire par email<small class="fn-row-desc">Vos demandes passent en priorité.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='support-email') }}" aria-label="Voir le détail : Support prioritaire par email" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row"><i class="fas fa-headset fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Support 24/7 <span class="fn-chip is-human">Conseiller humain</span><small class="fn-row-desc">Réponses assurées par un conseiller humain, à toute heure.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='support-24-7') }}" aria-label="Voir le détail : Support 24/7" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row"><i class="fas fa-chart-line fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Statistiques avancées de votre profil<small class="fn-row-desc">Comprenez qui vous voit et ce qui fonctionne.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='statistiques-avancees') }}" aria-label="Voir le détail : Statistiques avancées de votre profil" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+  </ul>
+  <h3 class="fn-group-h">Protégez votre compte et profitez</h3>
+  <ul class="fn-rows">
+    <li class="fn-row"><i class="fas fa-user-shield fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Protection renforcée du compte<small class="fn-row-desc">Une sécurité supplémentaire pour votre compte.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='protection-renforcee') }}" aria-label="Voir le détail : Protection renforcée du compte" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+    <li class="fn-row"><i class="fas fa-ticket fn-row-ico" aria-hidden="true"></i><span class="fn-row-label">Invitations à des événements exclusifs<small class="fn-row-desc">Accès à des événements réservés.</small></span><span class="fn-row-state"><i class="fas fa-circle-check fn-ok" aria-hidden="true"></i><span class="fn-sr">Inclus</span></span><a class="fn-go" href="{{ url_for('main.tsapi_info', slug='evenements-exclusifs') }}" aria-label="Voir le détail : Invitations à des événements exclusifs" title="Voir le détail"><i class="fas fa-arrow-right" aria-hidden="true"></i></a></li>
+  </ul>
+</section>
+
+        <div class="fn-block">
+            <div class="fn-parcours-steps" role="group" aria-label="Avancement de votre vérification">
+        <div class="fn-parcours-titre">
+            <i class="fas fa-shield-halved" aria-hidden="true"></i>
+            Avancement de votre vérification
+        </div>
+        <div class="fn-progress" role="progressbar" aria-valuemin="0" aria-valuemax="5" aria-valuenow="1" aria-valuetext="Étape 1 sur 5">
+            <span class="fn-progress-seg is-active"></span>
+            <span class="fn-progress-seg"></span>
+            <span class="fn-progress-seg"></span>
+            <span class="fn-progress-seg"></span>
+            <span class="fn-progress-seg"></span>
+        </div>
+        <p class="fn-progress-note">Un processus sécurisé, rapide et confidentiel.</p>
+    </div>
+        </div>
+
+        <form id="tsapi_payment_form" action="{{ url_for('main.process_payment') }}" method="POST" enctype="multipart/form-data" onsubmit="return fnSafeSubmit(event)" novalidate>
+                <input type="radio" name="amount" value="4500" class="fn-sr" checked aria-label="Forfait Standard 4 500 FCFA">
+                <input type="radio" name="amount" value="12000" class="fn-sr" aria-label="Forfait Premium 12 000 FCFA">
+                <input type="radio" name="amount" value="78000" class="fn-sr" aria-label="Forfait Max 78 000 FCFA">
+                <input type="radio" name="amount" value="100000" class="fn-sr" aria-label="Forfait Max Plus 100 000 FCFA">
+
+            <div class="fn-block">
+                <div class="tsapi-step-block">
+                    <div class="form-section-title">
+                        <i class="fas fa-credit-card" style="color: var(--fn-blue);" aria-hidden="true"></i>
+                        Moyen de facturation
+                    </div>
+
+                    <div class="tsapi-input-group">
+                        <label for="payment_method">Sélectionnez le mode de paiement</label>
+                        <select id="payment_method" name="method" onchange="togglePaymentFields()">
+                            <option value="momo">Mobile Money</option>
+                            <option value="card">Carte Bancaire (Visa / Mastercard)</option>
+                            <option value="paypal">PayPal</option>
+                        </select>
+                    </div>
+
+                    <div id="payment-momo-fields" class="tsapi-input-group">
+                        <div class="tsapi-input-group" style="display:none;">
+                            <label for="momo_country_select">Pays</label>
+                            <select id="momo_country_select">
+                                <option value="CM" data-currency="XAF" data-prefix="+237" selected>Cameroun (+237)</option>
+                                <optgroup label="Afrique Centrale — XAF">
+                                    <option value="GA" data-currency="XAF" data-prefix="+241">Gabon (+241)</option>
+                                    <option value="CG" data-currency="XAF" data-prefix="+242">Congo-Brazzaville (+242)</option>
+                                </optgroup>
+                                <optgroup label="Afrique de l'Ouest — XOF">
+                                    <option value="CI" data-currency="XOF" data-prefix="+225">Côte d'Ivoire (+225)</option>
+                                    <option value="SN" data-currency="XOF" data-prefix="+221">Sénégal (+221)</option>
+                                    <option value="BJ" data-currency="XOF" data-prefix="+229">Bénin (+229)</option>
+                                    <option value="TG" data-currency="XOF" data-prefix="+228">Togo (+228)</option>
+                                    <option value="BF" data-currency="XOF" data-prefix="+226">Burkina Faso (+226)</option>
+                                    <option value="ML" data-currency="XOF" data-prefix="+223">Mali (+223)</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div id="momo_operator_wrap" class="tsapi-input-group" style="display:none;">
+                            <label id="momo_operator_label">Avec quel opérateur souhaitez-vous payer ?</label>
+                            <div id="momo_operator_list" class="momo-op-grid" role="radiogroup" aria-labelledby="momo_operator_label"></div>
+                            <div id="momo_operator_status" class="phone-status" role="status" aria-live="polite"></div>
+                        </div>
+                        <input type="hidden" name="network" id="momo_network" value="">
+                        <input type="hidden" name="currency" id="momo_currency" value="XAF">
+                        <label id="phone_label" for="phone_number">Numéro de Téléphone Mobile (Cameroun)</label>
+                        <input type="hidden" name="phone_country" id="phone_country" value="CM">
+                        <div class="phone-fixed-row">
+                            <span class="phone-fixed-prefix" id="phone_prefix">+237</span>
+                            <input type="tel" id="phone_number" name="phone" inputmode="tel" autocomplete="tel" placeholder="6 XX XX XX XX">
+                        </div>
+                        <div id="phone_status" class="phone-status" role="status" aria-live="polite"></div>
+                        <div class="upload-feedback" id="phone_hint" style="display:none;" aria-hidden="true"></div>
+                        <div class="upload-feedback" id="momo_currency_note">Devise du paiement : XAF (FCFA)</div>
+                    </div>
+
+                    <div id="payment-card-fields" class="tsapi-input-group" style="display:none;">
+                        <div class="tsapi-input-group">
+                            <label for="card_holder">Titulaire de la carte (Nom imprimé)</label>
+                            <input type="text" id="card_holder" placeholder="EX: JEAN DUPONT" autocomplete="cc-name">
+                            <div class="upload-feedback error" id="card_holder_error" style="display:none;"></div>
+                        </div>
+
+                        <div class="tsapi-input-group">
+                            <label for="card_number">
+                                Numéro de Carte Bancaire
+                                <span class="info-tip" id="cards_info_tip" role="button" tabindex="0" aria-label="Voir la liste des cartes acceptées" aria-describedby="cards_tooltip_text" aria-expanded="false" aria-haspopup="true">!</span>
+                            </label>
+
+                            <div class="accepted-cards" aria-label="Cartes acceptées">
+                                <span class="card-logo" role="img" aria-label="Visa">
+                                    <svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" width="750" height="471" viewBox="0 0 750 471"><g fill-rule="nonzero" fill="none"><rect fill="#0E4595" width="750" height="471" rx="40"/><path fill="#FFF" d="M278.197 334.228l33.361-195.763h53.36l-33.385 195.763zM524.308 142.688c-10.572-3.966-27.137-8.222-47.823-8.222-52.725 0-89.865 26.55-90.18 64.603-.298 28.13 26.513 43.822 46.753 53.186 20.77 9.594 27.752 15.714 27.654 24.283-.132 13.121-16.587 19.116-31.923 19.116-21.357 0-32.703-2.966-50.226-10.276l-6.876-3.111-7.49 43.824c12.464 5.464 35.51 10.198 59.438 10.443 56.09 0 92.501-26.246 92.916-66.882.2-22.268-14.016-39.216-44.8-53.188-18.65-9.055-30.072-15.099-29.951-24.268 0-8.137 9.667-16.839 30.556-16.839 17.45-.27 30.089 3.535 39.937 7.5l4.781 2.26 7.234-42.43M661.615 138.465h-41.231c-12.774 0-22.332 3.487-27.942 16.234l-79.245 179.404h56.032s9.161-24.123 11.233-29.418c6.124 0 60.554.084 68.337.084 1.596 6.853 6.491 29.334 6.491 29.334h49.513l-43.188-195.638zm-65.418 126.407c4.413-11.279 21.26-54.723 21.26-54.723-.316.522 4.38-11.334 7.075-18.684l3.606 16.879s10.217 46.728 12.352 56.528h-44.293z"/><path d="M45.879 138.465l-.682 4.074c21.091 5.106 39.93 12.494 56.422 21.686l47.346 169.691 56.455-.066 84.004-195.385h-56.522l-52.24 133.496-5.566-27.129a88.005 88.005 0 0 0-.823-2.49l-18.166-87.35c-3.23-12.396-12.598-16.095-24.187-16.527H45.879z" fill="#fff"/></g></svg>
+                                </span>
+                                <span class="card-logo" role="img" aria-label="Mastercard">
+                                    <svg aria-hidden="true" focusable="false" width="750" height="471" viewBox="0 0 750 471" xmlns="http://www.w3.org/2000/svg"><g fill-rule="nonzero" fill="none"><rect fill="#000" width="750" height="471" rx="40"/><path d="M221.13 421.67v-24.85c0-9.53-5.8-15.74-15.32-15.74-5 0-10.35 1.66-14.08 7-2.9-4.56-7-7-13.25-7a14.07 14.07 0 0 0-12 5.8v-5h-7.87v39.76h7.87v-22.75c0-7 4.14-10.35 9.94-10.35s9.11 3.73 9.11 10.35v22.78h7.87v-22.78c0-7 4.14-10.35 9.94-10.35s9.11 3.73 9.11 10.35v22.78h8.68zm129.22-39.35h-14.5v-12H328v12h-8.28v7H328V408c0 9.11 3.31 14.5 13.25 14.5a23.17 23.17 0 0 0 10.75-2.9l-2.49-7a13.63 13.63 0 0 1-7.46 2.07c-4.14 0-6.21-2.49-6.21-6.63V389h14.5v-6.63l.01-.05zm73.72-1.24a12.39 12.39 0 0 0-10.77 5.8v-5h-7.87v39.76h7.87v-22.33c0-6.63 3.31-10.77 8.7-10.77a24.24 24.24 0 0 1 5.38.83l2.49-7.46a28 28 0 0 0-5.8-.83h.01zm-111.41 4.14c-4.14-2.9-9.94-4.14-16.15-4.14-9.94 0-16.15 4.56-16.15 12.43 0 6.63 4.56 10.35 13.25 11.6l4.14.41c4.56.83 7.46 2.49 7.46 4.56 0 2.9-3.31 5-9.53 5a21.84 21.84 0 0 1-13.25-4.14l-4.14 6.21c5.8 4.14 12.84 5 17 5 11.6 0 17.81-5.38 17.81-12.84 0-7-5-10.35-13.67-11.6l-4.14-.41c-3.73-.41-7-1.66-7-4.14 0-2.9 3.31-5 7.87-5 5 0 9.94 2.07 12.43 3.31l4.07-6.25zm120.11 16.57c0 12 7.87 20.71 20.71 20.71 5.8 0 9.94-1.24 14.08-4.56l-4.14-6.21a16.74 16.74 0 0 1-10.35 3.73c-7 0-12.43-5.38-12.43-13.25S446 389 453.07 389a16.74 16.74 0 0 1 10.35 3.73l4.14-6.21c-4.14-3.31-8.28-4.56-14.08-4.56-12.43-.83-20.71 7.87-20.71 19.88v-.05zm-55.5-20.71c-11.6 0-19.47 8.28-19.47 20.71 0 12.43 8.28 20.71 20.29 20.71a25.33 25.33 0 0 0 16.15-5.38l-4.14-5.8a19.79 19.79 0 0 1-11.6 4.14c-5.38 0-11.18-3.31-12-10.35h29.41v-3.31c0-12.43-7.46-20.71-18.64-20.71v-.01zm-.41 7.46c5.8 0 9.94 3.73 10.35 9.94h-21.53c1.24-5.8 5-9.94 11.18-9.94zm-107.27 13.25v-19.88h-7.87v5c-2.9-3.73-7-5.8-12.84-5.8-11.18 0-19.47 8.7-19.47 20.71 0 12.01 8.28 20.71 19.47 20.71 5.8 0 9.94-2.07 12.84-5.8v5h7.87v-19.94zm-31.89 0c0-7.46 4.56-13.25 12.43-13.25 7.46 0 12 5.8 12 13.25 0 7.87-5 13.25-12 13.25-7.87.41-12.43-5.8-12.43-13.25zm306.08-20.71a12.39 12.39 0 0 0-10.77 5.8v-5h-7.87v39.76H533v-22.33c0-6.63 3.31-10.77 8.7-10.77a24.24 24.24 0 0 1 5.38.83l2.49-7.46a28 28 0 0 0-5.8-.83h.01zm-30.65 20.71v-19.88h-7.87v5c-2.9-3.73-7-5.8-12.84-5.8-11.18 0-19.47 8.7-19.47 20.71 0 12.01 8.28 20.71 19.47 20.71 5.8 0 9.94-2.07 12.84-5.8v5h7.87v-19.94zm-31.89 0c0-7.46 4.56-13.25 12.43-13.25 7.46 0 12 5.8 12 13.25 0 7.87-5 13.25-12 13.25-7.87.41-12.43-5.8-12.43-13.25zm111.83 0v-35.62h-7.87v20.71c-2.9-3.73-7-5.8-12.84-5.8-11.18 0-19.47 8.7-19.47 20.71 0 12.01 8.28 20.71 19.47 20.71 5.8 0 9.94-2.07 12.84-5.8v5h7.87v-19.91zm-31.89 0c0-7.46 4.56-13.25 12.43-13.25 7.46 0 12 5.8 12 13.25 0 7.87-5 13.25-12 13.25-7.88.42-12.44-5.79-12.44-13.25h.01z" fill="#FFF"/><path fill="#FF5F00" d="M303.55 80.39h143.72v234.42H303.55z"/><path d="M318.05 197.6a149.5 149.5 0 0 1 56.74-117.21c-61.128-48.061-148.928-41.075-201.687 16.048-52.758 57.123-52.758 145.2 0 202.324 52.759 57.123 140.559 64.11 201.687 16.048a149.5 149.5 0 0 1-56.74-117.21z" fill="#EB001B"/><path d="M616.26 197.6c.041 57.047-32.503 109.106-83.804 134.056-51.302 24.95-112.347 18.408-157.196-16.846a149.43 149.43 0 0 0 0-234.42c44.85-35.254 105.894-41.797 157.196-16.846 51.3 24.95 83.845 77.01 83.804 134.056z" fill="#F79E1B"/></g></svg>
+                                </span>
+                                <span class="card-logo" role="img" aria-label="American Express">
+                                    <svg aria-hidden="true" focusable="false" width="750" height="471" viewBox="0 0 750 471" xmlns="http://www.w3.org/2000/svg"><g fill-rule="nonzero" fill="none"><rect fill="#2557D6" width="750" height="471" rx="40"/><path d="M.003 221.185h36.024l8.123-19.51h18.185l8.101 19.51h70.88V206.27l6.327 14.98h36.796l6.327-15.202v15.138h176.151l-.082-32.026h3.408c2.386.083 3.083.302 3.083 4.226v27.8h91.106v-7.455c7.349 3.92 18.779 7.455 33.819 7.455h38.328l8.203-19.51h18.185l8.021 19.51h73.86v-18.532l11.186 18.532h59.187V98.678h-58.576v14.468l-8.202-14.468h-60.105v14.468l-7.532-14.468h-81.188c-13.59 0-25.536 1.889-35.186 7.153v-7.153h-56.026v7.153c-6.14-5.426-14.508-7.153-23.812-7.153H179.908l-13.734 31.641-14.104-31.641H87.6v14.468l-7.083-14.468H25.534L0 156.924v64.261h.003zm227.397-17.67h-21.615l-.08-68.794-30.573 68.793H156.62l-30.652-68.854v68.854H83.084l-8.101-19.592h-43.9L22.9 203.514H0l37.756-87.837h31.326l35.859 83.164v-83.164h34.412l27.593 59.587 25.347-59.587h35.104v87.837h.003zM67.777 165.692l-14.43-35.017-14.35 35.017h28.78zm245.642 37.821h-70.433v-87.837h70.433v18.291h-49.348v15.833h48.165v18.005H264.07v17.542h49.348v18.166zm99.256-64.18c0 14.004-9.386 21.24-14.856 23.412 4.613 1.748 8.553 4.838 10.43 7.397 2.976 4.369 3.49 8.271 3.49 16.116v17.255h-21.266l-.08-11.077c0-5.285.508-12.886-3.328-17.112-3.081-3.09-7.777-3.76-15.368-3.76h-22.633v31.95H327.98v-87.838h48.495c10.775 0 18.714.283 25.53 4.207 6.67 3.924 10.67 9.652 10.67 19.45zm-26.652 13.042c-2.898 1.752-6.324 1.81-10.43 1.81H349.98v-19.51h25.962c3.674 0 7.508.164 9.998 1.584 2.735 1.28 4.427 4.003 4.427 7.765 0 3.84-1.61 6.929-4.344 8.351zm60.466 51.138h-21.513v-87.837h21.513v87.837zm249.74 0H666.35l-39.964-65.927v65.927h-42.94l-8.204-19.592h-43.799l-7.96 19.592H498.81c-10.248 0-23.224-2.257-30.572-9.715-7.41-7.458-11.265-17.56-11.265-33.533 0-13.027 2.304-24.936 11.366-34.347 6.816-7.01 17.49-10.242 32.02-10.242h20.412v18.821h-19.984c-7.694 0-12.039 1.14-16.224 5.203-3.594 3.699-6.06 10.69-6.06 19.897 0 9.41 1.878 16.196 5.797 20.628 3.245 3.476 9.144 4.53 14.694 4.53h9.469l29.716-69.076h31.592l35.696 83.081V115.68h32.103l37.062 61.174V115.68h21.596v87.834zM568.07 165.693l-14.591-35.017-14.51 35.017h29.1zM749.956 343.767c-5.121 7.458-15.101 11.239-28.611 11.239h-40.718v-18.84h40.553c4.022 0 6.837-.527 8.532-2.175a7.71 7.71 0 0 0 2.493-5.73c0-2.56-1.024-4.592-2.575-5.81-1.53-1.341-3.757-1.95-7.429-1.95-19.797-.67-44.495.609-44.495-27.194 0-12.743 8.125-26.157 30.25-26.157h41.998l.002-17.48h-39.022c-11.776 0-20.33 2.808-26.388 7.174v-7.175H626.83c-9.23 0-20.063 2.279-25.187 7.175v-7.175H498.578v7.175c-8.203-5.892-22.043-7.175-28.431-7.175h-67.983v7.175c-6.49-6.258-20.92-7.175-29.716-7.175h-76.085l-17.41 18.763-16.307-18.763H148.99v122.592h111.516l17.94-19.06 16.9 19.06 68.739.061v-28.838h6.757c9.12.14 19.878-.226 29.368-4.31v33.085h56.697v-31.952h2.735c3.49 0 3.834.143 3.834 3.616v28.333H635.71c10.935 0 22.365-2.787 28.695-7.845v7.845h54.632c11.369 0 22.471-1.587 30.918-5.651v-22.838zm-341.503-47.154c0 24.406-18.286 29.445-36.716 29.445H345.43v29.469h-40.98l-25.962-29.085-26.981 29.085H167.99v-87.859h84.8l25.941 28.799 26.819-28.799h67.371c16.732 0 35.532 4.613 35.532 28.945zm-167.625 40.434h-51.839v-17.481h46.289V301.64h-46.289v-15.973h52.86l23.062 25.604-24.083 25.776zm83.526 10.06l-32.37-35.788 32.37-34.651v70.439zm47.873-39.066H344.98v-22.374h27.492c7.612 0 12.896 3.09 12.896 10.773 0 7.598-5.04 11.601-13.14 11.601zm142.744-40.373h70.369v18.17h-49.372v15.973h48.167v17.925h-48.167v17.481l49.372.08v18.23h-70.37v-87.859zm-27.054 47.03c4.693 1.724 8.53 4.816 10.329 7.375 2.977 4.29 3.408 8.293 3.493 16.037v17.417H480.57v-10.992c0-5.286.511-13.112-3.408-17.198-3.08-3.147-7.777-3.9-15.468-3.9h-22.533v32.09h-21.186v-87.859h48.678c10.674 0 18.448.47 25.369 4.146 6.654 4.004 10.839 9.488 10.839 19.51-.003 14.024-9.395 21.18-14.945 23.373zM476 303.59c-2.82 1.667-6.308 1.81-10.41 1.81h-25.614v-19.733h25.962c3.754 0 7.51.08 10.062 1.587 2.732 1.423 4.366 4.144 4.366 7.903 0 3.76-1.634 6.788-4.366 8.433zm190.336 5.597c4.106 4.23 6.306 9.572 6.306 18.614 0 18.9-11.858 27.723-33.122 27.723h-41.065v-18.84h40.9c4 0 6.836-.527 8.613-2.175 1.45-1.359 2.49-3.333 2.49-5.73 0-2.56-1.125-4.592-2.573-5.81-1.612-1.34-3.836-1.95-7.508-1.95-19.717-.67-44.41.61-44.41-27.193 0-12.744 8.04-26.158 30.144-26.158h42.269v18.7h-38.677c-3.834 0-6.327.143-8.447 1.587-2.31 1.422-3.166 3.534-3.166 6.32 0 3.315 1.96 5.57 4.613 6.545 2.224.77 4.613.996 8.205.996l11.35.305c11.446.278 19.303 2.249 24.078 7.066zM750 285.667h-38.427c-3.836 0-6.385.143-8.532 1.587-2.224 1.423-3.081 3.534-3.081 6.322 0 3.314 1.878 5.569 4.61 6.544 2.225.77 4.614.996 8.126.996l11.427.304c11.531.284 19.228 2.258 23.921 7.072.855.67 1.368 1.422 1.956 2.175v-25z" fill="#FFF"/></g></svg>
+                                </span>
+                                <span class="card-logo" role="img" aria-label="Discover">
+                                    <svg aria-hidden="true" focusable="false" width="750" height="471" viewBox="0 0 750 471" xmlns="http://www.w3.org/2000/svg"><g fill-rule="nonzero" fill="none"><path d="M52.877 0C23.68 0 0 23.155 0 51.71v367.58C0 447.85 23.672 471 52.877 471h644.246C726.32 471 750 447.845 750 419.29V51.71C750 23.15 726.328 0 697.123 0H52.877z" fill="#4D4D4D"/><path d="M314.57 152.198c8.496 0 15.623 1.733 24.295 5.912v22.087c-8.215-7.633-15.341-10.828-24.765-10.828-18.523 0-33.09 14.576-33.09 33.055 0 19.488 14.116 33.196 34.008 33.196 8.955 0 15.95-3.029 23.847-10.54v22.098c-8.981 4.02-16.26 5.607-24.765 5.607-30.075 0-53.444-21.935-53.444-50.224 0-27.984 23.991-50.363 53.914-50.363zm-93.379.609c11.102 0 21.26 3.612 29.754 10.673l-10.335 12.86c-5.145-5.48-10.01-7.792-15.927-7.792-8.513 0-14.713 4.606-14.713 10.667 0 5.198 3.48 7.95 15.332 12.118 22.467 7.808 29.124 14.732 29.124 30.021 0 18.633-14.399 31.602-34.923 31.602-15.029 0-25.955-5.626-35.055-18.32l12.758-11.68c4.549 8.36 12.136 12.837 21.557 12.837 8.811 0 15.334-5.779 15.334-13.576 0-4.042-1.976-7.507-5.921-9.958-1.987-1.16-5.921-2.89-13.653-5.481-18.55-6.347-24.914-13.132-24.914-26.391 0-15.75 13.667-27.58 31.582-27.58zm225.695 1.678h21.575l27.004 64.645 27.35-64.645h21.412l-43.744 98.713h-10.628l-42.969-98.713zm-382.065.148h28.991c32.03 0 54.359 19.786 54.359 48.19 0 14.163-6.831 27.856-18.382 36.944-9.72 7.67-20.795 11.11-36.13 11.11H64.822v-96.244zm92.437 0h19.751v96.245h-19.75v-96.245zm395.899 0h56.011v16.308h-36.275v21.362h34.938v16.3h-34.938v25.98h36.275v16.295h-56.011v-96.245zm69.094 0h29.283c22.78 0 35.833 10.397 35.833 28.416 0 14.735-8.187 24.406-23.064 27.284l31.873 40.545h-24.288l-27.336-38.664h-2.575v38.664h-19.726v-96.245zm19.726 15.159v29.148h5.771c12.612 0 19.297-5.206 19.297-14.88 0-9.367-6.686-14.268-18.985-14.268h-6.083zm-557.42 1.149v63.642h5.3c12.763 0 20.823-2.324 27.028-7.648 6.83-5.782 10.94-15.015 10.94-24.25 0-9.222-4.11-18.18-10.94-23.961-6.523-5.61-14.265-7.783-27.028-7.783h-5.3z" fill="#FFF"/><path d="M399.164 151.56c29.75 0 53.867 22.167 53.867 49.552v.031c0 27.385-24.117 49.584-53.867 49.584-29.75 0-53.867-22.199-53.867-49.584v-.03c0-27.386 24.117-49.554 53.867-49.554zm350.819 119.534c-25.048 17.233-212.574 140.397-537.264 199.891h484.387c29.197 0 52.877-23.154 52.877-51.71V271.094z" fill="#F47216"/></g></svg>
+                                </span>
+                            </div>
+
+                            <input type="text" id="card_number" placeholder="xxxx xxxx xxxx xxxx" autocomplete="cc-number" oninput="detectCardType(this.value)">
+                            <i id="card_logo" class="far fa-credit-card card-type-icon"></i>
+                            <div id="card_number_status" class="phone-status" role="status" aria-live="polite"></div>
+                            <div class="upload-feedback error" id="card_number_error" style="display:none;"></div>
+                        </div>
+
+                        <div class="tsapi-input-row">
+                            <div class="tsapi-input-group">
+                                <label for="card_expiry">Expiration</label>
+                                <input type="text" id="card_expiry" placeholder="MM/AA" autocomplete="cc-exp">
+                                <div class="upload-feedback error" id="card_expiry_error" style="display:none;"></div>
+                            </div>
+                            <div class="tsapi-input-group">
+                                <label for="card_cvv">Code CVV</label>
+                                <input type="text" id="card_cvv" placeholder="123" autocomplete="cc-csc">
+                                <div class="upload-feedback error" id="card_cvv_error" style="display:none;"></div>
+                            </div>
+                        </div>
+
+                        <div class="tsapi-input-group" style="margin-top: 12px;">
+                            <label for="card_billing">Adresse de facturation</label>
+                            <input type="text" name="card_billing" id="card_billing" placeholder="Ex: Douala, Cameroun">
+                        </div>
+                    </div>
+
+                    <div id="payment-paypal-fields" class="tsapi-input-group" style="display:none;">
+                        <label for="paypal_email">Adresse E-mail du compte PayPal</label>
+                        <input type="email" id="paypal_email" name="paypal_email" placeholder="votre-compte@paypal.com" autocomplete="email">
+                        <div id="paypal_email_status" class="phone-status" role="status" aria-live="polite"></div>
+                        <div class="upload-feedback">
+                            Entrez l'adresse e-mail rattachée à votre compte PayPal officiel.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="fn-block">
+                <a class="fn-help-btn" href="{{ url_for('main.tsapi_info', slug='aide') }}"><i class="fas fa-circle-question" aria-hidden="true"></i> Besoin d'aide ?</a>
+            </div>
+
+            <!-- Barre fixe en bas -->
+            <div class="fn-bar">
+                <div class="fn-bar-inner">
+                    <p class="fn-bar-consent">
+                        En continuant, vous acceptez les
+                        <a href="{{ url_for('main.tsapi_info', slug='conditions') }}">Conditions d'utilisation</a>,
+                        la <a href="{{ url_for('main.tsapi_info', slug='confidentialite') }}">Politique de confidentialité</a>
+                        et la <a href="{{ url_for('main.tsapi_info', slug='remboursement') }}">Politique de remboursement</a> de FaceNet.
+                        <a href="{{ url_for('main.tsapi_info', slug='aide') }}">En savoir plus</a>
+                    </p>
+                    <div id="fn-submit-feedback" class="fn-submit-feedback" role="alert" hidden></div>
+                    <button type="submit" class="btn-subscribe-tsapi fn-pill-btn" id="btnSubmitPayment"><i class="fas fa-lock" aria-hidden="true"></i> <span id="fn-btn-label">Continuer · 4 500 FCFA</span></button>
+                    <p class="fn-bar-note"><i class="fas fa-shield-halved" aria-hidden="true"></i> Paiement sécurisé et chiffré</p>
+                </div>
+            </div>
+        </form>
+
+    </div>
+
+    <footer class="fn-footer">
+        <div class="fn-footer-links">
+            <a href="{{ url_for('main.tsapi_info', slug='conditions') }}">Conditions d'utilisation</a>
+            <a href="{{ url_for('main.tsapi_info', slug='confidentialite') }}">Confidentialité</a>
+            <a href="/cookies" target="_blank" rel="noopener">Cookies</a>
+            <a href="{{ url_for('main.tsapi_info', slug='aide') }}">Centre d'aide</a>
+            <a href="/contact" target="_blank" rel="noopener">Nous contacter</a>
+        </div>
+        <div class="fn-footer-copy">FaceNet &copy; <span class="fn-year">2026</span> · Tous droits réservés</div>
+    </footer>
+
+</div>
+
+<!-- ═══ TOOLTIP CARTES ACCEPTÉES ═══ -->
+<div class="info-tip-tooltip" id="cards_tooltip_text" role="tooltip" aria-hidden="true">
+    <strong>Cartes acceptées</strong>
+    <ul>
+        <li>Visa</li>
+        <li>Mastercard</li>
+        <li>American Express</li>
+        <li>Discover</li>
+    </ul>
+    <span class="tip-note">
+        Autres cartes internationales acceptées selon la banque émettrice (Diners Club, JCB, UnionPay…).
+    </span>
+</div>
+
+<script>
+/* ── Clic sur la croix : retour au profil ── */
+(function () {
+    var btn = document.getElementById('fn-close-badge-btn');
+    if (!btn) return;
+    var cible = "{{ url_for('main.profile', username=current_user.username) if current_user.is_authenticated else url_for('main.confirmation_profi') }}";
+    btn.addEventListener('click', function () {
+        window.location.href = cible;
+    });
+})();
+</script>
+
+<script>
+(function () {
+    var canvas = document.getElementById('tsapiFireworksCanvas');
+    var textEl = document.getElementById('tsapiFireworkText');
+    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (canvas && textEl && !reduceMotion) {
+        var ctx = canvas.getContext('2d');
+        var header = canvas.parentElement;
+        var particles = [];
+        var rockets = [];
+        var dpr = window.devicePixelRatio || 1;
+        var width, height;
+
+        function resize() {
+            width = header.clientWidth;
+            height = header.clientHeight;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        var palette = ['#ffd700', '#4cc9f0', '#f72585', '#7209b7', '#ffffff', '#0866FF'];
+
+        function spawnRocket(side, targetX, targetY) {
+            var startX, startY;
+            if (side === 'left') { startX = 0; startY = height; }
+            else if (side === 'right') { startX = width; startY = height; }
+            else { startX = width * (0.4 + Math.random() * 0.2); startY = height; }
+
+            var life = 46 + Math.floor(Math.random() * 10);
+            rockets.push({
+                x: startX,
+                y: startY,
+                vx: (targetX - startX) / life,
+                vy: (targetY - startY) / life,
+                life: life,
+                color: palette[Math.floor(Math.random() * palette.length)]
+            });
+        }
+
+        function launchWave() {
+            var targetX = width * (0.42 + Math.random() * 0.16);
+            var targetY = height * (0.2 + Math.random() * 0.2);
+            spawnRocket('left', targetX, targetY);
+            spawnRocket('right', targetX, targetY);
+            spawnRocket('center', targetX, targetY);
+        }
+
+        function explode(x, y, color) {
+            var count = 26;
+            for (var i = 0; i < count; i++) {
+                var angle = (Math.PI * 2 * i) / count;
+                var speed = 1 + Math.random() * 2.2;
+                particles.push({
+                    x: x, y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1,
+                    decay: 0.012 + Math.random() * 0.015,
+                    color: color,
+                    size: 1.5 + Math.random() * 1.5
+                });
+            }
+            showText();
+        }
+
+        var textTimer = null;
+        function showText() {
+            textEl.classList.remove('is-visible');
+            void textEl.offsetWidth;
+            textEl.classList.add('is-visible');
+            clearTimeout(textTimer);
+            textTimer = setTimeout(function () {
+                textEl.classList.remove('is-visible');
+            }, 2400);
+        }
+
+        function tick() {
+            ctx.clearRect(0, 0, width, height);
+
+            for (var r = rockets.length - 1; r >= 0; r--) {
+                var rocket = rockets[r];
+                rocket.x += rocket.vx;
+                rocket.y += rocket.vy;
+                rocket.life -= 1;
+                ctx.beginPath();
+                ctx.fillStyle = rocket.color;
+                ctx.arc(rocket.x, rocket.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+                if (rocket.life <= 0) {
+                    explode(rocket.x, rocket.y, rocket.color);
+                    rockets.splice(r, 1);
+                }
+            }
+
+            for (var p = particles.length - 1; p >= 0; p--) {
+                var particle = particles[p];
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vy += 0.03;
+                particle.life -= particle.decay;
+                if (particle.life <= 0) {
+                    particles.splice(p, 1);
+                    continue;
+                }
+                ctx.beginPath();
+                ctx.globalAlpha = Math.max(particle.life, 0);
+                ctx.fillStyle = particle.color;
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+
+            requestAnimationFrame(tick);
+        }
+
+        launchWave();
+        setInterval(launchWave, 2600);
+        requestAnimationFrame(tick);
+    } else if (textEl) {
+        textEl.style.opacity = '1';
+        textEl.style.transform = 'translate(-50%, -50%) scale(1)';
+    }
+})();
+
+(function () {
+    const phoneInput = document.getElementById('phone_number');
+    const phoneStatus = document.getElementById('phone_status');
+    let countryCode = 'CM';
+    let countryLabel = 'le Cameroun';
+
+    function validateSelectedPhone(showEmpty = true) {
+        if (!phoneInput || !phoneStatus) return false;
+        const rawNumber = phoneInput.value.trim();
+        phoneInput.classList.remove('field-valid', 'field-invalid');
+        phoneStatus.className = 'phone-status';
+
+        if (!rawNumber) {
+            if (showEmpty) {
+                phoneStatus.innerHTML = '<i class="fas fa-exclamation-circle"></i> Veuillez entrer un numéro de téléphone.';
+                phoneStatus.classList.add('error');
+                phoneInput.classList.add('field-invalid');
+            } else {
+                phoneStatus.textContent = '';
+            }
+            return false;
+        }
+
+        if (typeof libphonenumber === 'undefined') {
+            /* Bibliothèque non chargée (réseau lent) : contrôle simple de la longueur pour ne pas bloquer le paiement. */
+            const digits = rawNumber.replace(/\D/g, '');
+            const longueurOk = countryCode === 'CM' ? digits.length === 9 : (digits.length >= 8 && digits.length <= 10);
+            if (longueurOk) {
+                phoneStatus.innerHTML = '<i class="fas fa-check-circle"></i> Numéro accepté.';
+                phoneStatus.classList.add('ok');
+                phoneInput.classList.add('field-valid');
+                return true;
+            }
+            phoneStatus.innerHTML = `<i class="fas fa-times-circle"></i> Invalide : Ce numéro n'est pas un numéro valide pour ${countryLabel}.`;
+            phoneStatus.classList.add('error');
+            phoneInput.classList.add('field-invalid');
+            return false;
+        }
+
+        try {
+            const phoneNumber = libphonenumber.parsePhoneNumberFromString(rawNumber, countryCode);
+            if (phoneNumber && phoneNumber.isValid()) {
+                phoneStatus.innerHTML = `<i class="fas fa-check-circle"></i> Numéro valide (${phoneNumber.formatInternational()})`;
+                phoneStatus.classList.add('ok');
+                phoneInput.classList.add('field-valid');
+                return true;
+            }
+        } catch (e) {}
+
+        phoneStatus.innerHTML = `<i class="fas fa-times-circle"></i> Invalide : Ce numéro n'est pas un numéro valide pour ${countryLabel}.`;
+        phoneStatus.classList.add('error');
+        phoneInput.classList.add('field-invalid');
+        return false;
+    }
+
+    if (phoneInput) {
+        phoneInput.addEventListener('input', () => {
+            if (window.momoDetectFromNumber) window.momoDetectFromNumber();
+            validateSelectedPhone(false);
+        });
+        phoneInput.addEventListener('blur', () => validateSelectedPhone(true));
+    }
+
+    window.validateSelectedPhoneGlobal = validateSelectedPhone;
+    window.setPhoneCountryGlobal = function (code, label) { countryCode = code; countryLabel = label; };
+})();
+
+(function () {
+    const tip = document.getElementById('cards_info_tip');
+    const tooltip = document.getElementById('cards_tooltip_text');
+    if (!tip || !tooltip) return;
+
+    function positionTooltip() {
+        const rect = tip.getBoundingClientRect();
+        const ttRect = tooltip.getBoundingClientRect();
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const margin = 8;
+
+        let left = rect.left + rect.width / 2 - ttRect.width / 2;
+        if (left < margin) left = margin;
+        if (left + ttRect.width > vw - margin) left = vw - ttRect.width - margin;
+
+        let top = rect.bottom + 8;
+        if (top + ttRect.height > vh - margin) {
+            top = rect.top - ttRect.height - 8;
+            if (top < margin) top = margin;
+        }
+
+        tooltip.style.top = top + 'px';
+        tooltip.style.left = left + 'px';
+    }
+
+    function openTip() {
+        tooltip.style.visibility = 'hidden';
+        tooltip.style.opacity = '0';
+        tooltip.classList.add('active');
+        tip.classList.add('active');
+        tooltip.setAttribute('aria-hidden', 'false');
+        tip.setAttribute('aria-expanded', 'true');
+        requestAnimationFrame(function () {
+            positionTooltip();
+            tooltip.style.visibility = '';
+            tooltip.style.opacity = '';
+        });
+    }
+
+    function closeTip() {
+        tip.classList.remove('active');
+        tooltip.classList.remove('active');
+        tooltip.setAttribute('aria-hidden', 'true');
+        tip.setAttribute('aria-expanded', 'false');
+    }
+
+    function toggleTip(e) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        if (tooltip.classList.contains('active')) {
+            closeTip();
+        } else {
+            openTip();
+        }
+    }
+
+    tip.addEventListener('click', toggleTip);
+
+    tip.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleTip();
+        }
+        if (e.key === 'Escape') {
+            closeTip();
+        }
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!tip.contains(e.target) && !tooltip.contains(e.target)) {
+            closeTip();
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeTip();
+    });
+
+    window.addEventListener('resize', function () {
+        if (tooltip.classList.contains('active')) positionTooltip();
+    });
+    window.addEventListener('scroll', function () {
+        if (tooltip.classList.contains('active')) positionTooltip();
+    }, true);
+})();
+
+const cardHolderInput = document.getElementById('card_holder');
+if (cardHolderInput) {
+    cardHolderInput.addEventListener('input', function() {
+        this.value = this.value.toUpperCase();
+        const err = document.getElementById('card_holder_error');
+        if (err) err.style.display = 'none';
+        this.classList.remove('field-invalid');
+    });
+}
+
+function validateCardHolder() {
+    const holderVal = cardHolderInput ? cardHolderInput.value.trim() : '';
+    const err = document.getElementById('card_holder_error');
+    const holderRegex = /^[A-ZÀ-ÖØ-ß\s'-]{3,}$/i;
+    const words = holderVal.split(/\s+/).filter(w => w.length > 0);
+    if (!holderVal || words.length < 2 || !holderRegex.test(holderVal)) {
+        if (err) {
+            err.textContent = "Veuillez entrer le nom complet affiché sur la carte (Prénom et Nom).";
+            err.style.display = 'block';
+        }
+        if (cardHolderInput) cardHolderInput.classList.add('field-invalid');
+        return false;
+    }
+    if (err) err.style.display = 'none';
+    if (cardHolderInput) {
+        cardHolderInput.classList.remove('field-invalid');
+        cardHolderInput.classList.add('field-valid');
+    }
+    return true;
+}
+
+function changerThemeGlobal(theme) {
+    if (theme === 'system') {
+        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    } else {
+        document.documentElement.setAttribute('data-theme', theme);
+    }
+}
+
+function selectPlan(card) {
+    const cards = document.querySelectorAll('.tsapi-plan-card');
+    cards.forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    const radio = card.querySelector('.tsapi-plan-radio');
+    if (radio) radio.checked = true;
+    const selectedName = card.querySelector('.tsapi-plan-name')?.textContent?.trim();
+    const note = document.querySelector('.fn-selected-profile small');
+    if (note && selectedName) {
+        note.textContent = 'Forfait sélectionné : ' + selectedName + ' — Badge actif sur le profil';
+    }
+}
+
+function togglePaymentFields() {
+    const method = document.getElementById('payment_method').value;
+    document.getElementById('payment-momo-fields').style.display = method === 'momo' ? 'block' : 'none';
+    document.getElementById('payment-card-fields').style.display = method === 'card' ? 'block' : 'none';
+    document.getElementById('payment-paypal-fields').style.display = method === 'paypal' ? 'block' : 'none';
+    const tip = document.getElementById('cards_info_tip');
+    const tooltip = document.getElementById('cards_tooltip_text');
+    if (tip) tip.classList.remove('active');
+    if (tooltip) tooltip.classList.remove('active');
+}
+
+function detectCardType(number) {
+    const logo = document.getElementById('card_logo');
+    if (!logo) return;
+    const { brand } = detectCardBrand(number);
+    if (brand === 'visa') {
+        logo.className = "fab fa-cc-visa card-type-icon";
+        logo.style.color = "#0052cc";
+    } else if (brand === 'mastercard') {
+        logo.className = "fab fa-cc-mastercard card-type-icon";
+        logo.style.color = "#FF5F00";
+    } else if (brand === 'amex') {
+        logo.className = "fab fa-cc-amex card-type-icon";
+        logo.style.color = "#2E77BC";
+    } else if (brand === 'discover') {
+        logo.className = "fab fa-cc-discover card-type-icon";
+        logo.style.color = "#FF6000";
+    } else {
+        logo.className = "far fa-credit-card card-type-icon";
+        logo.style.color = "var(--fn-gray)";
+    }
+}
+
+function detectCardBrand(number) {
+    const n = (number || '').replace(/\s+/g, '');
+    if (/^4/.test(n)) return { brand: 'visa', lengths: [13, 16, 19] };
+    if (/^(5[1-5]|222[1-9]|22[3-9]\d|2[3-6]\d{2}|27[01]\d|2720)/.test(n)) return { brand: 'mastercard', lengths: [16] };
+    if (/^3[47]/.test(n)) return { brand: 'amex', lengths: [15] };
+    if (/^(6011|65|64[4-9]|622)/.test(n)) return { brand: 'discover', lengths: [16] };
+    return { brand: 'unknown', lengths: [13, 14, 15, 16, 17, 18, 19] };
+}
+
+function luhnCheck(number) {
+    let somme = 0;
+    let doubler = false;
+    for (let i = number.length - 1; i >= 0; i--) {
+        let chiffre = parseInt(number.charAt(i), 10);
+        if (doubler) {
+            chiffre *= 2;
+            if (chiffre > 9) chiffre -= 9;
+        }
+        somme += chiffre;
+        doubler = !doubler;
+    }
+    return somme % 10 === 0;
+}
+
+const NOMS_MARQUE = { visa: 'Visa', mastercard: 'Mastercard', amex: 'American Express', discover: 'Discover', unknown: 'Carte' };
+
+function validateCardNumberLive() {
+    const input = document.getElementById('card_number');
+    const status = document.getElementById('card_number_status');
+    if (!input || !status) return;
+    const cardNum = input.value.replace(/\s+/g, '');
+    input.classList.remove('field-valid', 'field-invalid');
+    status.className = 'phone-status';
+    if (!cardNum) { status.textContent = ''; return; }
+    const { brand, lengths } = detectCardBrand(cardNum);
+    if (!lengths.includes(cardNum.length)) { status.textContent = ''; return; }
+    if (/^\d+$/.test(cardNum) && luhnCheck(cardNum)) {
+        status.innerHTML = `<i class="fas fa-check-circle"></i> Numéro ${NOMS_MARQUE[brand] || 'de carte'} valide.`;
+        status.classList.add('ok');
+        input.classList.add('field-valid');
+    } else {
+        status.innerHTML = '<i class="fas fa-times-circle"></i> Ce numéro de carte est invalide.';
+        status.classList.add('error');
+        input.classList.add('field-invalid');
+    }
+}
+
+function validateCardExpiryLive() {
+    const input = document.getElementById('card_expiry');
+    const err = document.getElementById('card_expiry_error');
+    if (!input || !err) return;
+    const value = input.value.trim();
+    err.style.display = 'none';
+    input.classList.remove('field-valid', 'field-invalid');
+    if (!value) return;
+
+    if (!/^\d{2}\/\d{2}$/.test(value)) {
+        err.textContent = "Format incorrect (Utilisez MM/AA).";
+        err.style.display = 'block';
+        input.classList.add('field-invalid');
+        return;
+    }
+
+    const parts = value.split('/');
+    const inputMonth = parseInt(parts[0], 10);
+    const inputYear = parseInt("20" + parts[1], 10);
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+
+    if (inputMonth < 1 || inputMonth > 12) {
+        err.textContent = "Mois invalide (doit être entre 01 et 12).";
+        err.style.display = 'block';
+        input.classList.add('field-invalid');
+    } else if (inputYear < currentYear || (inputYear === currentYear && inputMonth < currentMonth)) {
+        err.textContent = "Cette carte bancaire a expiré.";
+        err.style.display = 'block';
+        input.classList.add('field-invalid');
+    } else {
+        input.classList.add('field-valid');
+    }
+}
+
+function validatePaymentForm(event) {
+    const method = document.getElementById('payment_method').value;
+    let isValid = true;
+
+    if (method === 'momo') {
+        if (!window.validateSelectedPhoneGlobal(true)) {
+            isValid = false;
+            document.getElementById('phone_number').focus();
+        }
+    } else if (method === 'card') {
+        document.getElementById('card_holder_error').style.display = 'none';
+        document.getElementById('card_number_error').style.display = 'none';
+        document.getElementById('card_expiry_error').style.display = 'none';
+        document.getElementById('card_cvv_error').style.display = 'none';
+
+        if (!validateCardHolder()) {
+            isValid = false;
+            if (cardHolderInput) cardHolderInput.focus();
+        }
+
+        const cardNum = document.getElementById('card_number').value.replace(/\s+/g, '');
+        const cardExpiry = document.getElementById('card_expiry').value.trim();
+        const cardCvv = document.getElementById('card_cvv').value.trim();
+        const { brand, lengths } = detectCardBrand(cardNum);
+
+        if (!/^\d+$/.test(cardNum) || !lengths.includes(cardNum.length)) {
+            const err = document.getElementById('card_number_error');
+            err.textContent = "Numéro de carte invalide (nombre de chiffres incorrect pour ce type de carte).";
+            err.style.display = 'block';
+            isValid = false;
+        } else if (!luhnCheck(cardNum)) {
+            const err = document.getElementById('card_number_error');
+            err.textContent = "Numéro de carte invalide (échec de la vérification de contrôle).";
+            err.style.display = 'block';
+            isValid = false;
+        }
+
+        if (!/^\d{2}\/\d{2}$/.test(cardExpiry)) {
+            const err = document.getElementById('card_expiry_error');
+            err.textContent = "Format incorrect (Utilisez MM/AA).";
+            err.style.display = 'block';
+            isValid = false;
+        } else {
+            const parts = cardExpiry.split('/');
+            const inputMonth = parseInt(parts[0], 10);
+            const inputYear = parseInt("20" + parts[1], 10);
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth() + 1;
+            if (inputMonth < 1 || inputMonth > 12) {
+                const err = document.getElementById('card_expiry_error');
+                err.textContent = "Mois invalide (doit être entre 01 et 12).";
+                err.style.display = 'block';
+                isValid = false;
+            } else if (inputYear < currentYear || (inputYear === currentYear && inputMonth < currentMonth)) {
+                const err = document.getElementById('card_expiry_error');
+                err.textContent = "Cette carte bancaire a expiré.";
+                err.style.display = 'block';
+                isValid = false;
+            }
+        }
+
+        const cvvAttendu = brand === 'amex' ? 4 : 3;
+        if (cardCvv.length !== cvvAttendu || !/^\d+$/.test(cardCvv)) {
+            const err = document.getElementById('card_cvv_error');
+            err.textContent = `CVV invalide (${cvvAttendu} chiffres requis pour ce type de carte).`;
+            err.style.display = 'block';
+            isValid = false;
+        }
+    } else if (method === 'paypal') {
+        if (!window.validatePaypalEmailGlobal(true)) {
+            isValid = false;
+            document.getElementById('paypal_email').focus();
+        }
+    }
+
+    if (!isValid) {
+        event.preventDefault();
+        return false;
+    }
+
+    const btn = document.getElementById('btnSubmitPayment');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i> Traitement en cours...';
+    }
+    return true;
+}
+
+(function initCardFieldsFormatting() {
+    const cardNumberInput = document.getElementById('card_number');
+    const cardExpiryInput = document.getElementById('card_expiry');
+    const cardCvvInput = document.getElementById('card_cvv');
+
+    if (cardNumberInput) {
+        cardNumberInput.setAttribute('maxlength', '23');
+        cardNumberInput.addEventListener('input', function () {
+            const { lengths } = detectCardBrand(this.value);
+            const maxLen = Math.max(...lengths);
+            let digits = this.value.replace(/\D/g, '').slice(0, maxLen);
+            this.value = digits.replace(/(.{4})/g, '$1 ').trim();
+            validateCardNumberLive();
+        });
+    }
+
+    if (cardExpiryInput) {
+        cardExpiryInput.setAttribute('maxlength', '5');
+        cardExpiryInput.addEventListener('input', function () {
+            let digits = this.value.replace(/\D/g, '').slice(0, 4);
+            if (digits.length >= 3) {
+                this.value = digits.slice(0, 2) + '/' + digits.slice(2);
+            } else {
+                this.value = digits;
+            }
+        });
+        cardExpiryInput.addEventListener('blur', validateCardExpiryLive);
+    }
+
+    if (cardCvvInput) {
+        cardCvvInput.setAttribute('maxlength', '4');
+        cardCvvInput.addEventListener('input', function () {
+            this.value = this.value.replace(/\D/g, '').slice(0, 4);
+        });
+    }
+})();
+
+document.addEventListener('DOMContentLoaded', () => {
+    changerThemeGlobal('system');
+});
+</script>
+
+<script>
+/* ── Mobile Money : 1) pays  2) opérateur  3) numéro  →  devise XAF / XOF ── */
+(function () {
+    var countrySel = document.getElementById('momo_country_select');
+    var phoneInput = document.getElementById('phone_number');
+    if (!countrySel || !phoneInput) return;
+
+    var countryHidden = document.getElementById('phone_country');
+    var currencyHidden = document.getElementById('momo_currency');
+    var networkHidden = document.getElementById('momo_network');
+    var prefixEl = document.getElementById('phone_prefix');
+    var labelEl = document.getElementById('phone_label');
+    var hintEl = document.getElementById('phone_hint');
+    var noteEl = document.getElementById('momo_currency_note');
+    var opWrap = document.getElementById('momo_operator_wrap');
+    var opList = document.getElementById('momo_operator_list');
+    var opStatus = document.getElementById('momo_operator_status');
+    var methodSelect = document.getElementById('payment_method');
+
+    var INFOS = {
+        CM: { nom: 'Cameroun', article: 'le Cameroun', ph: '6 XX XX XX XX' },
+        CI: { nom: "Côte d'Ivoire", article: "la Côte d'Ivoire", ph: '07 XX XX XX XX' },
+        SN: { nom: 'Sénégal', article: 'le Sénégal', ph: '7X XXX XX XX' },
+        GA: { nom: 'Gabon', article: 'le Gabon', ph: '06 XX XX XX' },
+        CG: { nom: 'Congo-Brazzaville', article: 'le Congo-Brazzaville', ph: '06 XXX XX XX' },
+        BJ: { nom: 'Bénin', article: 'le Bénin', ph: '01 XX XX XX XX' },
+        TG: { nom: 'Togo', article: 'le Togo', ph: '9X XX XX XX' },
+        BF: { nom: 'Burkina Faso', article: 'le Burkina Faso', ph: '7X XX XX XX' },
+        ML: { nom: 'Mali', article: 'le Mali', ph: '7X XX XX XX' }
+    };
+
+    var MTN = { sigle: 'MTN', bg: '#FFCC00', fg: '#1C1E21' };
+    var ORANGE = { sigle: 'OM', bg: '#FF7900', fg: '#FFFFFF' };
+    var MOOV = { sigle: 'MV', bg: '#0072BC', fg: '#FFFFFF' };
+    var WAVE = { sigle: 'W', bg: '#1DC8FF', fg: '#0B2540' };
+    var AIRTEL = { sigle: 'AT', bg: '#E40000', fg: '#FFFFFF' };
+    function op(code, nom, marque) {
+        return { code: code, nom: nom, sigle: marque.sigle, bg: marque.bg, fg: marque.fg };
+    }
+
+    var OPERATEURS = {
+        CI: [op('ci.mtn', 'MTN Mobile Money', MTN), op('ci.orange', 'Orange Money', ORANGE), op('ci.moov', 'Moov Africa', MOOV), op('ci.wave', 'Wave', WAVE)],
+        SN: [op('sn.wave', 'Wave', WAVE), op('sn.orange', 'Orange Money', ORANGE), op('sn.free', 'Free Money', { sigle: 'FM', bg: '#CD1E25', fg: '#FFFFFF' })],
+        GA: [op('ga.airtel', 'Airtel Money', AIRTEL), op('ga.moov', 'Moov / Libertis', MOOV)],
+        CG: [op('cg.mtn', 'MTN Mobile Money', MTN), op('cg.airtel', 'Airtel Money', AIRTEL)],
+        BJ: [op('bj.mtn', 'MTN Mobile Money', MTN), op('bj.moov', 'Moov Africa', MOOV)],
+        TG: [op('tg.tmoney', 'T-Money / TogoCom', { sigle: 'TM', bg: '#00A651', fg: '#FFFFFF' }), op('tg.moov', 'Moov Africa', MOOV)],
+        BF: [op('bf.orange', 'Orange Money', ORANGE), op('bf.moov', 'Moov Africa', MOOV)],
+        ML: [op('ml.orange', 'Orange Money', ORANGE), op('ml.moov', 'Moov Africa', MOOV)]
+    };
+
+    function operateurRequis() {
+        return countryHidden.value !== 'CM';
+    }
+
+    function choisirOperateur(code) {
+        networkHidden.value = code;
+        var cartes = opList.querySelectorAll('.momo-op-card');
+        for (var i = 0; i < cartes.length; i++) {
+            var actif = cartes[i].getAttribute('data-code') === code;
+            cartes[i].classList.toggle('selected', actif);
+            cartes[i].setAttribute('aria-checked', actif ? 'true' : 'false');
+        }
+        opStatus.className = 'phone-status';
+        opStatus.textContent = '';
+    }
+
+    function construireOperateurs(cc) {
+        opList.textContent = '';
+        (OPERATEURS[cc] || []).forEach(function (o) {
+            var carte = document.createElement('button');
+            carte.type = 'button';
+            carte.className = 'momo-op-card';
+            carte.setAttribute('role', 'radio');
+            carte.setAttribute('aria-checked', 'false');
+            carte.setAttribute('data-code', o.code);
+
+            var badge = document.createElement('span');
+            badge.className = 'momo-op-badge';
+            badge.style.background = o.bg;
+            badge.style.color = o.fg;
+            badge.textContent = o.sigle;
+            /* Logo officiel : si le fichier existe dans static/img/operateurs/, il remplace le sigle coloré. */
+            (function (b, marque) {
+                var exts = ['svg', 'png'], n = 0, logo = new Image();
+                logo.alt = ''; logo.className = 'momo-op-logo';
+                logo.onload = function () { b.textContent = ''; b.classList.add('has-logo'); b.appendChild(logo); };
+                logo.onerror = function () { n++; if (n < exts.length) logo.src = "{{ url_for('static', filename='img/operateurs/') }}" + marque + '.' + exts[n]; };
+                logo.src = "{{ url_for('static', filename='img/operateurs/') }}" + marque + '.' + exts[0];
+            })(badge, o.code.split('.')[1]);
+
+            var nom = document.createElement('span');
+            nom.className = 'momo-op-name';
+            nom.textContent = o.nom;
+
+            var check = document.createElement('i');
+            check.className = 'fas fa-check-circle momo-op-check';
+            check.setAttribute('aria-hidden', 'true');
+
+            carte.appendChild(badge);
+            carte.appendChild(nom);
+            carte.appendChild(check);
+            carte.addEventListener('click', function () { choisirOperateur(o.code); });
+            opList.appendChild(carte);
+        });
+    }
+
+    function appliquer() {
+        var opt = countrySel.options[countrySel.selectedIndex];
+        var cc = opt.value;
+        var cur = opt.getAttribute('data-currency');
+        var info = INFOS[cc] || INFOS.CM;
+
+        countryHidden.value = cc;
+        currencyHidden.value = cur;
+        networkHidden.value = '';
+        prefixEl.textContent = opt.getAttribute('data-prefix');
+        labelEl.textContent = 'Numéro de Téléphone Mobile (' + info.nom + ')';
+        noteEl.textContent = 'Devise du paiement : ' + cur + ' (FCFA)';
+        phoneInput.placeholder = info.ph;
+
+        opStatus.className = 'phone-status';
+        opStatus.textContent = '';
+        if (cc === 'CM') {
+            opWrap.style.display = 'none';
+            opList.textContent = '';
+        } else {
+            construireOperateurs(cc);
+            opWrap.style.display = 'block';
+        }
+
+        if (window.setPhoneCountryGlobal) window.setPhoneCountryGlobal(cc, info.article);
+        if (originalValidate) originalValidate(false);
+    }
+
+    /* La validation existante du téléphone reste en place ; on lui ajoute le contrôle de l'opérateur. */
+    var originalValidate = window.validateSelectedPhoneGlobal;
+    window.validateSelectedPhoneGlobal = function (showEmpty) {
+        var phoneOk = originalValidate ? originalValidate(showEmpty) : true;
+        var operateurOk = true;
+        if (operateurRequis() && !networkHidden.value) {
+            operateurOk = false;
+            if (showEmpty) {
+                opStatus.className = 'phone-status error';
+                opStatus.innerHTML = '<i class="fas fa-exclamation-circle"></i> Veuillez choisir votre opérateur Mobile Money.';
+                var premiere = opList.querySelector('.momo-op-card');
+                if (premiere) setTimeout(function () { premiere.focus(); }, 0);
+            }
+        }
+        return phoneOk && operateurOk;
+    };
+
+    countrySel.addEventListener('change', appliquer);
+
+    /* Numéro saisi au format international (+225…, 00241…) : le pays est détecté automatiquement. */
+    window.momoDetectFromNumber = function () {
+        var v = phoneInput.value.trim();
+        if (!/^(\+|00)/.test(v) || typeof libphonenumber === 'undefined') return;
+        try {
+            var p = libphonenumber.parsePhoneNumberFromString(v.replace(/^00/, '+'));
+            if (!p || !p.country || !INFOS[p.country]) return;
+            if (countryHidden.value !== p.country) {
+                countrySel.value = p.country;
+                appliquer();
+            }
+            phoneInput.value = p.nationalNumber;
+        } catch (e) {}
+    };
+
+    /* Les champs réseau/devise ne sont envoyés que pour le paiement par téléphone. */
+    function synchroniser() {
+        var actif = !methodSelect || methodSelect.value === 'momo';
+        currencyHidden.disabled = !actif;
+        networkHidden.disabled = !actif;
+    }
+    if (methodSelect) methodSelect.addEventListener('change', synchroniser);
+
+    appliquer();
+    synchroniser();
+})();
+</script>
+
+<script>
+if (typeof window.fnAvatarFallback !== 'function') {
+window.fnAvatarFallback = function(img){
+    var raw=(img.getAttribute('data-raw')||'').replace(/^\/+/, '').replace(/^static\//,'');
+    var essais=(img._essais=img._essais||['uploads/','uploads/profile_pics/','profile_pics/','uploads/profiles/','images/']);
+    if(essais.length){ img.src='/static/'+essais.shift()+raw; return; }
+    img.onerror=null;
+    var ph=document.querySelector('.fn-avatar-preview');
+    if(ph){ img.style.display='none'; }
+};
+}
+</script>
+<script>
+/* ── Forfaits (onglets), bouton Continuer et validation PayPal ── */
+(function () {
+    var PRIX = { '4500': '4 500 FCFA', '12000': '12 000 FCFA', '78000': '78 000 FCFA', '100000': '100 000 FCFA' };
+    var NOMS = { '4500': 'Standard', '12000': 'Premium', '78000': 'Max', '100000': 'Max Plus' };
+    var btn = document.getElementById('btnSubmitPayment');
+    var timerReset = null;
+
+    function planChoisi() {
+        var r = document.querySelector('input[name="amount"]:checked');
+        return r ? r.value : '4500';
+    }
+    function htmlBouton() {
+        return '<i class="fas fa-lock" aria-hidden="true"></i> <span id="fn-btn-label">Continuer · ' + (PRIX[planChoisi()] || '') + '</span>';
+    }
+    window.fnSetButtonIdle = function () {
+        clearTimeout(timerReset);
+        if (!btn) return;
+        btn.disabled = false;
+        btn.innerHTML = htmlBouton();
+    };
+
+    window.selectPlan = function (value) {
+        value = String(value);
+        var onglets = document.querySelectorAll('.fn-tab');
+        for (var i = 0; i < onglets.length; i++) {
+            var actif = onglets[i].getAttribute('data-plan') === value;
+            onglets[i].classList.toggle('is-active', actif);
+            onglets[i].setAttribute('aria-selected', actif ? 'true' : 'false');
+            if (actif) {
+                var barre = onglets[i].parentNode;
+                try { barre.scrollTo({ left: onglets[i].offsetLeft - (barre.clientWidth - onglets[i].offsetWidth) / 2, behavior: 'smooth' }); } catch (e) {}
+            }
+        }
+        var panneaux = document.querySelectorAll('.fn-plan-panel');
+        for (var j = 0; j < panneaux.length; j++) {
+            panneaux[j].classList.toggle('is-active', panneaux[j].getAttribute('data-plan') === value);
+        }
+        var radios = document.querySelectorAll('input[name="amount"]');
+        for (var k = 0; k < radios.length; k++) radios[k].checked = (radios[k].value === value);
+        var note = document.querySelector('.fn-selected-profile small');
+        if (note && NOMS[value]) note.textContent = 'Forfait sélectionné : ' + NOMS[value] + ' — Badge actif sur le profil';
+        if (btn && !btn.disabled) btn.innerHTML = htmlBouton();
+    };
+
+    function afficherMessage(msg) {
+        var el = document.getElementById('fn-submit-feedback');
+        if (!el) return;
+        if (msg) { el.textContent = msg; el.hidden = false; } else { el.textContent = ''; el.hidden = true; }
+    }
+
+    /* Enveloppe la validation existante : un message visible près du bouton + défilement vers le champ à corriger. */
+    window.fnSafeSubmit = function (e) {
+        afficherMessage('');
+        var ok = false;
+        try { ok = (validatePaymentForm(e) !== false); }
+        catch (err) { ok = false; if (window.console) console.error(err); }
+        if (!ok) {
+            if (e && e.preventDefault) e.preventDefault();
+            afficherMessage('Veuillez vérifier les informations de paiement signalées en rouge.');
+            var faux = document.querySelector('.field-invalid, .upload-feedback.error[style*="block"], .phone-status.error');
+            var cible = faux || document.getElementById('payment_method');
+            if (cible && cible.scrollIntoView) cible.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            window.fnSetButtonIdle();
+            return false;
+        }
+        /* Si le serveur ne répond pas, on ne laisse pas le bouton bloqué indéfiniment. */
+        timerReset = setTimeout(window.fnSetButtonIdle, 20000);
+        return true;
+    };
+
+    /* Retour arrière du navigateur : le bouton ne reste pas sur « Traitement en cours… ». */
+    window.addEventListener('pageshow', function (ev) { if (ev.persisted) window.fnSetButtonIdle(); });
+
+    /* La validation PayPal était appelée mais n'existait pas : elle est maintenant définie. */
+    if (typeof window.validatePaypalEmailGlobal !== 'function') {
+        window.validatePaypalEmailGlobal = function (showEmpty) {
+            var input = document.getElementById('paypal_email');
+            var st = document.getElementById('paypal_email_status');
+            if (!input || !st) return true;
+            var v = input.value.trim();
+            st.className = 'phone-status';
+            input.classList.remove('field-valid', 'field-invalid');
+            if (!v) {
+                if (showEmpty) {
+                    st.innerHTML = '<i class="fas fa-exclamation-circle"></i> Veuillez entrer l\'adresse e-mail de votre compte PayPal.';
+                    st.classList.add('error');
+                    input.classList.add('field-invalid');
+                } else { st.textContent = ''; }
+                return false;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) {
+                st.innerHTML = '<i class="fas fa-times-circle"></i> Adresse e-mail invalide.';
+                st.classList.add('error');
+                input.classList.add('field-invalid');
+                return false;
+            }
+            st.innerHTML = '<i class="fas fa-check-circle"></i> Adresse e-mail valide.';
+            st.classList.add('ok');
+            input.classList.add('field-valid');
+            return true;
+        };
+        var pe = document.getElementById('paypal_email');
+        if (pe) pe.addEventListener('blur', function () { window.validatePaypalEmailGlobal(false); });
+    }
+
+    window.fnSetButtonIdle();
+})();
+</script>
+
+<script>
+/* ── Balayage de l'écran : gauche = forfait suivant, droite = forfait précédent ── */
+(function () {
+    var ORDRE = ['4500', '12000', '78000', '100000'];   /* Standard, Premium, Max, Max Plus */
+    var zone = document.querySelector('.fn-sheet');
+    if (!zone) return;
+    var x0 = 0, y0 = 0, t0 = 0, actif = false;
+
+    /* On ne détourne pas le geste sur les champs, listes déroulantes ni zones qui défilent déjà de côté. */
+    function ignore(el) {
+        return !!(el && el.closest && el.closest('input, select, textarea, button.momo-op-card, .fn-tabs, .momo-op-grid, .phone-fixed-row, .info-tip'));
+    }
+    function courant() {
+        var r = document.querySelector('input[name="amount"]:checked');
+        return r ? r.value : '4500';
+    }
+    function aller(delta) {
+        var i = ORDRE.indexOf(courant()) + delta;
+        if (i < 0 || i >= ORDRE.length || typeof window.selectPlan !== 'function') return;
+        var cible = ORDRE[i];
+        var panneaux = document.querySelectorAll('.fn-plan-panel');
+        for (var k = 0; k < panneaux.length; k++) panneaux[k].classList.remove('from-left', 'from-right');
+        window.selectPlan(cible);
+        var p = document.getElementById('fn-panel-' + cible);
+        if (p) {
+            p.classList.add(delta > 0 ? 'from-right' : 'from-left');
+            setTimeout(function () { p.classList.remove('from-left', 'from-right'); }, 400);
+        }
+    }
+
+    zone.addEventListener('touchstart', function (e) {
+        if (e.touches.length !== 1 || ignore(e.target)) { actif = false; return; }
+        actif = true;
+        x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now();
+    }, { passive: true });
+
+    zone.addEventListener('touchend', function (e) {
+        if (!actif) return;
+        actif = false;
+        var t = e.changedTouches[0];
+        var dx = t.clientX - x0, dy = t.clientY - y0;
+        /* geste surtout horizontal, assez long et assez rapide : le défilement vertical reste intact */
+        if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.6 || Date.now() - t0 > 700) return;
+        aller(dx < 0 ? 1 : -1);
+    }, { passive: true });
+
+    zone.addEventListener('touchcancel', function () { actif = false; }, { passive: true });
+})();
+</script>
+
+<script>
+/* Le badge « rebondit » à chaque changement de forfait (clic sur un onglet ou balayage). */
+(function () {
+    var original = window.selectPlan;
+    if (typeof original !== 'function') return;
+    window.selectPlan = function (value) {
+        var r = original.apply(this, arguments);
+        var b = document.querySelector('.fn-profile-top .fn-badge-svg');
+        if (b) { b.classList.remove('fn-pop'); void b.getBoundingClientRect(); b.classList.add('fn-pop'); }
+        return r;
+    };
+})();
+</script>
+
+<script>
+/* L'année du pied de page suit automatiquement l'année en cours. */
+(function () {
+    var annee = String(new Date().getFullYear());
+    document.querySelectorAll('.fn-year').forEach(function (el) { el.textContent = annee; });
+})();
+</script>
+{% endblock %}

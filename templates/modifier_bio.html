@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    .fn-bp-wrap { max-width: 560px; margin: 32px auto 60px; padding: 0 14px; box-sizing: border-box; }
+    .fn-bp-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,.1); padding: 22px; }
+    .fn-bp-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+    .fn-bp-back { width: 38px; height: 38px; border-radius: 50%; background: #e4e6eb; color: #050505; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; flex: none; }
+    .fn-bp-back:hover { background: #d8dadf; }
+    .fn-bp-head h2 { margin: 0; font-size: 20px; color: #050505; }
+    .fn-bp-sub { margin: 0 0 12px; font-size: 14px; color: #65676b; line-height: 1.45; }
+    .fn-bp-card textarea { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #ccd0d5; border-radius: 10px; font: inherit; font-weight: 600; color: #000; background: #fff; resize: none; min-height: 96px; }
+    .fn-bp-card textarea:focus { outline: 2px solid #1877f2; outline-offset: 0; border-color: #1877f2; }
+    .fn-bp-count { text-align: right; font-size: 12.5px; color: #65676b; margin-top: 6px; }
+    .fn-bp-count.max { color: #c0392b; font-weight: 700; }
+    .fn-bp-err { margin-top: 10px; padding: 10px 12px; border-radius: 8px; background: #fdecea; color: #c0392b; font-size: 13.5px; }
+    .fn-bp-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+    .fn-bp-btn { border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; text-decoration: none; background: #e4e6eb; color: #050505; display: inline-flex; align-items: center; }
+    .fn-bp-btn:hover { background: #d8dadf; }
+    .fn-bp-btn.ok { background: #1877f2; color: #fff; }
+    .fn-bp-btn.ok:hover { background: #166fe5; }
+    .fn-bp-btn:disabled { opacity: .6; cursor: default; }
+    html[data-theme="dark"] .fn-bp-card { background: #242526; box-shadow: 0 2px 12px rgba(0,0,0,.5); }
+    html[data-theme="dark"] .fn-bp-head h2 { color: #e4e6eb; }
+    html[data-theme="dark"] .fn-bp-sub, html[data-theme="dark"] .fn-bp-count { color: #b0b3b8; }
+    html[data-theme="dark"] .fn-bp-card textarea { background: #3a3b3c; color: #e4e6eb; border-color: #3e4042; }
+    html[data-theme="dark"] .fn-bp-back, html[data-theme="dark"] .fn-bp-btn { background: #3a3b3c; color: #e4e6eb; }
+    html[data-theme="dark"] .fn-bp-btn.ok { background: #1877f2; color: #fff; }
+</style>
+
+<div class="fn-bp-wrap">
+    <div class="fn-bp-card">
+        <div class="fn-bp-head">
+            <a class="fn-bp-back" href="{{ url_for('main.profile', username=current_user.username) }}" aria-label="Retour au profil"><i class="fa-solid fa-arrow-left"></i></a>
+            <h2>Modifier la biographie</h2>
+        </div>
+        <p class="fn-bp-sub">Décrivez-vous en quelques mots. Votre biographie est toujours visible sur votre profil (90 caractères maximum).</p>
+
+        <form method="POST" action="{{ url_for('main.modifier_bio_page') }}" id="fn-bp-form">
+            <textarea name="bio" id="fn-bp-text" rows="3" placeholder="Décrivez-vous en quelques mots" autofocus>{{ bio_saisie if bio_saisie is defined else (current_user.bio or '') }}</textarea>
+            <div class="fn-bp-count" id="fn-bp-count">0/90</div>
+            {% if erreur %}<div class="fn-bp-err">{{ erreur }}</div>{% endif %}
+            <div class="fn-bp-actions">
+                <a class="fn-bp-btn" href="{{ url_for('main.profile', username=current_user.username) }}">Annuler</a>
+                <button type="submit" class="fn-bp-btn ok" id="fn-bp-save">Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+(function () {
+    var MAX = 90;
+    var ta = document.getElementById('fn-bp-text');
+    var cpt = document.getElementById('fn-bp-count');
+    var form = document.getElementById('fn-bp-form');
+    var btn = document.getElementById('fn-bp-save');
+    if (!ta || !cpt || !form) return;
+
+    function compter() {
+        var chars = Array.from(ta.value.replace(/\s+/g, ' '));
+        if (chars.length > MAX) { chars = chars.slice(0, MAX); ta.value = chars.join(''); }
+        cpt.textContent = chars.length + '/' + MAX;
+        cpt.classList.toggle('max', chars.length >= MAX);
+    }
+    ta.addEventListener('input', compter);
+    ta.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); form.requestSubmit ? form.requestSubmit() : form.submit(); }
+    });
+    form.addEventListener('submit', function () { btn.disabled = true; });
+    compter();
+    ta.focus();
+    ta.setSelectionRange(ta.value.length, ta.value.length);
+})();
+</script>
+{% endblock %}
