@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% if stream %}{{ stream.titre or 'Direct' }} · {% endif %}FaceNet Live</title>
+<style>
+  :root{--bg:#0A0B0E;--panel:#14161C;--panel-alt:#1B1E26;--border:#262A35;--text:#F2F3F5;--dim:#9AA0AC;--faint:#5B6070;--accent:#2DD4BF;--live:#FF4D4D;--host:#FF5DA2;--danger:#E5484D;}
+  *{box-sizing:border-box;} html,body{margin:0;height:100%;}
+  body{background:var(--bg);color:var(--text);font:14px/1.5 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  a{color:inherit;} button{font-family:inherit;}
+  .app{display:flex;flex-direction:column;height:100vh;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--panel);}
+  .brand{font-weight:800;font-size:17px;display:flex;align-items:center;gap:10px;text-decoration:none;}
+  .brand i{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);}
+  .pills{display:flex;gap:10px;}
+  .pill{padding:6px 12px;background:var(--panel-alt);border:1px solid var(--border);border-radius:20px;font-size:12.5px;color:var(--dim);}
+  .main{display:flex;flex:1;min-height:0;}
+  .stage-col{flex:1;display:flex;flex-direction:column;padding:18px;gap:12px;min-width:0;}
+  .stage{position:relative;flex:1;background:#000;border:1px solid var(--border);border-radius:16px;overflow:hidden;min-height:240px;}
+  .stage video{width:100%;height:100%;object-fit:contain;background:#000;display:block;}
+  .veil{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:20px;background:rgba(10,11,14,.82);color:var(--dim);}
+  .veil.hide{display:none;} .veil strong{color:var(--text);font-size:16px;} .veil .ico{font-size:34px;}
+  .badge{position:absolute;top:14px;left:14px;background:var(--live);color:#fff;font-weight:800;font-size:12px;padding:5px 10px;border-radius:6px;display:none;}
+  .badge.on{display:block;}
+  .sound{position:absolute;bottom:14px;left:14px;display:none;}
+  .sound.on{display:inline-flex;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--border);background:var(--panel-alt);color:var(--text);padding:9px 14px;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;text-decoration:none;}
+  .btn:hover{background:#22252F;} .btn.primary{background:var(--accent);border-color:var(--accent);color:#04201C;}
+  .info{display:flex;align-items:center;gap:12px;}
+  .av{width:42px;height:42px;border-radius:50%;background:var(--panel-alt);object-fit:cover;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--dim);}
+  .info h1{margin:0;font-size:17px;} .info small{color:var(--dim);}
+  .side{width:340px;flex-shrink:0;border-left:1px solid var(--border);background:var(--panel);display:flex;flex-direction:column;min-height:0;}
+  .side h2{margin:0;padding:14px;font-size:14px;border-bottom:1px solid var(--border);}
+  .msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;}
+  .msg{display:flex;gap:8px;} .msg .a{width:26px;height:26px;border-radius:50%;background:var(--panel-alt);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--dim);}
+  .msg .a img{width:100%;height:100%;object-fit:cover;} .msg b{margin-right:5px;} .msg .l{word-wrap:break-word;min-width:0;}
+  .role{display:inline-block;font-size:9.5px;font-weight:800;padding:1.5px 5px;border-radius:4px;margin-right:5px;background:var(--host);color:#2B0014;}
+  .empty{color:var(--faint);text-align:center;padding:30px 16px;font-size:13px;}
+  .react{display:flex;gap:6px;padding:0 12px 10px;} .react button{background:var(--panel-alt);border:1px solid var(--border);border-radius:8px;font-size:17px;padding:6px 10px;cursor:pointer;}
+  .send{display:flex;gap:8px;padding:12px;border-top:1px solid var(--border);}
+  input{flex:1;background:var(--panel-alt);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:9px;font-size:13.5px;font-family:inherit;min-width:0;}
+  input:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  .float{position:absolute;right:18px;bottom:18px;font-size:22px;pointer-events:none;animation:up 1.6s ease-out forwards;}
+  @keyframes up{0%{opacity:0;transform:translateY(0) scale(.6);}15%{opacity:1;}100%{opacity:0;transform:translateY(-90px);}}
+  .toast{position:fixed;bottom:18px;left:18px;background:var(--panel-alt);border:1px solid var(--border);border-left:3px solid var(--danger);padding:10px 14px;border-radius:8px;z-index:50;}
+  .list{max-width:640px;margin:40px auto;padding:0 20px;width:100%;} .list h1{font-size:20px;}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;background:var(--panel);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;text-decoration:none;}
+  @media (max-width:920px){.main{flex-direction:column;}.side{width:100%;border-left:none;border-top:1px solid var(--border);height:340px;}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <a class="brand" href="/"><i></i>FaceNet Live</a>
+    {% if stream %}<div class="pills"><div class="pill">👁 <span id="viewers">{{ stream.viewer_count }}</span></div><div class="pill">❤️ <span id="likes">{{ stream.like_count }}</span></div></div>{% endif %}
+  </header>
+
+{% if not stream %}
+  <div class="list">
+    <h1>Directs en cours</h1>
+    {% if liste %}
+      {% for l in liste %}<a class="row" href="{{ url_for('main.live_regarder', stream_id=l.id) }}"><span><b>{{ l.titre }}</b><br><small style="color:var(--dim)">{{ l.hote }}</small></span><span class="pill">👁 {{ l.spectateurs }}</span></a>{% endfor %}
+    {% else %}
+      <div class="empty">Aucun direct en ce moment. Revenez bientôt !</div>
+    {% endif %}
+    <a class="btn primary" href="{{ url_for('main.lancer_direct') }}">🎥 Lancer mon direct</a>
+  </div>
+{% elif est_hote %}
+  <div class="list"><h1>C'est votre direct</h1><div class="empty">Vous diffusez depuis la page de lancement.</div><a class="btn primary" href="{{ url_for('main.lancer_direct') }}">Retour à ma régie</a></div>
+{% else %}
+  <div class="main">
+    <section class="stage-col">
+      <div class="stage" id="stage">
+        <video id="remote" autoplay playsinline muted></video>
+        <div class="badge" id="badge">EN DIRECT</div>
+        <button class="btn primary sound" id="btnSound" type="button">🔊 Activer le son</button>
+        <div class="veil" id="veil"><div class="ico">⏳</div><strong id="veilTitle">Connexion au direct…</strong><span id="veilSub">Quelques secondes</span></div>
+      </div>
+      <div class="info">
+        {% if hote and hote.avatar %}<img class="av" src="{{ url_for('static', filename='uploads/' + hote.avatar) }}" alt="">{% else %}<div class="av">{{ ((hote.nom_complet or hote.username) if hote else '?')[:1]|upper }}</div>{% endif %}
+        <div><h1>{{ stream.titre or 'Direct' }}</h1><small>{{ (hote.nom_complet or hote.username) if hote else '' }}</small></div>
+      </div>
+    </section>
+    <aside class="side">
+      <h2>Chat en direct</h2>
+      <div class="msgs" id="msgs"><div class="empty">Aucun message pour l'instant. Soyez le premier à écrire 👋</div></div>
+      <div class="react"><button data-e="🔥">🔥</button><button data-e="❤️">❤️</button><button data-e="👏">👏</button><button data-e="😮">😮</button></div>
+      <div class="send"><input id="txt" maxlength="500" placeholder="Écrire un message..."><button class="btn primary" id="btnSend" type="button">➤</button></div>
+    </aside>
+  </div>
+{% endif %}
+</div>
+
+{% if stream and not est_hote %}
+<script>
+(function(){
+  "use strict";
+  const STREAM_ID = {{ stream.id|tojson }};
+  let ended = {{ 'true' if stream.statut != 'live' else 'false' }};
+  const KEY = 'v' + (crypto.getRandomValues ? Array.from(crypto.getRandomValues(new Uint8Array(9))).map(b => b.toString(16).padStart(2,'0')).join('') : String(Math.random()).slice(2,20));
+  const $ = (s) => document.querySelector(s);
+  const video = $('#remote'), veil = $('#veil');
+  let pc = null, lastSig = 0, lastMsg = 0, connected = false, timers = [], tries = 0;
+
+  const esc = (s) => { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; };
+  function toast(m){ const t = document.createElement('div'); t.className = 'toast'; t.textContent = m; document.body.appendChild(t); setTimeout(() => t.remove(), 3500); }
+  async function call(url, body){
+    const o = body === undefined ? { credentials: 'same-origin' } : { method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) };
+    const r = await fetch(url, o); const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.success === false) throw new Error(d.error || ('Erreur ' + r.status));
+    return d;
+  }
+  function showVeil(ico, title, sub){ veil.classList.remove('hide'); veil.querySelector('.ico').textContent = ico; $('#veilTitle').textContent = title; $('#veilSub').textContent = sub || ''; }
+
+  function finish(){
+    if (ended && connected === 'done') return;
+    ended = true; connected = 'done';
+    timers.forEach(clearInterval); timers = [];
+    if (pc) { try { pc.close(); } catch (e) {} pc = null; }
+    video.srcObject = null; $('#badge').classList.remove('on'); $('#btnSound').classList.remove('on');
+    showVeil('📴', 'Le direct est terminé', 'Merci d\u2019avoir regardé !');
+  }
+
+  async function connect(){
+    if (ended) return;
+    if (pc) { try { pc.close(); } catch (e) {} }
+    pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    const mine = pc;
+    pc.addTransceiver('video', { direction: 'recvonly' });
+    pc.addTransceiver('audio', { direction: 'recvonly' });
+    pc.ontrack = (e) => {
+      if (video.srcObject !== e.streams[0]) video.srcObject = e.streams[0];
+      video.play().catch(() => {});
+    };
+    pc.onicecandidate = (e) => { if (e.candidate && mine === pc) call('/api/stream/signal', { stream_id: STREAM_ID, from_key: KEY, kind: 'ice', payload: e.candidate.toJSON() }).catch(() => {}); };
+    pc.onconnectionstatechange = () => {
+      if (mine !== pc) return;
+      if (pc.connectionState === 'connected') {
+        connected = true; veil.classList.add('hide'); $('#badge').classList.add('on'); $('#btnSound').classList.toggle('on', video.muted);
+      } else if (pc.connectionState === 'failed') { connected = false; showVeil('📡', 'Connexion perdue', 'Nouvelle tentative…'); setTimeout(connect, 1500); }
+    };
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    try { await call('/api/stream/signal', { stream_id: STREAM_ID, from_key: KEY, kind: 'offer', payload: { type: offer.type, sdp: offer.sdp } }); }
+    catch (e) { if (/termin|invalide/i.test(e.message)) finish(); }
+  }
+
+  async function pollSignals(){
+    if (ended || !pc) return;
+    try {
+      const d = await call('/api/stream/signals?stream_id=' + STREAM_ID + '&after_id=' + lastSig + '&viewer_key=' + KEY);
+      for (const s of d.signals) {
+        lastSig = Math.max(lastSig, s.id);
+        if (s.kind === 'answer' && pc.signalingState === 'have-local-offer') await pc.setRemoteDescription(s.payload);
+        else if (s.kind === 'ice' && pc.remoteDescription) { try { await pc.addIceCandidate(s.payload); } catch (e) {} }
+      }
+      if (d.statut === 'ended') finish();
+    } catch (e) {}
+  }
+
+  async function heartbeat(){
+    if (ended) return;
+    try {
+      const d = await call('/api/stream/join', { stream_id: STREAM_ID, viewer_key: KEY });
+      $('#viewers').textContent = d.stream.viewer_count; $('#likes').textContent = d.stream.like_count;
+    } catch (e) { if (/termin/i.test(e.message)) finish(); }
+  }
+
+  async function pollChat(){
+    if (ended) return;
+    try {
+      const d = await call('/api/stream/chat/messages?stream_id=' + STREAM_ID + '&after_id=' + lastMsg);
+      d.messages.forEach(addMsg);
+      if (d.statut === 'ended') finish();
+    } catch (e) {}
+  }
+  function addMsg(m){
+    const box = $('#msgs');
+    if (box.querySelector('.empty')) box.innerHTML = '';
+    if (box.querySelector('[data-mid="' + m.id + '"]')) return;
+    const row = document.createElement('div'); row.className = 'msg'; row.dataset.mid = m.id;
+    row.innerHTML = '<div class="a">' + (m.avatar ? '<img src="' + esc(m.avatar) + '" alt="">' : esc((m.auteur || '?')[0].toUpperCase())) + '</div>'
+      + '<div class="l">' + (m.user_role === 'host' ? '<span class="role">HÔTE</span>' : '') + '<b>' + esc(m.auteur) + '</b>' + esc(m.message) + '</div>';
+    box.appendChild(row); box.scrollTop = box.scrollHeight; lastMsg = Math.max(lastMsg, m.id);
+  }
+  async function send(){
+    const input = $('#txt'); const txt = input.value.trim();
+    if (!txt || ended) return;
+    try { const d = await call('/api/stream/chat/send', { stream_id: STREAM_ID, message: txt }); addMsg(d.message); input.value = ''; }
+    catch (e) { toast(e.message); }
+  }
+  $('#btnSend').addEventListener('click', send);
+  $('#txt').addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+  document.querySelectorAll('.react button').forEach(b => b.addEventListener('click', async () => {
+    const f = document.createElement('div'); f.className = 'float'; f.textContent = b.dataset.e; $('#stage').appendChild(f); setTimeout(() => f.remove(), 1700);
+    try { const d = await call('/api/stream/like', { stream_id: STREAM_ID }); $('#likes').textContent = d.like_count; } catch (e) {}
+  }));
+  $('#btnSound').addEventListener('click', () => { video.muted = false; video.play().catch(() => {}); $('#btnSound').classList.remove('on'); });
+
+  if (ended) { finish(); return; }
+  heartbeat(); connect(); pollChat();
+  timers.push(setInterval(heartbeat, 8000), setInterval(pollSignals, 1000), setInterval(pollChat, 3000));
+  // sans flux après 15 s : nouvelle offre (l'hôte n'était peut-être pas encore prêt)
+  timers.push(setInterval(() => { if (!connected && !ended && ++tries <= 6) connect(); }, 15000));
+  window.addEventListener('pagehide', () => { if (pc) pc.close(); });
+})();
+</script>
+{% endif %}
+</body>
+</html>

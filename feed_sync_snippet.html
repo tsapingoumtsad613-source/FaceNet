@@ -1,0 +1,130 @@
+{# ══════════════════════════════════════════════════════════════════════
+   SYNCHRO FEED ⇄ REELS — à coller TEL QUEL dans feed.html, juste avant
+   {% endblock %} (fin du bloc content). Aucun changement de route, de
+   fonction ni de style existant.
+
+   • Quand une publication est supprimée depuis le fil → le reel correspondant
+     disparaît aussi (page Reels ouverte, autre onglet, ou retour arrière).
+   • Quand un reel est détecté comme supprimé côté Reels → il disparaît du fil.
+   • Détection automatique : toute requête POST/DELETE réussie vers une URL de
+     suppression de publication (ex. /supprimer_publication/12,
+     /api/publication/12/supprimer, /publication/12/delete…).
+   • Si ta route de suppression a un autre nom, ajoute UNE ligne dans son
+     handler de succès :   window.FNSync && FNSync.publicationDeleted(id);
+═══════════════════════════════════════════════════════════════════════ #}
+<script>
+(function () {
+    'use strict';
+    if (window.FNSync) return;
+
+    var KEY = 'fn:pub-deleted:v1', EVT = 'fn:pub-deleted:evt', CHAN = 'fn-pub-sync', TTL = 30 * 60 * 1000;
+    var seen = {}, bc = null;
+    try { if ('BroadcastChannel' in window) bc = new BroadcastChannel(CHAN); } catch (e) { bc = null; }
+
+    function now() { return Date.now(); }
+    function readTomb() {
+        var o = {};
+        try { o = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { o = {}; }
+        var t = now(), dirty = false;
+        Object.keys(o).forEach(function (k) { if (t - o[k] > TTL) { delete o[k]; dirty = true; } });
+        if (dirty) writeTomb(o);
+        return o;
+    }
+    function writeTomb(o) {
+        try {
+            var ks = Object.keys(o);
+            if (ks.length > 300) ks.sort(function (a, b) { return o[a] - o[b]; }).slice(0, ks.length - 300).forEach(function (k) { delete o[k]; });
+            localStorage.setItem(KEY, JSON.stringify(o));
+        } catch (e) {}
+    }
+
+    /* Retrait d'une publication du fil, avec fondu + repli fluide (pas de saut de page) */
+    function postElements(id) {
+        var sel = ['#publication-' + id, '#post-' + id, '#pub-' + id, '[data-pub-id="' + id + '"]', '[data-post-id="' + id + '"]', '[data-publication-id="' + id + '"]'].join(',');
+        try { return Array.prototype.slice.call(document.querySelectorAll(sel)); } catch (e) { return []; }
+    }
+    function removePost(id) {
+        postElements(id).forEach(function (el) {
+            if (el.dataset.fnGone) return;
+            el.dataset.fnGone = '1';
+            try { Array.prototype.forEach.call(el.querySelectorAll('video'), function (v) { v.pause(); }); } catch (e) {}
+            var h = el.offsetHeight;
+            el.style.overflow = 'hidden';
+            el.style.maxHeight = h + 'px';
+            el.style.transition = 'opacity .25s ease, max-height .35s ease, margin .35s ease, padding .35s ease';
+            void el.offsetHeight;
+            el.style.opacity = '0'; el.style.maxHeight = '0px'; el.style.marginTop = '0'; el.style.marginBottom = '0'; el.style.paddingTop = '0'; el.style.paddingBottom = '0';
+            setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 400);
+        });
+    }
+
+    function receive(msg) {
+        if (!msg || msg.t !== 'del' || !msg.id) return;
+        var k = msg.id + '|' + msg.ts;
+        if (seen[k]) return;
+        seen[k] = 1;
+        var o = readTomb(); if (!o[msg.id]) { o[msg.id] = msg.ts || now(); writeTomb(o); }
+        removePost(msg.id);
+    }
+    function publish(id) {
+        id = String(id);
+        if (!/^\d+$/.test(id)) return;
+        var ts = now(), o = readTomb();
+        o[id] = ts; writeTomb(o);
+        var msg = { t: 'del', id: id, ts: ts };
+        try { if (bc) bc.postMessage(msg); } catch (e) {}
+        try { localStorage.setItem(EVT, id + '|' + ts + '|' + Math.random().toString(36).slice(2, 7)); } catch (e) {}
+        seen[id + '|' + ts] = 1;
+        removePost(id);
+        try { document.dispatchEvent(new CustomEvent('fn:pub-deleted', { detail: { id: id } })); } catch (e) {}
+    }
+    if (bc) bc.onmessage = function (e) { receive(e.data); };
+    window.addEventListener('storage', function (e) {
+        if (e.key === EVT && e.newValue) { var p = e.newValue.split('|'); receive({ t: 'del', id: p[0], ts: parseInt(p[1], 10) || now() }); }
+    });
+
+    /* Page restaurée depuis le cache (retour arrière) ou onglet de nouveau visible : on réapplique les suppressions récentes */
+    function applyTombstones() { Object.keys(readTomb()).forEach(removePost); }
+    window.addEventListener('pageshow', function (e) { if (e.persisted) applyTombstones(); });
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) applyTombstones(); });
+
+    /* ── Détection automatique des suppressions de publication faites depuis le fil ── */
+    var DEL  = /(supprim|delete|remove|effac)/i;
+    var PUB  = /(publication|post|pub|reel)/i;
+    var NOT  = /(comment|commentaire|story|stories|message|embed|collection|favori|signal|report|masquer|hide|photo|album|group|groupe|event|evenement|ami|friend|notif|conversation|chat|republ|bloc)/i;
+    function deletedIdFrom(url, method) {
+        try {
+            if (!/^(POST|DELETE)$/i.test(method || 'GET')) return null;
+            var p = new URL(url, location.origin).pathname;
+            if (!DEL.test(p) || !PUB.test(p) || NOT.test(p)) return null;
+            var m = /\/(\d+)(?:\/|$)/.exec(p);
+            return m ? m[1] : null;
+        } catch (e) { return null; }
+    }
+    if (typeof window.fetch === 'function') {
+        var _fetch = window.fetch;
+        window.fetch = function (input, init) {
+            var url = typeof input === 'string' ? input : (input && input.url) || '';
+            var method = (init && init.method) || (input && input.method) || 'GET';
+            var id = deletedIdFrom(url, method);
+            var p = _fetch.apply(this, arguments);
+            if (id) {
+                p.then(function (res) {
+                    if (!res || !res.ok) return;
+                    res.clone().json().then(function (d) { if (!d || d.success !== false) publish(id); }).catch(function () { publish(id); });
+                }).catch(function () {});
+            }
+            return p;
+        };
+    }
+    var _open = XMLHttpRequest.prototype.open, _send = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.open = function (method, url) { this.__fnDelId = deletedIdFrom(url, method); return _open.apply(this, arguments); };
+    XMLHttpRequest.prototype.send = function () {
+        var xhr = this;
+        if (xhr.__fnDelId) xhr.addEventListener('load', function () { if (xhr.status >= 200 && xhr.status < 300) publish(xhr.__fnDelId); });
+        return _send.apply(this, arguments);
+    };
+
+    window.FNSync = { publicationDeleted: publish, isDeleted: function (id) { return !!readTomb()[String(id)]; } };
+})();
+</script>

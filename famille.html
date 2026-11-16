@@ -1,0 +1,612 @@
+{% extends "base.html" %}
+
+{% block title %}Cercle familial — FaceNet{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    /* ============================================================
+       Cercle familial — page de gestion (Paramètres › Cercle familial)
+       Toutes les classes commencent par « fam- » : aucun conflit avec le reste du site.
+       ============================================================ */
+    .fam-page { max-width: 760px; margin: 0 auto; padding: 14px 14px 40px; box-sizing: border-box; color: #1c1e21; }
+    .fam-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .fam-back { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; background: #fff; color: #1c1e21; box-shadow: 0 2px 8px rgba(0,0,0,.12); display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 17px; }
+    .fam-back:hover { background: #e7f0fd; color: #1877f2; }
+    .fam-header h1 { margin: 0; font-size: 26px; font-weight: 800; }
+
+    .fam-intro { background: #e7f0fd; color: #1c3d6e; border-radius: 14px; padding: 14px 16px; font-size: 15px; line-height: 1.5; margin-bottom: 16px; }
+    .fam-intro i { margin-right: 8px; color: #1877f2; }
+
+    .fam-card { background: #fff; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.08); padding: 16px; margin-bottom: 16px; }
+    .fam-card h2 { margin: 0 0 4px; font-size: 19px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+    .fam-count { background: #e4e6eb; color: #4b4f56; border-radius: 999px; font-size: 13px; font-weight: 700; padding: 2px 10px; }
+    .fam-sub { margin: 0 0 12px; color: #65676b; font-size: 14px; line-height: 1.45; }
+    .fam-empty { color: #65676b; font-size: 15px; padding: 10px 2px 4px; }
+
+    .fam-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid #f0f0f0; flex-wrap: wrap; }
+    .fam-row:first-of-type { border-top: none; }
+    .fam-avatar { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; background: #e4e6eb; flex-shrink: 0; }
+    .fam-info { flex: 1; min-width: 150px; }
+    .fam-name { font-weight: 700; font-size: 16px; color: #1c1e21; text-decoration: none; word-break: break-word; }
+    .fam-name:hover { text-decoration: underline; }
+    .fam-lien { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; background: #e6f7f2; color: #007a63; font-weight: 700; font-size: 13px; padding: 3px 11px; border-radius: 999px; word-break: break-word; }
+    .fam-wait { display: inline-block; margin-top: 4px; margin-left: 6px; background: #fff3d6; color: #8a5a00; font-weight: 700; font-size: 12px; padding: 3px 10px; border-radius: 999px; }
+    .fam-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .fam-btn { border: none; border-radius: 10px; padding: 10px 16px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: background .15s ease, transform .1s ease; }
+    .fam-btn:active { transform: scale(.97); }
+    .fam-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .fam-btn-primary { background: #1877f2; color: #fff; }
+    .fam-btn-primary:hover:not(:disabled) { background: #166fe5; }
+    .fam-btn-light { background: #e4e6eb; color: #050505; }
+    .fam-btn-light:hover:not(:disabled) { background: #d8dadf; }
+    .fam-btn-danger { background: #fdecee; color: #d0213f; }
+    .fam-btn-danger:hover:not(:disabled) { background: #fbd9de; }
+
+    .fam-edit { flex-basis: 100%; display: none; gap: 8px; padding-left: 64px; flex-wrap: wrap; }
+    .fam-edit.open { display: flex; }
+    .fam-input { flex: 1; min-width: 160px; border: 1.5px solid #d0d3d9; border-radius: 10px; padding: 10px 12px; font-family: inherit; font-size: 15px; background: #fff; color: #1c1e21; box-sizing: border-box; }
+    .fam-input:focus { outline: none; border-color: #1877f2; box-shadow: 0 0 0 3px rgba(24,119,242,.15); }
+
+    /* Sélecteur d'ami */
+    .fam-label { display: block; font-size: 14px; font-weight: 700; margin: 12px 0 6px; }
+    .fam-friends { max-height: 260px; overflow-y: auto; border: 1.5px solid #e4e6eb; border-radius: 12px; margin-top: 8px; }
+    .fam-friend { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: #fff; border: none; border-bottom: 1px solid #f0f0f0; padding: 9px 12px; cursor: pointer; font-family: inherit; font-size: 15px; color: #1c1e21; }
+    .fam-friend:last-child { border-bottom: none; }
+    .fam-friend:hover { background: #f5f6f7; }
+    .fam-friend.selected { background: #e7f0fd; }
+    .fam-friend img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; background: #e4e6eb; flex-shrink: 0; }
+    .fam-friend .fam-check { margin-left: auto; color: #1877f2; opacity: 0; }
+    .fam-friend.selected .fam-check { opacity: 1; }
+    .fam-friend small { color: #65676b; display: block; font-size: 12px; }
+    .fam-noresult { padding: 14px; color: #65676b; font-size: 14px; display: none; }
+    .fam-hint { color: #65676b; font-size: 12.5px; margin-top: 6px; }
+    /* Nom de la famille */
+    .fam-nom { background: #f0f7ff; border: 1px solid #cfe3fb; border-radius: 12px; padding: 12px 14px; margin: 0 0 12px; }
+    .fam-nom-ligne { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .fam-nom-info { min-width: 0; flex: 1; }
+    .fam-nom-label { display: block; font-size: 12px; font-weight: 700; color: #65676b; text-transform: uppercase; letter-spacing: .4px; }
+    .fam-nom-valeur { display: block; font-size: 18px; font-weight: 800; color: #1c1e21; word-break: break-word; }
+    .fam-nom-valeur.vide { font-size: 15px; font-weight: 600; color: #65676b; font-style: italic; }
+    .fam-nom-edit { display: none; margin-top: 12px; }
+    .fam-nom-edit.open { display: block; }
+    .fam-nom-edit .fam-input { width: 100%; }
+    .fam-nom-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .fam-submit { margin-top: 14px; width: 100%; padding: 13px; font-size: 16px; }
+
+    @media (max-width: 480px) {
+        .fam-header h1 { font-size: 23px; }
+        .fam-edit { padding-left: 0; }
+        .fam-actions { width: 100%; }
+        .fam-actions .fam-btn { flex: 1; }
+    }
+    /* ============ Sélecteur d'amis plein écran (sélection multiple + lien par personne) ============ */
+    .fam-open-picker { width: 100%; padding: 14px; font-size: 16px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .fam-quick { margin-top: 14px; border-top: 1px solid #f0f0f0; padding-top: 4px; }
+    .fam-quick summary { cursor: pointer; font-weight: 700; font-size: 14px; color: #1877f2; padding: 10px 0; }
+    .fam-full { display: none; position: fixed; inset: 0; z-index: 9990; background: #f0f2f5; color: #1c1e21; flex-direction: column; font-family: inherit; }
+    .fam-full.open { display: flex; }
+    .fam-full-head { display: flex; align-items: center; gap: 14px; padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+    .fam-full-close { width: 42px; height: 42px; border-radius: 50%; border: none; background: #e4e6eb; color: #1c1e21; font-size: 18px; cursor: pointer; flex-shrink: 0; }
+    .fam-full-close:hover { background: #d8dadf; }
+    .fam-full-head h2 { margin: 0; font-size: 20px; font-weight: 800; }
+    .fam-full-head p { margin: 2px 0 0; color: #65676b; font-size: 13.5px; line-height: 1.35; }
+    .fam-full-tools { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #fff; border-bottom: 1px solid #e4e6eb; flex-wrap: wrap; }
+    .fam-full-tools .fam-input { flex: 1; min-width: 200px; }
+    .fam-full-count { font-size: 14px; font-weight: 700; color: #1877f2; white-space: nowrap; }
+    .fam-full-body { flex: 1; overflow-y: auto; padding: 16px; -webkit-overflow-scrolling: touch; }
+    .fam-full-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; align-items: start; }
+    .fam-pick { background: #fff; border: 2px solid transparent; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.08); overflow: hidden; transition: border-color .15s ease, box-shadow .15s ease; }
+    .fam-pick.selected { border-color: #1877f2; box-shadow: 0 4px 14px rgba(24,119,242,.2); }
+    .fam-pick.erreur { border-color: #d0213f; }
+    .fam-pick-main { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; background: transparent; border: none; text-align: left; cursor: pointer; font-family: inherit; font-size: 16px; font-weight: 700; color: #1c1e21; }
+    .fam-pick-main img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; background: #e4e6eb; flex-shrink: 0; }
+    .fam-pick-name { flex: 1; min-width: 0; word-break: break-word; }
+    .fam-pick-name small { display: block; color: #65676b; font-size: 13px; font-weight: 500; }
+    .fam-pick-check { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #ccd0d5; display: flex; align-items: center; justify-content: center; font-size: 13px; color: transparent; flex-shrink: 0; }
+    .fam-pick.selected .fam-pick-check { background: #1877f2; border-color: #1877f2; color: #fff; }
+    .fam-pick-role { display: none; padding: 0 14px 14px; }
+    .fam-pick.selected .fam-pick-role { display: block; }
+    .fam-pick-role .fam-input { width: 100%; min-width: 0; }
+    .fam-input.invalid { border-color: #d0213f; box-shadow: 0 0 0 3px rgba(208,33,63,.15); }
+    .fam-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .fam-chip { border: 1px solid #d0d3d9; background: #f5f6f7; color: #1c1e21; border-radius: 999px; padding: 5px 11px; font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+    .fam-chip:hover { background: #e7f0fd; border-color: #1877f2; color: #1877f2; }
+    .fam-full-foot { display: flex; gap: 10px; justify-content: flex-end; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: #fff; box-shadow: 0 -1px 4px rgba(0,0,0,.1); }
+    .fam-full-foot .fam-btn { padding: 13px 22px; font-size: 15px; }
+    @media (max-width: 480px) {
+        .fam-full-grid { grid-template-columns: 1fr; }
+        .fam-full-foot .fam-btn { flex: 1; }
+        .fam-full-head h2 { font-size: 18px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fam-page" data-csrf="{{ csrf_token() if csrf_token is defined else '' }}">
+
+    <div class="fam-header">
+        <a class="fam-back" href="{{ url_for('main.settings') }}" aria-label="Retour aux paramètres" title="Retour"><i class="fa-solid fa-arrow-left"></i></a>
+        <h1>Cercle familial</h1>
+    </div>
+
+    <div class="fam-intro">
+        <i class="fa-solid fa-house-user"></i>
+        Ajoutez des proches parmi vos amis validés et indiquez votre lien de parenté. Chaque personne doit <strong>accepter l'invitation</strong>.
+        Les publications et Reels que vous partagez avec l'audience <strong>« Famille »</strong> ne sont visibles que par votre cercle familial,
+        nulle part ailleurs (ni dans le fil, ni sur votre profil, ni dans la recherche, ni dans les Reels).
+    </div>
+
+    {# ───── Invitations reçues ───── #}
+    {% if invitations_recues %}
+    <div class="fam-card">
+        <h2><i class="fa-solid fa-envelope-open-text" style="color:#00a884;"></i> Invitations reçues <span class="fam-count">{{ invitations_recues|length }}</span></h2>
+        <p class="fam-sub">Ces personnes souhaitent vous ajouter à leur cercle familial.</p>
+        {% for l in invitations_recues %}
+        {% set p = l.proprietaire %}
+        <div class="fam-row" id="fam-recue-{{ l.id }}">
+            <img class="fam-avatar" src="{{ url_for('static', filename='uploads/' + (p.avatar if p.avatar else 'default_avatar.png')) }}" alt="">
+            <div class="fam-info">
+                <a class="fam-name" href="{{ url_for('main.profile', username=p.username) }}">{{ p.nom_complet or p.username }}</a><br>
+                {% set nf = (noms_familles or {}).get(p.id) %}
+                {% if nf %}<span class="fam-lien"><i class="fa-solid fa-house-user"></i> Famille « {{ nf }} »</span><br>{% endif %}
+                <span class="fam-lien"><i class="fa-solid fa-people-arrows"></i> Lien proposé : {{ l.lien }}</span>
+            </div>
+            <div class="fam-actions">
+                <button type="button" class="fam-btn fam-btn-primary" data-fam-post="{{ url_for('main.famille_repondre', lien_id=l.id, action='accepter') }}">Accepter</button>
+                <button type="button" class="fam-btn fam-btn-light" data-fam-post="{{ url_for('main.famille_repondre', lien_id=l.id, action='refuser') }}">Refuser</button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {# ───── Ajouter un membre ───── #}
+    <div class="fam-card">
+        <h2><i class="fa-solid fa-user-plus" style="color:#1877f2;"></i> Ajouter un membre</h2>
+        <p class="fam-sub">Seuls vos amis déjà validés peuvent être ajoutés.</p>
+
+        {% if amis_disponibles %}
+        <button type="button" class="fam-btn fam-btn-primary fam-open-picker" id="fam-open-picker"><i class="fa-solid fa-users"></i> Choisir mes amis</button>
+        <div class="fam-hint" style="text-align:center;">Sélectionnez un ou plusieurs amis et donnez le lien de parenté de chacun.</div>
+
+        <details class="fam-quick">
+        <summary>Ajout rapide d'un seul ami</summary>
+        <form id="fam-form-ajout" autocomplete="off" novalidate>
+            <label class="fam-label" for="fam-search">1. Choisissez un ami</label>
+            <input type="search" id="fam-search" class="fam-input" style="width:100%;" placeholder="Rechercher parmi vos amis…" aria-label="Rechercher un ami">
+            <div class="fam-friends" id="fam-friends" role="listbox" aria-label="Vos amis">
+                {% for a in amis_disponibles %}
+                <button type="button" class="fam-friend" role="option" aria-selected="false" data-id="{{ a.id }}" data-search="{{ ((a.nom_complet or '') ~ ' ' ~ (a.username or ''))|lower }}">
+                    <img src="{{ url_for('static', filename='uploads/' + (a.avatar if a.avatar else 'default_avatar.png')) }}" alt="" loading="lazy">
+                    <span>{{ a.nom_complet or a.username }}<small>@{{ a.username }}</small></span>
+                    <i class="fa-solid fa-circle-check fam-check"></i>
+                </button>
+                {% endfor %}
+                <div class="fam-noresult" id="fam-noresult">Aucun ami ne correspond à votre recherche.</div>
+            </div>
+
+            <label class="fam-label" for="fam-lien">2. Lien de parenté</label>
+            <input type="text" id="fam-lien" class="fam-input" style="width:100%;" list="fam-liens" maxlength="{{ longueur_max_lien }}" placeholder="Ex. : frère, belle-mère, grand-oncle, cousine…" required>
+            <datalist id="fam-liens">
+                {% for lien in liens_suggeres %}<option value="{{ lien }}"></option>{% endfor %}
+            </datalist>
+            <div class="fam-hint">Choisissez une suggestion ou écrivez librement n'importe quel lien (jusqu'à {{ longueur_max_lien }} caractères).</div>
+
+            <button type="submit" class="fam-btn fam-btn-primary fam-submit" id="fam-envoyer">Envoyer l'invitation</button>
+        </form>
+        </details>
+
+        {# ───── Sélecteur plein écran (déplacé dans <body> par le script) ───── #}
+        <div class="fam-full" id="fam-full" role="dialog" aria-modal="true" aria-labelledby="fam-full-titre">
+            <div class="fam-full-head">
+                <button type="button" class="fam-full-close" id="fam-full-close" aria-label="Fermer" title="Fermer"><i class="fa-solid fa-xmark"></i></button>
+                <div>
+                    <h2 id="fam-full-titre">{% if nom_famille %}Ajouter à « {{ nom_famille }} »{% else %}Ajouter à mon cercle familial{% endif %}</h2>
+                    <p>Touchez un ou plusieurs amis, puis indiquez le lien de parenté de chacun.</p>
+                </div>
+            </div>
+            <div class="fam-full-tools">
+                <input type="search" id="fam-full-search" class="fam-input" placeholder="Rechercher parmi vos amis…" aria-label="Rechercher un ami" autocomplete="off">
+                <span class="fam-full-count" id="fam-full-count" aria-live="polite">Aucun ami sélectionné</span>
+            </div>
+            <div class="fam-full-body">
+                <div class="fam-full-grid" id="fam-full-grid">
+                    {% for a in amis_disponibles %}
+                    <div class="fam-pick" data-id="{{ a.id }}" data-nom="{{ a.nom_complet or a.username }}" data-search="{{ ((a.nom_complet or '') ~ ' ' ~ (a.username or ''))|lower }}">
+                        <button type="button" class="fam-pick-main" aria-pressed="false">
+                            <img src="{{ url_for('static', filename='uploads/' + (a.avatar if a.avatar else 'default_avatar.png')) }}" alt="" loading="lazy">
+                            <span class="fam-pick-name">{{ a.nom_complet or a.username }}<small>@{{ a.username }}</small></span>
+                            <span class="fam-pick-check"><i class="fa-solid fa-check"></i></span>
+                        </button>
+                        <div class="fam-pick-role">
+                            <input type="text" class="fam-input" list="fam-liens" maxlength="{{ longueur_max_lien }}" placeholder="Lien de parenté (ex. : frère, cousine…)" aria-label="Lien de parenté avec {{ a.nom_complet or a.username }}">
+                            <div class="fam-chips"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="fam-noresult" id="fam-full-noresult">Aucun ami ne correspond à votre recherche.</div>
+            </div>
+            <div class="fam-full-foot">
+                <button type="button" class="fam-btn fam-btn-light" id="fam-full-cancel">Annuler</button>
+                <button type="button" class="fam-btn fam-btn-primary" id="fam-full-send">Envoyer l'invitation</button>
+            </div>
+        </div>
+        {% else %}
+        <div class="fam-empty">
+            {% if membres or invitations_envoyees %}Tous vos amis sont déjà dans votre cercle familial ou ont reçu une invitation.
+            {% else %}Vous n'avez pas encore d'ami validé à ajouter. Ajoutez d'abord des amis, puis revenez ici.{% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    {# ───── Mon cercle familial ───── #}
+    <div class="fam-card">
+        <h2><i class="fa-solid fa-house-user" style="color:#00a884;"></i> {{ nom_famille or 'Mon cercle familial' }} <span class="fam-count">{{ membres|length }}</span></h2>
+        <p class="fam-sub">Ces personnes peuvent voir vos publications et Reels « Famille ».</p>
+
+        <div class="fam-nom" id="fam-nom-bloc">
+            <div class="fam-nom-ligne">
+                <div class="fam-nom-info">
+                    <span class="fam-nom-label">Nom de la famille</span>
+                    <strong class="fam-nom-valeur{% if not nom_famille %} vide{% endif %}" id="fam-nom-valeur">{{ nom_famille or 'Aucun nom pour le moment' }}</strong>
+                </div>
+                <button type="button" class="fam-btn fam-btn-light" id="fam-nom-ouvrir">{{ 'Modifier le nom' if nom_famille else 'Nommer ma famille' }}</button>
+            </div>
+            <div class="fam-nom-edit" id="fam-nom-edit">
+                <input type="text" class="fam-input" id="fam-nom-champ" maxlength="{{ longueur_max_nom|default(60) }}" value="{{ nom_famille or '' }}" placeholder="Ex. : Famille Dupont" aria-label="Nom de la famille" autocomplete="off">
+                <div class="fam-nom-actions">
+                    <button type="button" class="fam-btn fam-btn-primary" id="fam-nom-enregistrer">Enregistrer</button>
+                    <button type="button" class="fam-btn fam-btn-light" id="fam-nom-annuler">Annuler</button>
+                </div>
+                <div class="fam-hint">Ce nom est visible par les personnes que vous invitez et par les membres de votre cercle. Laissez le champ vide pour retirer le nom.</div>
+            </div>
+        </div>
+        {% for l in membres %}
+        {% set m = l.membre %}
+        <div class="fam-row" id="fam-membre-{{ l.id }}">
+            <img class="fam-avatar" src="{{ url_for('static', filename='uploads/' + (m.avatar if m.avatar else 'default_avatar.png')) }}" alt="">
+            <div class="fam-info">
+                <a class="fam-name" href="{{ url_for('main.profile', username=m.username) }}">{{ m.nom_complet or m.username }}</a><br>
+                <span class="fam-lien"><i class="fa-solid fa-people-arrows"></i> <span data-fam-lien>{{ l.lien }}</span></span>
+            </div>
+            <div class="fam-actions">
+                <button type="button" class="fam-btn fam-btn-light" data-fam-edit="{{ l.id }}">Modifier le lien</button>
+                <button type="button" class="fam-btn fam-btn-danger" data-fam-post="{{ url_for('main.famille_retirer', lien_id=l.id) }}" data-fam-confirm="Retirer {{ m.nom_complet or m.username }} de votre cercle familial ? Cette personne ne verra plus vos contenus « Famille ».">Retirer</button>
+            </div>
+            <div class="fam-edit" id="fam-edit-{{ l.id }}">
+                <input type="text" class="fam-input" list="fam-liens" maxlength="{{ longueur_max_lien }}" value="{{ l.lien }}" aria-label="Nouveau lien de parenté">
+                <button type="button" class="fam-btn fam-btn-primary" data-fam-save="{{ url_for('main.famille_modifier', lien_id=l.id) }}">Enregistrer</button>
+            </div>
+        </div>
+        {% else %}
+        <div class="fam-empty">Votre cercle familial est vide pour le moment.</div>
+        {% endfor %}
+    </div>
+
+    {# ───── Invitations envoyées ───── #}
+    {% if invitations_envoyees %}
+    <div class="fam-card">
+        <h2><i class="fa-solid fa-paper-plane" style="color:#8a5a00;"></i> Invitations en attente <span class="fam-count">{{ invitations_envoyees|length }}</span></h2>
+        <p class="fam-sub">Ces personnes n'ont pas encore répondu. Elles ne voient aucun contenu « Famille » tant qu'elles n'ont pas accepté.</p>
+        {% for l in invitations_envoyees %}
+        {% set m = l.membre %}
+        <div class="fam-row" id="fam-attente-{{ l.id }}">
+            <img class="fam-avatar" src="{{ url_for('static', filename='uploads/' + (m.avatar if m.avatar else 'default_avatar.png')) }}" alt="">
+            <div class="fam-info">
+                <a class="fam-name" href="{{ url_for('main.profile', username=m.username) }}">{{ m.nom_complet or m.username }}</a><br>
+                <span class="fam-lien"><i class="fa-solid fa-people-arrows"></i> <span data-fam-lien>{{ l.lien }}</span></span><span class="fam-wait">En attente</span>
+            </div>
+            <div class="fam-actions">
+                <button type="button" class="fam-btn fam-btn-light" data-fam-edit="{{ l.id }}">Modifier le lien</button>
+                <button type="button" class="fam-btn fam-btn-danger" data-fam-post="{{ url_for('main.famille_retirer', lien_id=l.id) }}" data-fam-confirm="Annuler l'invitation envoyée à {{ m.nom_complet or m.username }} ?">Annuler</button>
+            </div>
+            <div class="fam-edit" id="fam-edit-{{ l.id }}">
+                <input type="text" class="fam-input" list="fam-liens" maxlength="{{ longueur_max_lien }}" value="{{ l.lien }}" aria-label="Nouveau lien de parenté">
+                <button type="button" class="fam-btn fam-btn-primary" data-fam-save="{{ url_for('main.famille_modifier', lien_id=l.id) }}">Enregistrer</button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {# ───── Cercles dont je fais partie ───── #}
+    {% if cercles %}
+    <div class="fam-card">
+        <h2><i class="fa-solid fa-people-roof" style="color:#6c5ce7;"></i> Cercles dont je fais partie <span class="fam-count">{{ cercles|length }}</span></h2>
+        <p class="fam-sub">Vous voyez les contenus « Famille » de ces personnes. Vous pouvez quitter un cercle à tout moment.</p>
+        {% for l in cercles %}
+        {% set p = l.proprietaire %}
+        <div class="fam-row" id="fam-cercle-{{ l.id }}">
+            <img class="fam-avatar" src="{{ url_for('static', filename='uploads/' + (p.avatar if p.avatar else 'default_avatar.png')) }}" alt="">
+            <div class="fam-info">
+                {% set nf = (noms_familles or {}).get(p.id) %}
+                <a class="fam-name" href="{{ url_for('main.profile', username=p.username) }}">{{ nf or ('Cercle de ' ~ (p.nom_complet or p.username)) }}</a><br>
+                {% if nf %}<span class="fam-lien"><i class="fa-solid fa-house-user"></i> Cercle de {{ p.nom_complet or p.username }}</span><br>{% endif %}
+                <span class="fam-lien"><i class="fa-solid fa-people-arrows"></i> Lien : {{ l.lien }}</span>
+            </div>
+            <div class="fam-actions">
+                <button type="button" class="fam-btn fam-btn-danger" data-fam-post="{{ url_for('main.famille_quitter', lien_id=l.id) }}" data-fam-confirm="Quitter le cercle familial de {{ p.nom_complet or p.username }} ? Vous ne verrez plus ses contenus « Famille ».">Quitter</button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+(function () {
+    /* Notification autonome (ne dépend plus de window.fnToast, défini seulement dans settings.html) */
+    function toast(msg, type) {
+        var hote = document.getElementById('fam-toasts');
+        if (!hote) {
+            hote = document.createElement('div');
+            hote.id = 'fam-toasts';
+            hote.setAttribute('aria-live', 'polite');
+            hote.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:100000;display:flex;flex-direction:column;gap:8px;width:min(92vw,420px);pointer-events:none;';
+            document.body.appendChild(hote);
+        }
+        var t = document.createElement('div');
+        t.setAttribute('role', type === 'error' ? 'alert' : 'status');
+        t.style.cssText = 'padding:12px 16px;border-radius:12px;font-family:inherit;font-size:14px;font-weight:600;line-height:1.4;color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.25);background:' + (type === 'error' ? '#d0213f' : '#1c1e21') + ';';
+        t.textContent = msg;
+        hote.appendChild(t);
+        setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 4500);
+    }
+
+    /* Jeton CSRF : meta de base.html, sinon attribut posé par cette page, sinon champ caché */
+    var CSRF = (function () {
+        var m = document.querySelector('meta[name="csrf-token"]');
+        var tok = m && m.getAttribute('content');
+        if (!tok) { var page = document.querySelector('.fam-page'); tok = page && page.getAttribute('data-csrf'); }
+        if (!tok) { var champ = document.querySelector('input[name="csrf_token"]'); tok = champ && champ.value; }
+        return tok || '';
+    })();
+
+    function envoyer(url, corps) {
+        var entetes = { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' };
+        if (CSRF) { entetes['X-CSRFToken'] = CSRF; entetes['X-CSRF-Token'] = CSRF; }
+        return fetch(url, {
+            method: 'POST', credentials: 'same-origin', headers: entetes,
+            body: JSON.stringify(corps || {})
+        }).then(function (r) {
+            return r.text().then(function (txt) {
+                var d = null;
+                try { d = JSON.parse(txt); } catch (e) { d = null; }
+                return { ok: r.ok, status: r.status, d: d, redirected: r.redirected };
+            });
+        }).then(function (res) {
+            if (res.ok && res.d && res.d.success) return res.d;
+            var msg = res.d && (res.d.error || res.d.message);
+            if (!msg) {
+                if (res.redirected || res.status === 401) msg = "Session expirée. Reconnectez-vous puis réessayez.";
+                else if (res.status === 400) msg = "Requête refusée par le serveur (jeton de sécurité manquant ou expiré). Rechargez la page puis réessayez.";
+                else if (res.status === 403) msg = "Action non autorisée.";
+                else if (res.status === 404) msg = "Cette page d'action est introuvable (404). Vérifiez que famille.brancher_sur_main(main_bp) est bien appelé dans app.py.";
+                else if (res.status >= 500) msg = "Erreur du serveur (" + res.status + "). Consultez la console Flask.";
+                else msg = "Action impossible pour le moment.";
+            }
+            throw new Error(msg);
+        });
+    }
+    function terminer(d) { toast(d.message || 'Fait.', 'success'); setTimeout(function () { window.location.reload(); }, 900); }
+    function echec(err, btn) {
+        if (window.console) console.error('[famille]', err);
+        var msg = (err && err.name === 'TypeError') ? "Connexion au serveur impossible. Vérifiez votre réseau." : (err && err.message);
+        toast(msg || "Action impossible pour le moment.", 'error');
+        if (btn) btn.disabled = false;
+    }
+
+    /* Boutons d'action simples : Accepter, Refuser, Retirer, Annuler, Quitter */
+    document.querySelectorAll('[data-fam-post]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var question = btn.getAttribute('data-fam-confirm');
+            if (question && !window.confirm(question)) return;
+            btn.disabled = true;
+            envoyer(btn.getAttribute('data-fam-post')).then(terminer).catch(function (e) { echec(e, btn); });
+        });
+    });
+
+    /* Modifier le lien de parenté */
+    document.querySelectorAll('[data-fam-edit]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var zone = document.getElementById('fam-edit-' + btn.getAttribute('data-fam-edit'));
+            if (!zone) return;
+            zone.classList.toggle('open');
+            var champ = zone.querySelector('input');
+            if (zone.classList.contains('open') && champ) { champ.focus(); champ.select(); }
+        });
+    });
+    document.querySelectorAll('[data-fam-save]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var champ = btn.parentElement.querySelector('input');
+            var valeur = (champ && champ.value || '').trim();
+            if (!valeur) { toast('Indiquez le lien de parenté.', 'error'); return; }
+            btn.disabled = true;
+            envoyer(btn.getAttribute('data-fam-save'), { lien: valeur }).then(terminer).catch(function (e) { echec(e, btn); });
+        });
+    });
+
+    /* Sélecteur d'ami + envoi de l'invitation */
+    var liste = document.getElementById('fam-friends');
+    var form = document.getElementById('fam-form-ajout');
+    if (liste && form) {
+        var choisi = null, btnEnvoyer = document.getElementById('fam-envoyer'), champLien = document.getElementById('fam-lien');
+        var amis = Array.prototype.slice.call(liste.querySelectorAll('.fam-friend'));
+        function maj() { /* le bouton reste actif : un message explique ce qui manque */ }
+        amis.forEach(function (b) {
+            b.addEventListener('click', function () {
+                amis.forEach(function (x) { x.classList.remove('selected'); x.setAttribute('aria-selected', 'false'); });
+                b.classList.add('selected'); b.setAttribute('aria-selected', 'true');
+                choisi = b.getAttribute('data-id');
+                maj();
+                if (champLien) champLien.focus();
+            });
+        });
+        document.getElementById('fam-search').addEventListener('input', function (e) {
+            var q = (e.target.value || '').trim().toLowerCase(), visibles = 0;
+            amis.forEach(function (b) {
+                var ok = !q || (b.getAttribute('data-search') || '').indexOf(q) !== -1;
+                b.style.display = ok ? '' : 'none';
+                if (ok) visibles++;
+            });
+            document.getElementById('fam-noresult').style.display = visibles ? 'none' : 'block';
+        });
+        champLien.addEventListener('input', maj);
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (!choisi) { toast("Choisissez d'abord un ami dans la liste.", 'error'); return; }
+            if (!champLien.value.trim()) { toast("Indiquez le lien de parenté (ex. : frère, cousine…).", 'error'); champLien.focus(); return; }
+            btnEnvoyer.disabled = true;
+            envoyer('{{ url_for("main.famille_inviter") }}', { ami_id: parseInt(choisi, 10), lien: champLien.value.trim() })
+                .then(terminer).catch(function (err) { echec(err, btnEnvoyer); });
+        });
+    }
+    /* Nom de la famille : donner, modifier ou retirer (champ vide) */
+    var nomOuvrir = document.getElementById('fam-nom-ouvrir');
+    if (nomOuvrir) {
+        var nomZone = document.getElementById('fam-nom-edit');
+        var nomChamp = document.getElementById('fam-nom-champ');
+        var nomEnregistrer = document.getElementById('fam-nom-enregistrer');
+        var nomInitial = nomChamp.value;
+        var fermerNom = function () { nomZone.classList.remove('open'); nomChamp.value = nomInitial; };
+        var enregistrerNom = function () {
+            nomEnregistrer.disabled = true;
+            envoyer('{{ url_for("main.famille_nom") }}', { nom: nomChamp.value.trim() })
+                .then(terminer).catch(function (e) { echec(e, nomEnregistrer); });
+        };
+        nomOuvrir.addEventListener('click', function () {
+            if (nomZone.classList.contains('open')) { fermerNom(); return; }
+            nomZone.classList.add('open'); nomChamp.focus(); nomChamp.select();
+        });
+        document.getElementById('fam-nom-annuler').addEventListener('click', fermerNom);
+        nomEnregistrer.addEventListener('click', enregistrerNom);
+        nomChamp.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); enregistrerNom(); }
+            else if (e.key === 'Escape') { fermerNom(); }
+        });
+    }
+
+    /* Sélecteur plein écran : plusieurs amis à la fois, un lien de parenté pour chacun */
+    var plein = document.getElementById('fam-full');
+    var ouvrir = document.getElementById('fam-open-picker');
+    if (plein && ouvrir) {
+        document.body.appendChild(plein);   // évite tout problème d'empilement avec la mise en page parente
+        var URL_INVITER = '{{ url_for("main.famille_inviter") }}';
+        var PUCES = ['Père', 'Mère', 'Frère', 'Sœur', 'Fils', 'Fille', 'Conjoint(e)', 'Cousin', 'Cousine', 'Oncle', 'Tante', 'Grand-père', 'Grand-mère'];
+        var lignes = Array.prototype.slice.call(plein.querySelectorAll('.fam-pick'));
+        var champRecherche = document.getElementById('fam-full-search');
+        var compteur = document.getElementById('fam-full-count');
+        var btnPlein = document.getElementById('fam-full-send');
+        var aRecharger = false, enCours = false, ancienOverflow = '';
+
+        function selectionnes() { return lignes.filter(function (l) { return l.classList.contains('selected'); }); }
+        function majCompteur() {
+            var n = selectionnes().length;
+            compteur.textContent = n === 0 ? 'Aucun ami sélectionné' : (n === 1 ? '1 ami sélectionné' : n + ' amis sélectionnés');
+            btnPlein.textContent = n > 1 ? 'Envoyer ' + n + ' invitations' : "Envoyer l'invitation";
+        }
+
+        lignes.forEach(function (l) {
+            var principal = l.querySelector('.fam-pick-main');
+            var champ = l.querySelector('.fam-pick-role input');
+            var puces = l.querySelector('.fam-chips');
+            PUCES.forEach(function (texte) {
+                var b = document.createElement('button');
+                b.type = 'button'; b.className = 'fam-chip'; b.textContent = texte;
+                b.addEventListener('click', function () { champ.value = texte; champ.classList.remove('invalid'); });
+                puces.appendChild(b);
+            });
+            principal.addEventListener('click', function () {
+                if (enCours) return;
+                var actif = !l.classList.contains('selected');
+                l.classList.toggle('selected', actif);
+                l.classList.remove('erreur');
+                principal.setAttribute('aria-pressed', actif ? 'true' : 'false');
+                majCompteur();
+            });
+            champ.addEventListener('input', function () { champ.classList.remove('invalid'); });
+        });
+
+        champRecherche.addEventListener('input', function () {
+            var q = (champRecherche.value || '').trim().toLowerCase(), visibles = 0;
+            lignes.forEach(function (l) {
+                if (l.hasAttribute('data-done')) return;
+                var ok = !q || (l.getAttribute('data-search') || '').indexOf(q) !== -1;
+                l.style.display = ok ? '' : 'none';
+                if (ok) visibles++;
+            });
+            document.getElementById('fam-full-noresult').style.display = visibles ? 'none' : 'block';
+        });
+
+        function ouvrirPlein() {
+            plein.classList.add('open');
+            ancienOverflow = document.body.style.overflow;
+            document.body.style.overflow = 'hidden';
+            if (window.matchMedia && window.matchMedia('(hover: hover)').matches) champRecherche.focus();
+        }
+        function fermerPlein() {
+            if (enCours) return;
+            plein.classList.remove('open');
+            document.body.style.overflow = ancienOverflow;
+            if (aRecharger) { window.location.reload(); } else { ouvrir.focus(); }
+        }
+        ouvrir.addEventListener('click', ouvrirPlein);
+        document.getElementById('fam-full-close').addEventListener('click', fermerPlein);
+        document.getElementById('fam-full-cancel').addEventListener('click', fermerPlein);
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && plein.classList.contains('open')) fermerPlein();
+        });
+
+        btnPlein.addEventListener('click', function () {
+            if (enCours) return;
+            var sel = selectionnes();
+            if (!sel.length) { toast('Sélectionnez au moins un ami.', 'error'); return; }
+            var premierManquant = null;
+            sel.forEach(function (l) {
+                var c = l.querySelector('.fam-pick-role input');
+                if (!c.value.trim()) { c.classList.add('invalid'); if (!premierManquant) premierManquant = c; }
+            });
+            if (premierManquant) {
+                toast('Indiquez le lien de parenté de chaque ami sélectionné.', 'error');
+                premierManquant.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                premierManquant.focus();
+                return;
+            }
+            enCours = true; btnPlein.disabled = true;
+            var envoyees = 0, erreurs = [], i = 0;
+            function suivant() {
+                if (i >= sel.length) return fin();
+                var l = sel[i++];
+                btnPlein.textContent = 'Envoi ' + i + '/' + sel.length + '…';
+                envoyer(URL_INVITER, {
+                    ami_id: parseInt(l.getAttribute('data-id'), 10),
+                    lien: l.querySelector('.fam-pick-role input').value.trim()
+                }).then(function () {
+                    envoyees++; aRecharger = true;
+                    l.classList.remove('selected', 'erreur');
+                    l.setAttribute('data-done', '1'); l.style.display = 'none';
+                }).catch(function (e) {
+                    l.classList.add('erreur');
+                    erreurs.push((l.getAttribute('data-nom') || 'Ami') + ' : ' + ((e && e.message) || 'échec'));
+                }).then(suivant);
+            }
+            function fin() {
+                enCours = false; btnPlein.disabled = false; majCompteur();
+                if (!erreurs.length) {
+                    toast(envoyees > 1 ? envoyees + ' invitations envoyées.' : 'Invitation envoyée.', 'success');
+                    setTimeout(function () { window.location.reload(); }, 900);
+                    return;
+                }
+                if (envoyees) toast(envoyees + (envoyees > 1 ? ' invitations envoyées.' : ' invitation envoyée.'), 'success');
+                erreurs.slice(0, 3).forEach(function (m) { toast(m, 'error'); });
+                if (erreurs.length > 3) toast('… et ' + (erreurs.length - 3) + ' autre(s) en erreur.', 'error');
+            }
+            suivant();
+        });
+    }
+})();
+</script>
+{% endblock %}

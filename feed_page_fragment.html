@@ -1,0 +1,12 @@
+{# ──────────────────────────────────────────────────────────────────
+   Fragment réutilisé par /api/feed/page/<n> (scroll infini) et
+   /api/feed/charger-nouvelles (bannière "nouvelles publications").
+   Il importe le MÊME macro que feed.html : aucune duplication de
+   markup, donc aucun risque de divergence visuelle ou comportementale
+   entre les cartes chargées au premier affichage et celles injectées
+   dynamiquement ensuite.
+   ────────────────────────────────────────────────────────────────── #}
+{% from '_feed_card_macro.html' import render_post_card %}
+{% for pub in publications %}
+{{ render_post_card(pub) }}
+{% endfor %}

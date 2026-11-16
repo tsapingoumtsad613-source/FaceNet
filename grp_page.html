@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- DÉBUT : Page d'un groupe -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/groupes.css') }}">
+<div class="gp-wrap" id="gpRoot">
+    <a href="{{ url_for('groupes_pro.hub') }}" class="gp-back"><i class="fas fa-chevron-left"></i> Groupes</a>
+    <section id="gpHeader" class="gp-header"><div class="gp-skeleton">Chargement du groupe…</div></section>
+    <nav class="gp-tabs" id="gpTabs" role="tablist" aria-label="Sections du groupe" hidden>
+        <button type="button" role="tab" data-tab="discussion" class="active">Discussion</button>
+        <button type="button" role="tab" data-tab="apropos">À propos</button>
+        <button type="button" role="tab" data-tab="membres">Membres</button>
+        <button type="button" role="tab" data-tab="evenements">Événements</button>
+        <button type="button" role="tab" data-tab="medias">Photos</button>
+    </nav>
+    <div id="gpBody" aria-live="polite"></div>
+</div>
+<div id="gpModalRoot"></div>
+<div id="gpToast" class="gp-toast" role="status" aria-live="polite"></div>
+<script>window.GP = { page: 'groupe', gid: {{ gid }}, moi: {{ session.get('user_id') | tojson }}, categories: {{ categories | tojson }} };</script>
+<script src="{{ url_for('static', filename='js/groupes.js') }}"></script>
+<!-- FIN : Page d'un groupe -->
+{% endblock %}

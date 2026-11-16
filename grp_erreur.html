@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/groupes.css') }}">
+<div class="gp-wrap gp-erreur">
+    <i class="fas fa-people-group"></i>
+    <h1>{{ message }}</h1>
+    <a href="{{ url_for('groupes_pro.hub') }}" class="gp-btn gp-btn-primary">Retour aux groupes</a>
+</div>
+{% endblock %}
