@@ -1,0 +1,119 @@
+{# ══════════════════════════════════════════════════════════════════════════
+   AJOUT ADDITIF (à coller tout à la fin de feed.html, JUSTE AVANT {% endblock %}) :
+   1) bouton micro / volume sur les vidéos simples du fil (son coupé par défaut)
+   2) titre « Reels » des suggestions au même format 3D que Commenter / Partager
+   Rien d'existant n'est modifié ni supprimé.
+   ══════════════════════════════════════════════════════════════════════════ #}
+<style>
+/* ── 1) Bouton micro / volume sur les vidéos du fil (en bas à droite) ── */
+.feed-video-wrapper .fn-vol {
+    position: absolute; right: 12px; bottom: 12px; z-index: 7;
+    width: 40px; height: 40px; border-radius: 50%; padding: 0; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.5); color: #fff; font-size: 17px;
+    border: 2px solid rgba(255,255,255,.85);
+    -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+    box-shadow: 0 3px 12px rgba(0,0,0,.35);
+    transition: transform .15s ease, background .2s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+.feed-video-wrapper .fn-vol i { pointer-events: none; }
+.feed-video-wrapper .fn-vol:active { transform: scale(.9); }
+.feed-video-wrapper .fn-vol.son { background: rgba(24,119,242,.88); }
+/* Croix rouge : le son est activé mais le volume de l'appareil est à zéro */
+.feed-video-wrapper .fn-vol .fn-vol-x {
+    display: none; position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%;
+    background: #e41e3f; color: #fff; font-size: 11px; align-items: center; justify-content: center;
+    border: 2px solid #fff;
+}
+.feed-video-wrapper .fn-vol.bas .fn-vol-x { display: flex; }
+
+/* ── 2) Titre « Reels » des suggestions : même écriture 3D que « Commenter » / « Partager » ── */
+.fn-rv-titre {
+    perspective: none; font-style: normal; font-weight: 800; font-size: 26px; letter-spacing: .1px; line-height: 1.1;
+    color: #3a3b3c; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: geometricPrecision;
+}
+.fn-rv-titre .fn-rv-mot { transform: none !important; animation: none !important; filter: none; transform-style: flat; }
+.fn-rv-titre .fn-rv-mot .c { display: none; }                /* plus de couches empilées : relief par text-shadow */
+.fn-rv-titre .fn-rv-mot .av {
+    background: none; -webkit-background-clip: border-box; background-clip: border-box;
+    color: inherit; -webkit-text-fill-color: currentColor;
+    text-shadow:
+        -.5px -.5px 0 rgba(255,255,255,.95),
+        1px 1px 0 rgba(15,23,42,.30), 2px 2px 0 rgba(15,23,42,.20),
+        2px 3px 4px rgba(15,23,42,.22);
+}
+html[data-fn-theme="dark"] .fn-rv-titre { color: #e4e6eb; }
+html[data-fn-theme="dark"] .fn-rv-titre .fn-rv-mot .av {
+    text-shadow: -.5px -.5px 0 rgba(255,255,255,.14), 1px 1px 0 rgba(0,0,0,.65), 2px 2px 0 rgba(0,0,0,.45), 2px 3px 4px rgba(0,0,0,.5);
+}
+</style>
+<script>
+(function () {
+    'use strict';
+    if (window.__fnVolumeFil) return; window.__fnVolumeFil = true;
+
+    function pret(fn) { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn); else fn(); }
+    function toast(m) { if (typeof showFacenetToast === 'function') { try { showFacenetToast(m); } catch (e) { } } }
+
+    /* Volume de l'appareil : un navigateur ne peut PAS le lire. null = inconnu.
+       Une appli native (WebView) peut le fournir : window.fnSetVolumeAppareil(0..1)
+       ou l'évènement document.dispatchEvent(new CustomEvent('fn:volume', {detail: 0.4})). */
+    var volumeAppareil = null;
+    function appareilMuet() { return volumeAppareil !== null && volumeAppareil <= 0; }
+    window.fnSetVolumeAppareil = function (n) {
+        volumeAppareil = (typeof n === 'number' && isFinite(n)) ? n : null;
+        document.querySelectorAll('.feed-video-wrapper video').forEach(function (v) { if (v.__fnMajVol) v.__fnMajVol(); });
+    };
+    document.addEventListener('fn:volume', function (e) { window.fnSetVolumeAppareil(e && e.detail); });
+
+    var conseilDonne = false;
+
+    function equiperVolume(video) {
+        if (!video || video.dataset.fnVol === '1') return;
+        var w = video.closest('.feed-video-wrapper');
+        if (!w || !video.closest('.feed-card')) return;
+        video.dataset.fnVol = '1';
+
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'fn-vol';
+        b.innerHTML = '<i class="fa-solid fa-microphone-slash"></i><span class="fn-vol-x"><i class="fa-solid fa-xmark"></i></span>';
+
+        function maj() {
+            var son = !video.muted && video.volume > 0;
+            b.classList.toggle('son', son);
+            b.classList.toggle('bas', son && appareilMuet());     // croix auto : disparaît dès que le volume remonte
+            b.firstChild.className = 'fa-solid ' + (son ? 'fa-microphone' : 'fa-microphone-slash');
+            b.setAttribute('aria-label', son ? 'Couper le son' : 'Activer le son');
+        }
+        video.__fnMajVol = maj;
+
+        b.addEventListener('click', function (e) {
+            e.stopPropagation(); e.preventDefault();               // n'ouvre pas la page Reels
+            if (video.muted || video.volume === 0) {
+                video.muted = false; video.volume = 1;
+                if (video.paused && video.dataset.fnPauseManuelle !== '1') { var p = video.play(); if (p && p.catch) p.catch(function () { video.muted = true; maj(); }); }
+                if (appareilMuet()) toast('Augmentez le volume de votre appareil');
+                else if (!conseilDonne) { conseilDonne = true; toast("Son activé. Si vous n'entendez rien, augmentez le volume de votre appareil."); }
+            } else {
+                video.muted = true;
+            }
+            maj();
+        });
+        b.addEventListener('dblclick', function (e) { e.stopPropagation(); e.preventDefault(); });
+        video.addEventListener('volumechange', maj);
+        w.appendChild(b); maj();
+    }
+    function equiperTout() { document.querySelectorAll('.feed-card .feed-video-wrapper video').forEach(equiperVolume); }
+
+    pret(function () {
+        try { equiperTout(); } catch (e) { }
+        var zone = document.querySelector('.main-container') || document.body;
+        if ('MutationObserver' in window) {
+            var mt = null;
+            new MutationObserver(function () { clearTimeout(mt); mt = setTimeout(function () { try { equiperTout(); } catch (e) { } }, 200); })
+                .observe(zone, { childList: true, subtree: true });
+        }
+    });
+})();
+</script>

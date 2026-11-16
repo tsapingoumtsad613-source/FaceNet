@@ -1,0 +1,961 @@
+{% extends "base.html" %}
+
+{% block content %}
+{# Lien vers ta messagerie privée classique (adapte si ta route est différente) #}
+{% set url_messagerie_privee = url_for('main.messagerie') %}
+
+<!-- DÉBUT : Messagerie Marketplace (page dédiée) -->
+<div class="fn-mm-root" id="fnMmRoot">
+
+    <!-- DÉBUT : En-tête Marketplace (logo + retour) -->
+    <header class="fn-mm-topbar">
+        <a class="fn-mm-icon-btn" href="{{ url_for('main.marketplace') }}" title="Retour au Marketplace" aria-label="Retour au Marketplace"><i class="fas fa-arrow-left"></i></a>
+        <div class="fn-mm-logo">
+            <span class="fn-mm-logo-icon"><i class="fas fa-store"></i></span>
+            <span class="fn-mm-logo-text">Marketplace</span>
+        </div>
+        <a class="fn-mm-topbar-link" href="{{ url_messagerie_privee }}"><i class="fas fa-comment-alt"></i> <span>Messages privés</span></a>
+    </header>
+    <!-- FIN : En-tête Marketplace (logo + retour) -->
+
+    <div class="fn-mm-layout">
+
+        <!-- DÉBUT : Liste des discussions Marketplace -->
+        <aside class="fn-mm-list" id="fnMmList">
+            <div class="fn-mm-list-head">
+                <h2>Discussions</h2>
+                <label class="fn-mm-search">
+                    <i class="fas fa-search" aria-hidden="true"></i>
+                    <input type="search" id="fnMmSearch" placeholder="Rechercher une personne ou un article" autocomplete="off" aria-label="Rechercher dans les discussions">
+                </label>
+                <div class="fn-mm-tabs" role="tablist">
+                    <button class="fn-mm-tab active" data-role="tous" role="tab">Tout</button>
+                    <button class="fn-mm-tab" data-role="achats" role="tab">Achats</button>
+                    <button class="fn-mm-tab" data-role="ventes" role="tab">Ventes</button>
+                </div>
+            </div>
+            <div class="fn-mm-list-body" id="fnMmListBody">
+                <div class="fn-mm-skel-list" aria-hidden="true">
+                    <div class="fn-mm-skel-row"><span class="a"></span><span class="b"><i></i><i></i></span></div>
+                    <div class="fn-mm-skel-row"><span class="a"></span><span class="b"><i></i><i></i></span></div>
+                    <div class="fn-mm-skel-row"><span class="a"></span><span class="b"><i></i><i></i></span></div>
+                    <div class="fn-mm-skel-row"><span class="a"></span><span class="b"><i></i><i></i></span></div>
+                </div>
+            </div>
+        </aside>
+        <!-- FIN : Liste des discussions Marketplace -->
+
+        <!-- DÉBUT : Zone de discussion -->
+        <section class="fn-mm-chat" id="fnMmChat">
+
+            <div class="fn-mm-placeholder" id="fnMmPlaceholder">
+                <div class="fn-mm-placeholder-icon"><i class="fas fa-store"></i></div>
+                <h3>Vos discussions Marketplace</h3>
+                <p>Sélectionnez une discussion, ou cliquez sur « Discuter avec le vendeur » depuis une annonce.</p>
+            </div>
+
+            <div class="fn-mm-chat-inner" id="fnMmChatInner" style="display:none;">
+
+                <!-- DÉBUT : En-tête produit (miniature, titre, prix) + menu d'options -->
+                <div class="fn-mm-chat-head">
+                    <button class="fn-mm-icon-btn fn-mm-back-list" id="fnMmBackList" aria-label="Retour aux discussions"><i class="fas fa-arrow-left"></i></button>
+                    <a class="fn-mm-product" id="fnMmProductLink" href="#">
+                        <img id="fnMmProductImg" src="" alt="">
+                        <div class="fn-mm-product-text">
+                            <div class="fn-mm-product-title" id="fnMmProductTitle">Article</div>
+                            <div class="fn-mm-product-price" id="fnMmProductPrice"></div>
+                        </div>
+                    </a>
+                    <span class="fn-mm-badge" id="fnMmProductBadge"></span>
+
+                    <!-- Bouclier FaceNet : visible uniquement pour l'acheteur -->
+                    <button class="fn-mm-icon-btn fn-mm-shield-btn" id="fnMmShieldBtn" style="display:none;" aria-label="Sécurité de la discussion" title="Sécurité de la discussion"><i class="fas fa-shield-halved"></i></button>
+
+                    <div class="fn-mm-menu-wrap">
+                        <button class="fn-mm-icon-btn" id="fnMmMenuBtn" aria-label="Options de la discussion" aria-haspopup="true"><i class="fas fa-ellipsis-v"></i></button>
+                        <div class="fn-mm-menu" id="fnMmMenu" role="menu">
+                            <a role="menuitem" id="fnMmMenuVoir" href="#"><i class="fas fa-tag"></i> Voir l'annonce</a>
+                            <button role="menuitem" class="danger" id="fnMmMenuSupprimer"><i class="fas fa-trash-alt"></i> Supprimer la conversation</button>
+                            <button role="menuitem" id="fnMmMenuBloquer"><i class="fas fa-ban"></i> <span>Bloquer l'utilisateur</span></button>
+                            <div class="fn-mm-menu-sep"></div>
+                            <button role="menuitem" id="fnMmMenuSignalerUser"><i class="fas fa-flag"></i> Signaler l'utilisateur</button>
+                            <button role="menuitem" id="fnMmMenuSignalerAnnonce"><i class="fas fa-exclamation-triangle"></i> Signaler l'annonce (fraude)</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- FIN : En-tête produit (miniature, titre, prix) + menu d'options -->
+
+                <div class="fn-mm-peer-row">
+                    <a class="fn-mm-peer" id="fnMmPeerLink" href="#">
+                        <img id="fnMmPeerAvatar" src="" alt="">
+                        <span id="fnMmPeerName">Utilisateur</span>
+                    </a>
+                    <span class="fn-mm-role" id="fnMmRole"></span>
+
+                    <!-- DÉBUT : Statut de l'article (vendeur uniquement) -->
+                    <label class="fn-mm-status-edit" id="fnMmStatusEdit" style="display:none;">
+                        Statut :
+                        <select id="fnMmStatusSelect">
+                            <option value="disponible">Disponible</option>
+                            <option value="reserve">Réservé</option>
+                            <option value="vendu">Vendu</option>
+                        </select>
+                    </label>
+                    <!-- FIN : Statut de l'article (vendeur uniquement) -->
+                </div>
+
+                <div class="fn-mm-messages-wrap">
+                    <div class="fn-mm-messages" id="fnMmMessages" aria-live="polite"></div>
+                    <button class="fn-mm-scroll-btn" id="fnMmScrollBtn" type="button" style="display:none;" aria-label="Aller aux derniers messages">
+                        <i class="fas fa-chevron-down"></i><span id="fnMmScrollCount"></span>
+                    </button>
+                </div>
+
+                <!-- DÉBUT : Bouclier FaceNet (alerte privée, acheteur uniquement) -->
+                <div class="fn-mm-shield" id="fnMmShield" style="display:none;" role="status"></div>
+                <!-- FIN : Bouclier FaceNet -->
+
+                <!-- DÉBUT : Bandeau utilisateur bloqué -->
+                <div class="fn-mm-blocked" id="fnMmBlocked" style="display:none;">
+                    <span id="fnMmBlockedText"></span>
+                    <button class="fn-mm-link-btn" id="fnMmUnblockBtn" style="display:none;">Débloquer</button>
+                </div>
+                <!-- FIN : Bandeau utilisateur bloqué -->
+
+                <!-- DÉBUT : Zone de saisie -->
+                <div class="fn-mm-composer" id="fnMmComposer">
+                    <div class="fn-mm-chips" id="fnMmChips">
+                        <button type="button" data-txt="Bonjour, cet article est-il toujours disponible ?">Toujours disponible ?</button>
+                        <button type="button" data-txt="Quel est votre dernier prix ?">Dernier prix ?</button>
+                        <button type="button" data-txt="Où pouvons-nous nous rencontrer pour voir l'article ?">Où se rencontrer ?</button>
+                        <button type="button" data-txt="Puis-je voir et essayer l'article avant de payer ?">Voir avant de payer</button>
+                    </div>
+                    <div class="fn-mm-composer-row">
+                        <div class="fn-mm-input-wrap">
+                            <textarea id="fnMmInput" rows="1" maxlength="2000" placeholder="Écrivez un message…" aria-label="Votre message"></textarea>
+                            <span class="fn-mm-counter" id="fnMmCounter"></span>
+                        </div>
+                        <button class="fn-mm-send" id="fnMmSend" aria-label="Envoyer" disabled><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+                <!-- FIN : Zone de saisie -->
+            </div>
+        </section>
+        <!-- FIN : Zone de discussion -->
+    </div>
+</div>
+
+<!-- DÉBUT : Modale de signalement Marketplace -->
+<div class="fn-mm-backdrop" id="fnMmReportBackdrop"></div>
+<div class="fn-mm-modal" id="fnMmReportModal" role="dialog" aria-modal="true" aria-labelledby="fnMmReportTitle">
+    <div class="fn-mm-modal-head">
+        <h3 id="fnMmReportTitle">Signaler</h3>
+        <button class="fn-mm-icon-btn" id="fnMmReportClose" aria-label="Fermer"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="fn-mm-modal-body">
+        <p class="fn-mm-modal-hint"><i class="fas fa-lock"></i> Choisissez le motif. La personne signalée ne verra jamais que c'est vous.</p>
+        <div id="fnMmReportMotifs">
+            <label><input type="radio" name="fnMmMotif" value="fraude"> Fraude ou arnaque</label>
+            <label><input type="radio" name="fnMmMotif" value="paiement_suspect"> Demande de paiement suspecte</label>
+            <label><input type="radio" name="fnMmMotif" value="article_interdit"> Article interdit ou contrefait</label>
+            <label><input type="radio" name="fnMmMotif" value="annonce_trompeuse"> Annonce trompeuse (faux prix, fausses photos)</label>
+            <label><input type="radio" name="fnMmMotif" value="harcelement"> Harcèlement ou comportement inapproprié</label>
+            <label><input type="radio" name="fnMmMotif" value="autre"> Autre</label>
+        </div>
+        <textarea id="fnMmReportDesc" rows="3" maxlength="500" placeholder="Détails (facultatif)"></textarea>
+        <p class="fn-mm-modal-error" id="fnMmReportError"></p>
+    </div>
+    <div class="fn-mm-modal-foot">
+        <button class="fn-mm-btn-secondary" id="fnMmReportCancel">Annuler</button>
+        <button class="fn-mm-btn-primary" id="fnMmReportSubmit">Envoyer le signalement</button>
+    </div>
+</div>
+<!-- FIN : Modale de signalement Marketplace -->
+
+<div class="fn-mm-toast-zone" id="fnMmToastZone"></div>
+
+<!-- DÉBUT : Styles messagerie Marketplace (préfixe fn-mm-, aucun sélecteur global) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+    .fn-mm-root { --mm-blue:#0866FF; --mm-blue-d:#0757d6; --mm-light:#E7F3FF; --mm-bg:#F0F2F5; --mm-gray:#65676B; --mm-border:#E4E6EB; --mm-text:#1C1E21;
+        --mm-ok:#1a7f37; --mm-ok-bg:#e6f6ea; --mm-warn:#8a5a00; --mm-warn-bg:#fff6dc; --mm-warn-bd:#f0c36d; --mm-bad:#b42318; --mm-bad-bg:#fdecec; --mm-bad-bd:#f5b5b0;
+        display:flex; flex-direction:column; background:var(--mm-bg); color:var(--mm-text);
+        font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,sans-serif;
+        height:calc(100vh - var(--header-h,60px) - var(--nav-h,60px)); min-height:420px; }
+    @supports (height:100dvh) { .fn-mm-root { height:calc(100dvh - var(--header-h,60px) - var(--nav-h,60px)); } }
+    .fn-mm-root *, .fn-mm-root *::before, .fn-mm-root *::after { box-sizing:border-box; }
+    .fn-mm-root button { font-family:inherit; }
+    .fn-mm-root :focus-visible { outline:2px solid var(--mm-blue); outline-offset:2px; }
+
+    /* ----- En-tête ----- */
+    .fn-mm-topbar { display:flex; align-items:center; gap:12px; padding:8px 14px; background:#fff; border-bottom:1px solid var(--mm-border); flex-shrink:0; }
+    .fn-mm-logo { display:flex; align-items:center; gap:8px; font-weight:800; font-size:20px; letter-spacing:-.2px; }
+    .fn-mm-logo-icon { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,#2a7bff,var(--mm-blue)); color:#fff; display:flex; align-items:center; justify-content:center; font-size:15px; box-shadow:0 2px 6px rgba(8,102,255,.35); }
+    .fn-mm-topbar-link { margin-left:auto; display:flex; align-items:center; gap:6px; text-decoration:none; color:var(--mm-blue); font-weight:600; font-size:14px; padding:7px 13px; border-radius:18px; background:var(--mm-light); transition:background .15s; }
+    .fn-mm-topbar-link:hover { background:#d6e9ff; }
+    .fn-mm-icon-btn { width:36px; height:36px; border:none; border-radius:50%; background:var(--mm-bg); color:var(--mm-text); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-decoration:none; font-size:15px; flex-shrink:0; transition:background .15s; }
+    .fn-mm-icon-btn:hover { background:#e4e6eb; }
+
+    /* ----- Liste ----- */
+    .fn-mm-layout { flex:1; display:flex; min-height:0; }
+    .fn-mm-list { width:370px; flex-shrink:0; background:#fff; border-right:1px solid var(--mm-border); display:flex; flex-direction:column; min-height:0; }
+    .fn-mm-list-head { padding:14px 14px 8px; }
+    .fn-mm-list-head h2 { margin:0 0 10px; font-size:24px; font-weight:800; letter-spacing:-.3px; }
+    .fn-mm-search { display:flex; align-items:center; gap:8px; background:var(--mm-bg); border-radius:22px; padding:0 14px; height:38px; margin-bottom:10px; color:var(--mm-gray); }
+    .fn-mm-search input { flex:1; min-width:0; border:none; outline:none; background:transparent; font-size:14px; font-family:inherit; color:var(--mm-text); }
+    .fn-mm-tabs { display:flex; gap:6px; }
+    .fn-mm-tab { border:none; background:var(--mm-bg); color:var(--mm-text); padding:7px 15px; border-radius:18px; font-weight:600; font-size:14px; cursor:pointer; transition:background .15s,color .15s; }
+    .fn-mm-tab:hover { background:#e4e6eb; }
+    .fn-mm-tab.active { background:var(--mm-light); color:var(--mm-blue); }
+    .fn-mm-list-body { flex:1; overflow-y:auto; padding:4px 8px 12px; }
+    .fn-mm-empty-small { text-align:center; color:var(--mm-gray); font-size:14px; padding:34px 14px; line-height:1.5; }
+    .fn-mm-empty-small i { display:block; font-size:30px; color:#ccd0d5; margin-bottom:10px; }
+
+    .fn-mm-conv { display:flex; gap:12px; padding:10px 8px; border-radius:12px; cursor:pointer; align-items:center; transition:background .12s; }
+    .fn-mm-conv:hover { background:var(--mm-bg); }
+    .fn-mm-conv.active { background:var(--mm-light); }
+    .fn-mm-conv-thumb { position:relative; width:58px; height:58px; flex-shrink:0; }
+    .fn-mm-conv-thumb img.prod { width:58px; height:58px; border-radius:12px; object-fit:cover; background:var(--mm-bg); }
+    .fn-mm-conv-thumb img.peer { position:absolute; right:-6px; bottom:-6px; width:26px; height:26px; border-radius:50%; object-fit:cover; border:2px solid #fff; background:#fff; }
+    .fn-mm-conv-main { flex:1; min-width:0; }
+    .fn-mm-conv-title { font-weight:700; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .fn-mm-conv-art { font-size:12.5px; color:var(--mm-blue); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .fn-mm-conv-sub { font-size:13px; color:var(--mm-gray); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
+    .fn-mm-conv.unread .fn-mm-conv-sub { color:var(--mm-text); font-weight:700; }
+    .fn-mm-conv-meta { display:flex; flex-direction:column; align-items:flex-end; gap:5px; font-size:12px; color:var(--mm-gray); }
+    .fn-mm-unread { min-width:20px; height:20px; padding:0 6px; border-radius:10px; background:var(--mm-blue); color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+    .fn-mm-conv-tag { font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:8px; text-transform:uppercase; letter-spacing:.2px; }
+    .fn-mm-conv-tag.reserve { background:var(--mm-warn-bg); color:var(--mm-warn); }
+    .fn-mm-conv-tag.vendu { background:var(--mm-bad-bg); color:var(--mm-bad); }
+
+    /* ----- Chargement (squelettes) ----- */
+    .fn-mm-skel-row { display:flex; gap:12px; padding:10px 8px; align-items:center; }
+    .fn-mm-skel-row .a { width:58px; height:58px; border-radius:12px; flex-shrink:0; }
+    .fn-mm-skel-row .b { flex:1; display:flex; flex-direction:column; gap:8px; }
+    .fn-mm-skel-row .b i { display:block; height:11px; border-radius:6px; }
+    .fn-mm-skel-row .b i:first-child { width:60%; }
+    .fn-mm-skel-row .b i:last-child { width:85%; }
+    .fn-mm-skel-row .a, .fn-mm-skel-row .b i, .fn-mm-skel-msg span { background:linear-gradient(90deg,#eceff3 25%,#f7f8fa 37%,#eceff3 63%); background-size:400% 100%; animation:fnMmShimmer 1.3s ease infinite; }
+    @keyframes fnMmShimmer { 0% { background-position:100% 50%; } 100% { background-position:0 50%; } }
+    .fn-mm-skel-msg { display:flex; flex-direction:column; gap:10px; padding:6px 0; }
+    .fn-mm-skel-msg span { height:34px; border-radius:18px; width:55%; }
+    .fn-mm-skel-msg span:nth-child(even) { align-self:flex-end; width:40%; }
+
+    /* ----- Zone de discussion ----- */
+    .fn-mm-chat { flex:1; min-width:0; display:flex; flex-direction:column; background:#fff; }
+    .fn-mm-placeholder { margin:auto; text-align:center; color:var(--mm-gray); padding:24px; max-width:340px; }
+    .fn-mm-placeholder-icon { width:84px; height:84px; border-radius:50%; background:var(--mm-light); color:var(--mm-blue); display:flex; align-items:center; justify-content:center; font-size:34px; margin:0 auto 16px; }
+    .fn-mm-placeholder h3 { margin:0 0 6px; color:var(--mm-text); font-size:19px; }
+    .fn-mm-placeholder p { margin:0; font-size:14.5px; line-height:1.5; }
+    .fn-mm-chat-inner { flex:1; display:flex; flex-direction:column; min-height:0; }
+
+    .fn-mm-chat-head { display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid var(--mm-border); background:#fff; }
+    .fn-mm-back-list { display:none; }
+    .fn-mm-product { display:flex; align-items:center; gap:10px; flex:1; min-width:0; text-decoration:none; color:inherit; }
+    .fn-mm-product img { width:52px; height:52px; border-radius:12px; object-fit:cover; background:var(--mm-bg); flex-shrink:0; }
+    .fn-mm-product-text { min-width:0; }
+    .fn-mm-product-title { font-weight:700; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .fn-mm-product-price { font-size:15px; color:var(--mm-blue); font-weight:800; }
+
+    .fn-mm-badge { padding:4px 10px; border-radius:12px; font-size:12px; font-weight:700; white-space:nowrap; }
+    .fn-mm-badge.disponible { background:var(--mm-ok-bg); color:var(--mm-ok); }
+    .fn-mm-badge.reserve { background:var(--mm-warn-bg); color:var(--mm-warn); }
+    .fn-mm-badge.vendu { background:var(--mm-bad-bg); color:var(--mm-bad); }
+
+    /* Bouclier : bouton d'en-tête */
+    .fn-mm-shield-btn { position:relative; }
+    .fn-mm-shield-btn.lvl-ok { background:var(--mm-ok-bg); color:var(--mm-ok); }
+    .fn-mm-shield-btn.lvl-prudence { background:var(--mm-warn-bg); color:var(--mm-warn); }
+    .fn-mm-shield-btn.lvl-danger { background:var(--mm-bad-bg); color:var(--mm-bad); animation:fnMmPulse 1.8s ease-in-out infinite; }
+    @keyframes fnMmPulse { 0%,100% { box-shadow:0 0 0 0 rgba(180,35,24,.35); } 50% { box-shadow:0 0 0 7px rgba(180,35,24,0); } }
+
+    .fn-mm-menu-wrap { position:relative; }
+    .fn-mm-menu { display:none; position:absolute; right:0; top:42px; background:#fff; min-width:260px; border-radius:12px; box-shadow:0 8px 28px rgba(0,0,0,.2); padding:6px; z-index:50; }
+    .fn-mm-menu.open { display:block; }
+    .fn-mm-menu a, .fn-mm-menu button { display:flex; align-items:center; gap:12px; width:100%; padding:10px 12px; border:none; background:none; border-radius:8px; font-size:15px; font-weight:500; color:var(--mm-text); text-decoration:none; cursor:pointer; text-align:left; }
+    .fn-mm-menu a:hover, .fn-mm-menu button:hover { background:var(--mm-bg); }
+    .fn-mm-menu i { width:20px; text-align:center; color:var(--mm-gray); }
+    .fn-mm-menu .danger, .fn-mm-menu .danger i { color:var(--mm-bad); }
+    .fn-mm-menu-sep { height:1px; background:var(--mm-border); margin:4px 6px; }
+
+    .fn-mm-peer-row { display:flex; align-items:center; gap:10px; padding:8px 14px; border-bottom:1px solid var(--mm-border); font-size:14px; flex-wrap:wrap; background:#fafbfc; }
+    .fn-mm-peer { display:flex; align-items:center; gap:8px; text-decoration:none; color:var(--mm-text); font-weight:700; }
+    .fn-mm-peer img { width:30px; height:30px; border-radius:50%; object-fit:cover; }
+    .fn-mm-role { color:var(--mm-gray); font-size:13px; background:var(--mm-bg); padding:2px 9px; border-radius:10px; }
+    .fn-mm-status-edit { margin-left:auto; font-size:13px; color:var(--mm-gray); display:flex; align-items:center; gap:6px; }
+    .fn-mm-status-edit select { padding:5px 8px; border:1px solid #ccd0d5; border-radius:8px; font-size:13px; background:#fff; }
+
+    /* ----- Messages ----- */
+    .fn-mm-messages-wrap { position:relative; flex:1; min-height:0; display:flex; flex-direction:column; }
+    .fn-mm-messages { flex:1; overflow-y:auto; padding:14px 14px 10px; background:#fff; display:flex; flex-direction:column; gap:2px; scroll-behavior:smooth; }
+    .fn-mm-day { align-self:center; font-size:12px; color:var(--mm-gray); background:var(--mm-bg); padding:3px 12px; border-radius:12px; margin:12px 0 8px; font-weight:600; }
+    .fn-mm-safety { align-self:center; max-width:440px; text-align:center; font-size:13px; color:#3b4a5a; background:var(--mm-light); border:1px solid #cfe3ff; padding:10px 14px; border-radius:12px; margin:4px 0 8px; line-height:1.45; }
+    .fn-mm-safety i { color:var(--mm-blue); margin-right:6px; }
+
+    .fn-mm-msgrow { display:flex; flex-direction:column; max-width:78%; margin-top:1px; }
+    .fn-mm-msgrow.g-first, .fn-mm-msgrow.g-single { margin-top:8px; }
+    .fn-mm-msgrow.sent { align-self:flex-end; align-items:flex-end; }
+    .fn-mm-msgrow.received { align-self:flex-start; align-items:flex-start; }
+    .fn-mm-bubble-wrap { display:flex; align-items:center; gap:6px; }
+    .fn-mm-msgrow.sent .fn-mm-bubble-wrap { flex-direction:row-reverse; }
+    .fn-mm-bubble { padding:8px 13px; border-radius:20px; font-size:15px; line-height:1.4; white-space:pre-wrap; word-break:break-word; }
+    .fn-mm-msgrow.sent .fn-mm-bubble { background:var(--mm-blue); color:#fff; }
+    .fn-mm-msgrow.received .fn-mm-bubble { background:var(--mm-bg); color:var(--mm-text); }
+    .fn-mm-msgrow.sent.g-first .fn-mm-bubble { border-bottom-right-radius:6px; }
+    .fn-mm-msgrow.sent.g-mid .fn-mm-bubble { border-top-right-radius:6px; border-bottom-right-radius:6px; }
+    .fn-mm-msgrow.sent.g-last .fn-mm-bubble { border-top-right-radius:6px; }
+    .fn-mm-msgrow.received.g-first .fn-mm-bubble { border-bottom-left-radius:6px; }
+    .fn-mm-msgrow.received.g-mid .fn-mm-bubble { border-top-left-radius:6px; border-bottom-left-radius:6px; }
+    .fn-mm-msgrow.received.g-last .fn-mm-bubble { border-top-left-radius:6px; }
+    .fn-mm-msgrow.pending .fn-mm-bubble { opacity:.65; }
+    .fn-mm-time { font-size:11px; color:var(--mm-gray); margin:3px 6px 0; display:flex; gap:4px; align-items:center; }
+    .fn-mm-time .lu { color:var(--mm-blue); }
+    .fn-mm-flag { opacity:0; border:none; background:none; color:var(--mm-gray); cursor:pointer; font-size:13px; padding:4px; transition:opacity .12s; }
+    .fn-mm-msgrow:hover .fn-mm-flag, .fn-mm-flag:focus { opacity:1; }
+    @media (hover:none) { .fn-mm-flag { opacity:.55; } }
+
+    /* Message jugé inquiétant par le Bouclier (visible uniquement par l'acheteur) */
+    .fn-mm-msgrow.suspect .fn-mm-bubble { box-shadow:0 0 0 2px var(--mm-warn-bd); background:var(--mm-warn-bg); color:var(--mm-text); }
+    .fn-mm-suspect-ico { color:var(--mm-warn); font-size:14px; flex-shrink:0; }
+
+    .fn-mm-scroll-btn { position:absolute; right:16px; bottom:12px; height:38px; min-width:38px; padding:0 12px; border:none; border-radius:19px; background:#fff; color:var(--mm-blue); box-shadow:0 2px 12px rgba(0,0,0,.25); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; font-weight:700; font-size:13px; }
+    .fn-mm-scroll-btn span:empty { display:none; }
+
+    /* ----- Bouclier FaceNet (carte privée) ----- */
+    .fn-mm-shield { margin:0 12px 8px; border-radius:14px; border:1px solid var(--mm-border); background:#fff; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,.08); animation:fnMmSlide .25s ease; }
+    @keyframes fnMmSlide { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+    .fn-mm-shield.lvl-prudence { background:var(--mm-warn-bg); border-color:var(--mm-warn-bd); }
+    .fn-mm-shield.lvl-danger { background:var(--mm-bad-bg); border-color:var(--mm-bad-bd); }
+    .fn-mm-sh-head { display:flex; align-items:center; gap:10px; padding:10px 12px; cursor:pointer; }
+    .fn-mm-sh-ico { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; color:#fff; }
+    .lvl-prudence .fn-mm-sh-ico { background:#d98a00; }
+    .lvl-danger .fn-mm-sh-ico { background:var(--mm-bad); }
+    .fn-mm-sh-titles { flex:1; min-width:0; }
+    .fn-mm-sh-title { font-weight:800; font-size:15px; line-height:1.25; }
+    .lvl-prudence .fn-mm-sh-title { color:var(--mm-warn); }
+    .lvl-danger .fn-mm-sh-title { color:var(--mm-bad); }
+    .fn-mm-sh-sub { font-size:12px; color:var(--mm-gray); margin-top:1px; }
+    .fn-mm-sh-chev { color:var(--mm-gray); font-size:13px; transition:transform .2s; }
+    .fn-mm-shield.collapsed .fn-mm-sh-chev { transform:rotate(180deg); }
+    .fn-mm-sh-body { padding:0 14px 12px 14px; font-size:14px; line-height:1.5; max-height:46vh; overflow-y:auto; }
+    .fn-mm-shield.collapsed .fn-mm-sh-body { display:none; }
+    .fn-mm-sh-resume { margin:0 0 8px; }
+    .fn-mm-sh-list { list-style:none; margin:0 0 8px; padding:0; display:flex; flex-direction:column; gap:5px; }
+    .fn-mm-sh-list li { display:flex; gap:8px; align-items:flex-start; }
+    .fn-mm-sh-list li i { margin-top:3px; font-size:12px; flex-shrink:0; }
+    .fn-mm-sh-signaux li i { color:var(--mm-warn); }
+    .lvl-danger .fn-mm-sh-signaux li i { color:var(--mm-bad); }
+    .fn-mm-sh-conseils li i { color:var(--mm-ok); }
+    .fn-mm-sh-detail { display:block; color:var(--mm-gray); font-size:12.5px; }
+    .fn-mm-sh-h { font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.4px; color:var(--mm-gray); margin:8px 0 5px; }
+    .fn-mm-sh-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .fn-mm-sh-actions button { border:none; border-radius:10px; padding:8px 13px; font-size:13.5px; font-weight:700; cursor:pointer; }
+    .fn-mm-sh-actions .primary { background:var(--mm-bad); color:#fff; }
+    .fn-mm-sh-actions .ghost { background:rgba(0,0,0,.07); color:var(--mm-text); }
+    .fn-mm-sh-private { margin-top:10px; font-size:11.5px; color:var(--mm-gray); display:flex; gap:6px; align-items:center; }
+
+    .fn-mm-blocked { padding:12px 14px; background:#fff4f4; color:var(--mm-bad); font-size:14px; text-align:center; border-top:1px solid var(--mm-border); }
+    .fn-mm-link-btn { border:none; background:none; color:var(--mm-blue); font-weight:700; cursor:pointer; margin-left:8px; font-size:14px; }
+
+    /* ----- Saisie ----- */
+    .fn-mm-composer { border-top:1px solid var(--mm-border); padding:8px 12px calc(10px + env(safe-area-inset-bottom,0px)); background:#fff; }
+    .fn-mm-chips { display:flex; gap:6px; overflow-x:auto; padding-bottom:8px; scrollbar-width:none; }
+    .fn-mm-chips::-webkit-scrollbar { display:none; }
+    .fn-mm-chips button { border:1px solid #b9d4ff; color:var(--mm-blue); background:var(--mm-light); border-radius:16px; padding:6px 12px; font-size:13px; font-weight:600; white-space:nowrap; cursor:pointer; transition:background .12s; }
+    .fn-mm-chips button:hover { background:#d6e9ff; }
+    .fn-mm-composer-row { display:flex; gap:8px; align-items:flex-end; }
+    .fn-mm-input-wrap { flex:1; position:relative; }
+    .fn-mm-composer textarea { width:100%; display:block; resize:none; border:none; outline:none; background:var(--mm-bg); border-radius:22px; padding:10px 16px; font-size:15px; max-height:140px; font-family:inherit; line-height:1.35; }
+    .fn-mm-counter { position:absolute; right:14px; bottom:-14px; font-size:11px; color:var(--mm-gray); }
+    .fn-mm-counter.warn { color:var(--mm-bad); font-weight:700; }
+    .fn-mm-send { width:42px; height:42px; border:none; border-radius:50%; background:var(--mm-blue); color:#fff; cursor:pointer; font-size:15px; flex-shrink:0; transition:background .15s,transform .1s; }
+    .fn-mm-send:hover:not(:disabled) { background:var(--mm-blue-d); }
+    .fn-mm-send:active:not(:disabled) { transform:scale(.94); }
+    .fn-mm-send:disabled { background:#bcc0c4; cursor:not-allowed; }
+
+    /* ----- Modale ----- */
+    .fn-mm-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:9000; }
+    .fn-mm-backdrop.open { display:block; }
+    .fn-mm-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:92vw; max-width:460px; max-height:90vh; overflow-y:auto; background:#fff; border-radius:14px; z-index:9010; box-shadow:0 12px 40px rgba(0,0,0,.35); font-family:'Segoe UI',-apple-system,Roboto,sans-serif; color:#1C1E21; }
+    .fn-mm-modal.open { display:block; }
+    .fn-mm-modal * { box-sizing:border-box; }
+    .fn-mm-modal-head { display:flex; justify-content:space-between; align-items:center; padding:14px 16px; border-bottom:1px solid #E4E6EB; }
+    .fn-mm-modal-head h3 { margin:0; font-size:18px; }
+    .fn-mm-modal .fn-mm-icon-btn { width:36px; height:36px; border:none; border-radius:50%; background:#F0F2F5; cursor:pointer; }
+    .fn-mm-modal-body { padding:14px 16px; }
+    .fn-mm-modal-hint { margin:0 0 10px; font-size:13px; color:#65676B; }
+    .fn-mm-modal-body label { display:flex; align-items:center; gap:10px; padding:9px 4px; font-size:15px; cursor:pointer; }
+    .fn-mm-modal-body textarea { width:100%; margin-top:8px; border:1px solid #ccd0d5; border-radius:8px; padding:9px 11px; font-size:14px; font-family:inherit; resize:vertical; }
+    .fn-mm-modal-error { color:#b42318; font-size:13px; min-height:16px; margin:6px 0 0; }
+    .fn-mm-modal-foot { display:flex; justify-content:flex-end; gap:8px; padding:12px 16px 16px; }
+    .fn-mm-btn-primary, .fn-mm-btn-secondary { border:none; border-radius:8px; padding:9px 16px; font-size:14px; font-weight:600; cursor:pointer; }
+    .fn-mm-btn-primary { background:#0866FF; color:#fff; }
+    .fn-mm-btn-primary:disabled { opacity:.6; cursor:not-allowed; }
+    .fn-mm-btn-secondary { background:#E4E6EB; color:#050505; }
+
+    .fn-mm-toast-zone { position:fixed; left:50%; bottom:90px; transform:translateX(-50%); z-index:9100; display:flex; flex-direction:column; gap:8px; align-items:center; pointer-events:none; }
+    .fn-mm-toast { background:#1C1E21; color:#fff; padding:10px 16px; border-radius:20px; font-size:14px; max-width:86vw; box-shadow:0 4px 14px rgba(0,0,0,.3); font-family:'Segoe UI',-apple-system,Roboto,sans-serif; }
+    .fn-mm-toast.error { background:#b42318; }
+    .fn-mm-toast.success { background:#1a7f37; }
+
+    @media (max-width: 900px) {
+        .fn-mm-list { width:100%; border-right:none; }
+        .fn-mm-chat { display:none; width:100%; }
+        .fn-mm-root.has-chat .fn-mm-list { display:none; }
+        .fn-mm-root.has-chat .fn-mm-chat { display:flex; }
+        .fn-mm-back-list { display:inline-flex; }
+        .fn-mm-topbar-link span { display:none; }
+        .fn-mm-msgrow { max-width:88%; }
+        .fn-mm-shield { margin:0 8px 6px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .fn-mm-root *, .fn-mm-shield { transition:none !important; animation:none !important; scroll-behavior:auto !important; }
+    }
+</style>
+<!-- FIN : Styles messagerie Marketplace -->
+
+<!-- DÉBUT : Script messagerie Marketplace -->
+<script>
+window.FNMM = {
+    moi: {{ current_user.id | tojson }},
+    conversationActive: {{ conversation_active_id | tojson }},
+    erreur: {{ erreur | tojson }},
+    urls: {
+        conversations: "{{ url_for('marketplace_pro.api_conversations') }}",
+        messages:      "{{ url_for('marketplace_pro.api_messages', cid=0) }}",
+        envoyer:       "{{ url_for('marketplace_pro.api_envoyer', cid=0) }}",
+        supprimer:     "{{ url_for('marketplace_pro.api_supprimer_conversation', cid=0) }}",
+        bloquer:       "{{ url_for('marketplace_pro.api_bloquer', uid=0) }}",
+        debloquer:     "{{ url_for('marketplace_pro.api_debloquer', uid=0) }}",
+        signaler:      "{{ url_for('marketplace_pro.api_signaler') }}",
+        statut:        "{{ url_for('marketplace_pro.api_changer_statut', annonce_id=0) }}",
+        bouclier:      "{{ url_for('marketplace_pro.api_bouclier', cid=0) }}"
+    }
+};
+
+(function () {
+    'use strict';
+    var C = window.FNMM;
+    var $ = function (id) { return document.getElementById(id); };
+    var root = $('fnMmRoot');
+
+    var state = { role: 'tous', q: '', convs: [], activeId: null, data: null, sig: '', report: null,
+                  nbMsgs: 0, nouveaux: 0, shield: null, shieldReq: 0, shieldVu: {}, shieldReplie: {} };
+    var timers = { msgs: null, list: null };
+    var ORDRE = { ok: 0, prudence: 1, danger: 2 };
+
+    /* ---------- utilitaires (mêmes conventions que messagerie.html) ---------- */
+    function urlId(modele, id) { return modele.replace(/\/0(\/|$)/, '/' + id + '$1'); }
+
+    function toast(msg, type) {
+        var zone = $('fnMmToastZone');
+        var el = document.createElement('div');
+        el.className = 'fn-mm-toast' + (type ? ' ' + type : '');
+        el.textContent = msg;
+        zone.appendChild(el);
+        setTimeout(function () { el.style.transition = 'opacity .25s'; el.style.opacity = '0'; setTimeout(function () { el.remove(); }, 260); }, 2800);
+    }
+
+    function api(url, opts) {
+        opts = opts || {};
+        opts.headers = Object.assign({ 'X-Requested-With': 'XMLHttpRequest' }, opts.headers || {});
+        opts.credentials = 'same-origin';
+        return fetch(url, opts).then(function (r) {
+            return r.json().catch(function () { return { success: false, message: 'Réponse invalide du serveur.' }; })
+                .then(function (d) { d._status = r.status; return d; });
+        });
+    }
+    function post(url, body) {
+        return api(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+    }
+
+    function el(tag, cls, txt) {
+        var n = document.createElement(tag);
+        if (cls) n.className = cls;
+        if (txt != null) n.textContent = txt;
+        return n;
+    }
+    function icone(classes) { var i = document.createElement('i'); i.className = classes; return i; }
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function heure(iso) { var d = new Date(iso); return isNaN(d) ? '' : pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+    function memeJour(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
+    function libelleJour(iso) {
+        var d = new Date(iso), now = new Date(), hier = new Date(); hier.setDate(now.getDate() - 1);
+        if (isNaN(d)) return '';
+        if (memeJour(d, now)) return "Aujourd'hui";
+        if (memeJour(d, hier)) return 'Hier';
+        return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric' });
+    }
+    function tempsRelatif(iso) {
+        var d = new Date(iso); if (isNaN(d)) return '';
+        var now = new Date();
+        if (memeJour(d, now)) return heure(iso);
+        var s = (now - d) / 1000;
+        if (s < 7 * 86400) return d.toLocaleDateString('fr-FR', { weekday: 'short' });
+        return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+    }
+
+    /* ---------- liste des discussions ---------- */
+    function chargerListe() {
+        return api(C.urls.conversations + '?role=' + encodeURIComponent(state.role)).then(function (d) {
+            if (!d.success) { if (d._status === 401) location.reload(); return; }
+            state.convs = d.conversations || [];
+            rendreListe();
+        }).catch(function () {});
+    }
+
+    function etatVide(icon, texte) {
+        var vide = el('div', 'fn-mm-empty-small');
+        vide.appendChild(icone('fas ' + icon));
+        vide.appendChild(document.createTextNode(texte));
+        return vide;
+    }
+
+    function rendreListe() {
+        var box = $('fnMmListBody');
+        box.innerHTML = '';
+        var q = state.q.trim().toLowerCase();
+        var liste = state.convs.filter(function (c) {
+            if (!q) return true;
+            return (c.autre.nom + ' ' + c.annonce.titre + ' ' + (c.dernier_message || '')).toLowerCase().indexOf(q) !== -1;
+        });
+        if (!liste.length) {
+            var msg = q ? 'Aucun résultat pour « ' + state.q.trim() + ' ».'
+                : state.role === 'ventes' ? 'Aucun acheteur ne vous a encore écrit.'
+                : state.role === 'achats' ? "Vous n'avez contacté aucun vendeur." : 'Aucune discussion pour le moment.';
+            box.appendChild(etatVide(q ? 'fa-search' : 'fa-comments', msg));
+            return;
+        }
+        liste.forEach(function (c) {
+            var row = el('div', 'fn-mm-conv' + (c.id === state.activeId ? ' active' : '') + (c.non_lus ? ' unread' : ''));
+            row.setAttribute('role', 'button'); row.tabIndex = 0;
+
+            var thumb = el('div', 'fn-mm-conv-thumb');
+            var p = el('img', 'prod'); p.src = c.annonce.image; p.alt = '';
+            var u = el('img', 'peer'); u.src = c.autre.avatar; u.alt = '';
+            thumb.appendChild(p); thumb.appendChild(u);
+
+            var main = el('div', 'fn-mm-conv-main');
+            main.appendChild(el('div', 'fn-mm-conv-title', c.autre.nom));
+            main.appendChild(el('div', 'fn-mm-conv-art', c.annonce.titre));
+            main.appendChild(el('div', 'fn-mm-conv-sub', c.dernier_message || (c.annonce.prix_txt || '')));
+
+            var meta = el('div', 'fn-mm-conv-meta');
+            meta.appendChild(el('span', '', tempsRelatif(c.dernier_message_at)));
+            if (c.non_lus) { meta.appendChild(el('span', 'fn-mm-unread', c.non_lus > 99 ? '99+' : String(c.non_lus))); }
+            else if (c.annonce.statut === 'vendu' || c.annonce.statut === 'reserve') {
+                meta.appendChild(el('span', 'fn-mm-conv-tag ' + c.annonce.statut, c.annonce.statut === 'vendu' ? 'Vendu' : 'Réservé'));
+            }
+
+            row.appendChild(thumb); row.appendChild(main); row.appendChild(meta);
+            var ouvrir = function () { ouvrirConversation(c.id); };
+            row.addEventListener('click', ouvrir);
+            row.addEventListener('keydown', function (e) { if (e.key === 'Enter') ouvrir(); });
+            box.appendChild(row);
+        });
+    }
+
+    /* ---------- discussion ---------- */
+    function squeletteMessages() {
+        var s = el('div', 'fn-mm-skel-msg'); s.setAttribute('aria-hidden', 'true');
+        for (var i = 0; i < 5; i++) s.appendChild(document.createElement('span'));
+        return s;
+    }
+
+    function ouvrirConversation(id) {
+        state.activeId = id; state.sig = ''; state.data = null; state.nbMsgs = 0; state.nouveaux = 0;
+        state.shield = null; state.shieldReq++;
+        majBoucliers();
+        root.classList.add('has-chat');
+        $('fnMmPlaceholder').style.display = 'none';
+        $('fnMmChatInner').style.display = 'flex';
+        var box = $('fnMmMessages'); box.innerHTML = ''; box.appendChild(squeletteMessages());
+        majBoutonBas();
+        try { history.replaceState(null, '', location.pathname + '?conversation_id=' + id); } catch (e) {}
+        rendreListe();
+        chargerMessages(false);
+        clearInterval(timers.msgs);
+        timers.msgs = setInterval(function () { if (!document.hidden) chargerMessages(true); }, 4000);
+    }
+
+    function fermerConversation() {
+        state.activeId = null; state.data = null; state.shield = null;
+        clearInterval(timers.msgs);
+        root.classList.remove('has-chat');
+        $('fnMmChatInner').style.display = 'none';
+        $('fnMmPlaceholder').style.display = '';
+        try { history.replaceState(null, '', location.pathname); } catch (e) {}
+        rendreListe();
+    }
+
+    function chargerMessages(silencieux) {
+        var id = state.activeId; if (!id) return;
+        api(urlId(C.urls.messages, id)).then(function (d) {
+            if (id !== state.activeId) return;
+            if (!d.success) {
+                if (!silencieux) { toast(d.message || 'Conversation introuvable.', 'error'); fermerConversation(); }
+                return;
+            }
+            var sig = d.messages.length + ':' + (d.messages.length ? d.messages[d.messages.length - 1].id : 0) + ':' +
+                d.messages.filter(function (m) { return m.sent_by_me && m.lu; }).length + ':' +
+                d.conversation.annonce.statut + ':' + d.conversation.bloque_par_moi + d.conversation.bloque_par_lui;
+            if (silencieux && sig === state.sig) return;
+            var premiere = !state.data;
+            state.sig = sig; state.data = d;
+            rendreEntete(d.conversation);
+            rendreMessages(d.messages, premiere);
+            chargerListe();
+            if (d.conversation.role === 'acheteur') chargerBouclier(id);
+        }).catch(function () {});
+    }
+
+    function rendreEntete(c) {
+        var a = c.annonce, u = c.autre;
+        $('fnMmProductImg').src = a.image;
+        $('fnMmProductTitle').textContent = a.titre;
+        $('fnMmProductPrice').textContent = a.prix_txt;
+        $('fnMmProductLink').href = a.url;
+        $('fnMmMenuVoir').href = a.url;
+        var badge = $('fnMmProductBadge');
+        badge.textContent = a.statut_label; badge.className = 'fn-mm-badge ' + a.statut;
+
+        $('fnMmPeerAvatar').src = u.avatar;
+        $('fnMmPeerName').textContent = u.nom;
+        $('fnMmPeerLink').href = u.url_profil;
+        $('fnMmRole').textContent = c.role === 'acheteur' ? 'Vendeur' : 'Acheteur potentiel';
+
+        var edit = $('fnMmStatusEdit');
+        if (c.role === 'vendeur' && !a.supprimee) { edit.style.display = ''; $('fnMmStatusSelect').value = a.statut; }
+        else { edit.style.display = 'none'; }
+
+        $('fnMmMenuSignalerAnnonce').style.display = (c.role === 'acheteur' && !a.supprimee) ? '' : 'none';
+        $('fnMmMenuBloquer').querySelector('span').textContent = c.bloque_par_moi ? 'Débloquer ' + u.nom : "Bloquer l'utilisateur";
+
+        var bloque = c.bloque_par_moi || c.bloque_par_lui;
+        $('fnMmBlocked').style.display = bloque ? '' : 'none';
+        $('fnMmBlockedText').textContent = c.bloque_par_moi ? 'Vous avez bloqué ' + u.nom + '. Vous ne pouvez plus échanger.' : 'Vous ne pouvez plus échanger avec cet utilisateur.';
+        $('fnMmUnblockBtn').style.display = c.bloque_par_moi ? '' : 'none';
+        $('fnMmComposer').style.display = bloque ? 'none' : '';
+    }
+
+    function rendreMessages(messages, forcerBas) {
+        var box = $('fnMmMessages');
+        var procheBas = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+        box.innerHTML = '';
+
+        var safety = el('div', 'fn-mm-safety');
+        safety.appendChild(icone('fas fa-shield-alt'));
+        safety.appendChild(document.createTextNode("Restez prudent : ne payez jamais avant d'avoir vu l'article et rencontrez-vous dans un lieu public."));
+        box.appendChild(safety);
+
+        var dernierJour = null;
+        messages.forEach(function (m, i) {
+            var d = new Date(m.timestamp);
+            var nouveauJour = !dernierJour || !memeJour(dernierJour, d);
+            if (nouveauJour) {
+                box.appendChild(el('div', 'fn-mm-day', libelleJour(m.timestamp)));
+                dernierJour = d;
+            }
+            // regroupement : même auteur, même jour, moins de 5 minutes d'écart
+            var prev = messages[i - 1], next = messages[i + 1];
+            var lie = function (a, b) {
+                return a && b && a.sent_by_me === b.sent_by_me && memeJour(new Date(a.timestamp), new Date(b.timestamp)) &&
+                    Math.abs(new Date(b.timestamp) - new Date(a.timestamp)) < 5 * 60 * 1000;
+            };
+            var avecPrev = !nouveauJour && lie(prev, m), avecNext = lie(m, next);
+            var pos = avecPrev ? (avecNext ? 'g-mid' : 'g-last') : (avecNext ? 'g-first' : 'g-single');
+            box.appendChild(creerBulle(m, pos, !avecNext));
+        });
+        $('fnMmChips').style.display = messages.length ? 'none' : '';
+
+        var recus = messages.filter(function (m) { return !m.sent_by_me; }).length;
+        var nouveauxRecus = Math.max(0, recus - (state.nbRecus || 0));
+        state.nbRecus = recus;
+        if (forcerBas || procheBas) { box.scrollTop = box.scrollHeight; state.nouveaux = 0; }
+        else if (nouveauxRecus) { state.nouveaux += nouveauxRecus; }
+        majBoutonBas();
+        marquerSuspects();
+    }
+
+    function creerBulle(m, pos, afficherHeure) {
+        var row = el('div', 'fn-mm-msgrow ' + (m.sent_by_me ? 'sent' : 'received') + ' ' + (pos || 'g-single') + (m.pending ? ' pending' : ''));
+        if (m.id) row.dataset.mid = m.id;
+        var wrap = el('div', 'fn-mm-bubble-wrap');
+        wrap.appendChild(el('div', 'fn-mm-bubble', m.contenu));
+        if (!m.sent_by_me && m.id) {
+            var f = el('button', 'fn-mm-flag'); f.title = 'Signaler ce message'; f.setAttribute('aria-label', 'Signaler ce message');
+            f.appendChild(icone('fas fa-flag'));
+            f.addEventListener('click', function () { ouvrirSignalement({ type: 'message', message_id: m.id }); });
+            wrap.appendChild(f);
+        }
+        row.appendChild(wrap);
+        if (afficherHeure !== false) {
+            var t = el('div', 'fn-mm-time');
+            t.appendChild(document.createTextNode(m.timestamp ? heure(m.timestamp) : ''));
+            if (m.sent_by_me && !m.pending) { t.appendChild(icone('fas fa-check' + (m.lu ? '-double lu' : ''))); }
+            row.appendChild(t);
+        }
+        return row;
+    }
+
+    /* bouton « aller en bas » */
+    function majBoutonBas() {
+        var box = $('fnMmMessages');
+        var loin = box.scrollHeight - box.scrollTop - box.clientHeight > 240;
+        $('fnMmScrollBtn').style.display = loin ? 'flex' : 'none';
+        $('fnMmScrollCount').textContent = (loin && state.nouveaux) ? String(state.nouveaux) : '';
+        if (!loin) state.nouveaux = 0;
+    }
+
+    /* ---------- Bouclier FaceNet (IA anti-arnaque, privée pour l'acheteur) ---------- */
+    function chargerBouclier(id) {
+        var req = ++state.shieldReq;
+        api(urlId(C.urls.bouclier, id)).then(function (d) {
+            if (id !== state.activeId || req !== state.shieldReq) return;
+            var nouveau = (d && d.success && d.alerte) ? d.alerte : null;
+            var avant = state.shield ? ORDRE[state.shield.niveau] : -1;
+            state.shield = nouveau;
+            if (nouveau && ORDRE[nouveau.niveau] > avant && ORDRE[nouveau.niveau] > 0) {
+                state.shieldReplie[id] = false;           // le niveau monte : on rouvre la carte
+                if (avant >= 0 && nouveau.niveau === 'danger') toast('Alerte de sécurité sur cette discussion.', 'error');
+            }
+            majBoucliers();
+            marquerSuspects();
+        }).catch(function () {});
+    }
+
+    function majBoucliers() {
+        var a = state.shield, id = state.activeId;
+        var btn = $('fnMmShieldBtn'), carte = $('fnMmShield');
+        carte.innerHTML = '';
+        if (!a || !id) { btn.style.display = 'none'; carte.style.display = 'none'; return; }
+
+        btn.style.display = '';
+        btn.className = 'fn-mm-icon-btn fn-mm-shield-btn lvl-' + a.niveau;
+        btn.title = a.niveau === 'ok' ? 'Aucun signal suspect' : a.titre;
+        if (a.niveau === 'ok') { carte.style.display = 'none'; return; }
+
+        var replie = !!state.shieldReplie[id];
+        carte.style.display = '';
+        carte.className = 'fn-mm-shield lvl-' + a.niveau + (replie ? ' collapsed' : '');
+
+        var tete = el('div', 'fn-mm-sh-head'); tete.setAttribute('role', 'button'); tete.tabIndex = 0;
+        var ico = el('div', 'fn-mm-sh-ico'); ico.appendChild(icone('fas ' + (a.niveau === 'danger' ? 'fa-shield-halved' : 'fa-triangle-exclamation')));
+        var titres = el('div', 'fn-mm-sh-titles');
+        titres.appendChild(el('div', 'fn-mm-sh-title', a.titre));
+        titres.appendChild(el('div', 'fn-mm-sh-sub', 'Bouclier FaceNet · visible uniquement par vous'));
+        tete.appendChild(ico); tete.appendChild(titres); tete.appendChild(icone('fas fa-chevron-down fn-mm-sh-chev'));
+        var basculer = function () { state.shieldReplie[id] = !state.shieldReplie[id]; majBoucliers(); };
+        tete.addEventListener('click', basculer);
+        tete.addEventListener('keydown', function (e) { if (e.key === 'Enter') basculer(); });
+        carte.appendChild(tete);
+
+        var corps = el('div', 'fn-mm-sh-body');
+        if (a.resume) corps.appendChild(el('p', 'fn-mm-sh-resume', a.resume));
+        if (a.signaux && a.signaux.length) {
+            corps.appendChild(el('div', 'fn-mm-sh-h', 'Ce que j\u2019ai remarqué'));
+            var ul = el('ul', 'fn-mm-sh-list fn-mm-sh-signaux');
+            a.signaux.forEach(function (s) {
+                var li = el('li'); li.appendChild(icone('fas fa-circle-exclamation'));
+                var tx = el('span', '', s.titre);
+                if (s.detail) tx.appendChild(el('span', 'fn-mm-sh-detail', s.detail));
+                li.appendChild(tx); ul.appendChild(li);
+            });
+            corps.appendChild(ul);
+        }
+        if (a.conseils && a.conseils.length) {
+            corps.appendChild(el('div', 'fn-mm-sh-h', 'Ce que je vous conseille'));
+            var ul2 = el('ul', 'fn-mm-sh-list fn-mm-sh-conseils');
+            a.conseils.forEach(function (c) { var li = el('li'); li.appendChild(icone('fas fa-check-circle')); li.appendChild(el('span', '', c)); ul2.appendChild(li); });
+            corps.appendChild(ul2);
+        }
+        var actions = el('div', 'fn-mm-sh-actions');
+        var bSig = el('button', 'primary', 'Signaler le vendeur');
+        bSig.addEventListener('click', function () { ouvrirSignalement({ type: 'utilisateur', motif: 'fraude' }); });
+        actions.appendChild(bSig);
+        if (a.niveau === 'danger' && state.data && !state.data.conversation.bloque_par_moi) {
+            var bBloq = el('button', 'ghost', 'Bloquer');
+            bBloq.addEventListener('click', basculerBlocage);
+            actions.appendChild(bBloq);
+        }
+        var bOk = el('button', 'ghost', 'J\u2019ai compris');
+        bOk.addEventListener('click', function () { state.shieldReplie[id] = true; majBoucliers(); });
+        actions.appendChild(bOk);
+        corps.appendChild(actions);
+        var prive = el('div', 'fn-mm-sh-private');
+        prive.appendChild(icone('fas fa-lock'));
+        prive.appendChild(document.createTextNode('Cette alerte reste entre vous et FaceNet : l\u2019autre personne ne la voit pas.'));
+        corps.appendChild(prive);
+        carte.appendChild(corps);
+    }
+
+    /* surligne (pour l'acheteur seulement) les messages jugés inquiétants */
+    function marquerSuspects() {
+        var rows = document.querySelectorAll('#fnMmMessages .fn-mm-msgrow');
+        var ids = (state.shield && state.shield.niveau !== 'ok') ? (state.shield.ids_suspects || []).map(String) : [];
+        Array.prototype.forEach.call(rows, function (r) {
+            var suspect = ids.indexOf(r.dataset.mid) !== -1;
+            r.classList.toggle('suspect', suspect);
+            var wrap = r.querySelector('.fn-mm-bubble-wrap'), ico = r.querySelector('.fn-mm-suspect-ico');
+            if (suspect && wrap && !ico) {
+                var i = icone('fas fa-triangle-exclamation fn-mm-suspect-ico'); i.title = 'Message jugé inquiétant par le Bouclier FaceNet';
+                wrap.appendChild(i);
+            } else if (!suspect && ico) { ico.remove(); }
+        });
+    }
+
+    /* ---------- envoi (optimiste, comme messagerie.html) ---------- */
+    function envoyer() {
+        var input = $('fnMmInput'), id = state.activeId;
+        var texte = input.value.trim();
+        if (!texte || !id) return;
+
+        var box = $('fnMmMessages');
+        $('fnMmChips').style.display = 'none';
+        var bulle = creerBulle({ contenu: texte, sent_by_me: true, timestamp: new Date().toISOString(), pending: true }, 'g-single', true);
+        box.appendChild(bulle); box.scrollTop = box.scrollHeight;
+        input.value = ''; majSaisie(); input.focus();
+
+        post(urlId(C.urls.envoyer, id), { contenu: texte }).then(function (d) {
+            if (!d.success) {
+                bulle.remove();
+                input.value = texte; majSaisie();
+                toast(d.message || "Échec de l'envoi, vérifiez votre connexion.", 'error');
+                if (d._status === 403) chargerMessages(false);
+                return;
+            }
+            state.sig = '';
+            chargerMessages(true);
+        }).catch(function () {
+            bulle.remove(); input.value = texte; majSaisie();
+            toast("Échec de l'envoi, vérifiez votre connexion.", 'error');
+        });
+    }
+
+    function majSaisie() {
+        var input = $('fnMmInput');
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+        $('fnMmSend').disabled = !input.value.trim();
+        var n = input.value.length, cpt = $('fnMmCounter');
+        cpt.textContent = n > 1700 ? n + ' / 2000' : '';
+        cpt.className = 'fn-mm-counter' + (n > 1900 ? ' warn' : '');
+    }
+
+    /* ---------- menu d'options (style Messenger) ---------- */
+    function basculerMenu(ouvrir) { $('fnMmMenu').classList.toggle('open', ouvrir); }
+
+    function supprimerConversation() {
+        basculerMenu(false);
+        if (!state.activeId) return;
+        if (!confirm('Supprimer cette conversation ? Elle sera retirée de votre liste (l\'autre personne la conserve).')) return;
+        post(urlId(C.urls.supprimer, state.activeId)).then(function (d) {
+            if (d.success) { toast('Conversation supprimée.', 'success'); fermerConversation(); chargerListe(); }
+            else toast(d.message || 'Suppression impossible.', 'error');
+        }).catch(function () { toast('Erreur réseau.', 'error'); });
+    }
+
+    function basculerBlocage() {
+        basculerMenu(false);
+        if (!state.data) return;
+        var c = state.data.conversation, uid = c.autre.id;
+        if (c.bloque_par_moi) {
+            post(urlId(C.urls.debloquer, uid)).then(function (d) {
+                if (d.success) { toast('Utilisateur débloqué.', 'success'); state.sig = ''; chargerMessages(true); }
+                else toast(d.message || 'Action impossible.', 'error');
+            });
+            return;
+        }
+        if (!confirm('Bloquer ' + c.autre.nom + ' ? Vous ne pourrez plus échanger dans le Marketplace.')) return;
+        post(urlId(C.urls.bloquer, uid)).then(function (d) {
+            if (d.success) { toast('Utilisateur bloqué.', 'success'); state.sig = ''; chargerMessages(true); }
+            else toast(d.message || 'Blocage impossible.', 'error');
+        }).catch(function () { toast('Erreur réseau.', 'error'); });
+    }
+
+    function changerStatut() {
+        if (!state.data) return;
+        var a = state.data.conversation.annonce, valeur = $('fnMmStatusSelect').value;
+        post(urlId(C.urls.statut, a.id), { statut: valeur }).then(function (d) {
+            if (d.success) { toast('Statut mis à jour : ' + d.statut_label + '.', 'success'); state.sig = ''; chargerMessages(true); }
+            else { toast(d.message || 'Mise à jour impossible.', 'error'); $('fnMmStatusSelect').value = a.statut; }
+        }).catch(function () { toast('Erreur réseau.', 'error'); $('fnMmStatusSelect').value = a.statut; });
+    }
+
+    /* ---------- signalement ---------- */
+    function ouvrirSignalement(cible) {
+        basculerMenu(false);
+        if (!state.data) return;
+        var c = state.data.conversation;
+        state.report = { type: cible.type, conversation_id: c.id, annonce_id: c.annonce.id, message_id: cible.message_id || null };
+        $('fnMmReportTitle').textContent = cible.type === 'annonce' ? "Signaler l'annonce"
+            : cible.type === 'message' ? 'Signaler ce message' : "Signaler l'utilisateur";
+        Array.prototype.forEach.call(document.getElementsByName('fnMmMotif'), function (r) { r.checked = false; });
+        var pre = cible.motif || (cible.type === 'annonce' ? 'fraude' : null);
+        if (pre) { var f = document.querySelector('input[name="fnMmMotif"][value="' + pre + '"]'); if (f) f.checked = true; }
+        $('fnMmReportDesc').value = ''; $('fnMmReportError').textContent = '';
+        $('fnMmReportBackdrop').classList.add('open'); $('fnMmReportModal').classList.add('open');
+    }
+    function fermerSignalement() {
+        $('fnMmReportBackdrop').classList.remove('open'); $('fnMmReportModal').classList.remove('open');
+    }
+    function envoyerSignalement() {
+        var choisi = document.querySelector('input[name="fnMmMotif"]:checked');
+        if (!choisi) { $('fnMmReportError').textContent = 'Veuillez choisir un motif.'; return; }
+        var btn = $('fnMmReportSubmit'); btn.disabled = true;
+        var corps = Object.assign({}, state.report, { motif: choisi.value, description: $('fnMmReportDesc').value.trim() });
+        post(C.urls.signaler, corps).then(function (d) {
+            btn.disabled = false;
+            if (d.success) { fermerSignalement(); toast(d.message, 'success'); }
+            else $('fnMmReportError').textContent = d.message || 'Envoi impossible.';
+        }).catch(function () { btn.disabled = false; $('fnMmReportError').textContent = 'Erreur réseau. Réessayez.'; });
+    }
+
+    /* ---------- branchements ---------- */
+    Array.prototype.forEach.call(document.querySelectorAll('.fn-mm-tab'), function (t) {
+        t.addEventListener('click', function () {
+            document.querySelectorAll('.fn-mm-tab').forEach(function (x) { x.classList.remove('active'); });
+            t.classList.add('active'); state.role = t.dataset.role; chargerListe();
+        });
+    });
+    $('fnMmSearch').addEventListener('input', function () { state.q = this.value; rendreListe(); });
+    $('fnMmBackList').addEventListener('click', fermerConversation);
+    $('fnMmMenuBtn').addEventListener('click', function (e) { e.stopPropagation(); basculerMenu(!$('fnMmMenu').classList.contains('open')); });
+    document.addEventListener('click', function (e) { if (!e.target.closest('.fn-mm-menu-wrap')) basculerMenu(false); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { basculerMenu(false); fermerSignalement(); } });
+    $('fnMmMenuSupprimer').addEventListener('click', supprimerConversation);
+    $('fnMmMenuBloquer').addEventListener('click', basculerBlocage);
+    $('fnMmUnblockBtn').addEventListener('click', basculerBlocage);
+    $('fnMmMenuSignalerUser').addEventListener('click', function () { ouvrirSignalement({ type: 'utilisateur' }); });
+    $('fnMmMenuSignalerAnnonce').addEventListener('click', function () { ouvrirSignalement({ type: 'annonce' }); });
+    $('fnMmStatusSelect').addEventListener('change', changerStatut);
+    $('fnMmReportClose').addEventListener('click', fermerSignalement);
+    $('fnMmReportCancel').addEventListener('click', fermerSignalement);
+    $('fnMmReportBackdrop').addEventListener('click', fermerSignalement);
+    $('fnMmReportSubmit').addEventListener('click', envoyerSignalement);
+    $('fnMmSend').addEventListener('click', envoyer);
+    $('fnMmInput').addEventListener('input', majSaisie);
+    $('fnMmInput').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey && !/Mobi|Android/i.test(navigator.userAgent)) { e.preventDefault(); envoyer(); }
+    });
+    $('fnMmMessages').addEventListener('scroll', majBoutonBas);
+    $('fnMmScrollBtn').addEventListener('click', function () { var b = $('fnMmMessages'); b.scrollTop = b.scrollHeight; state.nouveaux = 0; majBoutonBas(); });
+    $('fnMmShieldBtn').addEventListener('click', function () {
+        var a = state.shield, id = state.activeId; if (!a || !id) return;
+        if (a.niveau === 'ok') { toast('Aucun signal suspect dans cette discussion.', 'success'); return; }
+        state.shieldReplie[id] = !state.shieldReplie[id]; majBoucliers();
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#fnMmChips button'), function (b) {
+        b.addEventListener('click', function () { $('fnMmInput').value = b.dataset.txt; majSaisie(); envoyer(); });
+    });
+
+    /* ---------- démarrage ---------- */
+    if (C.erreur) toast(C.erreur, 'error');
+    chargerListe().then(function () { if (C.conversationActive) ouvrirConversation(C.conversationActive); });
+    timers.list = setInterval(function () { if (!document.hidden) chargerListe(); }, 8000);
+})();
+</script>
+<!-- FIN : Script messagerie Marketplace -->
+<!-- FIN : Messagerie Marketplace (page dédiée) -->
+{% endblock %}

@@ -1,0 +1,97 @@
+ {% extends "base.html" %}
+
+{% block content %}  
+<div class="fb-index-wrapper-v">
+    
+    <div class="fb-main-content-v">
+        <div class="fb-header-v">
+            <h1 class="facenet-logo-v">FaceNet</h1>
+        </div>
+
+        <div class="fb-body-v">
+            <div class="login-card-v">
+                <form action="{{ url_for('main.login') }}" method="POST">
+                    <div class="input-field-v">
+                        <input type="text" name="login_identity" placeholder="Adresse e-mail ou nom d'utilisateur" required autofocus>
+                    </div>
+                    <div class="input-field-v">
+                        <input type="password" name="login_pass" placeholder="Mot de passe" required>
+                    </div>
+
+                    <button type="submit" class="btn-login-v">Se connecter</button>
+                    
+                    <div class="forgot-link-v">
+                        <a href="{{ url_for('main.find_account') }}">Mot de passe oublié ?</a>
+                    </div>
+                    
+                    <div class="divider-v"></div>
+                    
+                    <div class="create-account-v">
+                        <a href="{{ url_for('main.signup') }}" class="btn-create-account-v">Créer un nouveau compte</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+        
+    <div class="fb-footer-v">
+        <p>&copy; 2026 FaceNet. Tous droits réservés.</p>
+
+        <div class="footer-signature">
+            <div class="sig-container">
+                <div class="sig-brand">
+                    <svg class="sig-icon" viewBox="0 0 100 48" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M24,42 C34,42 42,31 50,24 C58,17 66,6 76,6 C88,6 94,13 94,24 C94,35 88,42 76,42 C66,42 58,31 50,24 C42,17 34,6 24,6 C12,6 6,13 6,24 C6,35 12,42 24,42 Z" 
+                              fill="none" 
+                              stroke="#0064e0" 
+                              stroke-width="11" 
+                              stroke-linecap="round" 
+                              stroke-linejoin="round"/>
+                    </svg>
+                    <span class="sig-text">Tsapi</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Remplissage de tout l'écran */
+    .fb-index-wrapper-v { 
+        display: flex; 
+        flex-direction: column; 
+        justify-content: center; 
+        align-items: center; 
+        min-height: 100vh; 
+        background-color: #f0f2f5; 
+        font-family: Helvetica, Arial, sans-serif; 
+        padding: 20px 0;
+        box-sizing: border-box;
+    }
+    .fb-main-content-v { display: flex; flex-direction: column; align-items: center; max-width: 400px; width: 100%; padding: 20px; margin-bottom: auto; margin-top: auto; }
+    .facenet-logo-v { color: #1877f2; font-size: 3.5rem; font-weight: bold; margin-bottom: 0; letter-spacing: -1px; text-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .fb-body-v { width: 100%; margin-top: 20px; }
+    .login-card-v { background-color: #fff; border: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); padding: 20px; text-align: center; }
+    .input-field-v { margin-bottom: 16px; }
+    .input-field-v input { border: 1px solid #dddfe2; border-radius: 6px; font-size: 17px; padding: 14px 16px; width: 100%; box-sizing: border-box; }
+    .input-field-v input:focus { border-color: #1877f2; outline: none; box-shadow: 0 0 0 2px #e7f3ff; }
+    .btn-login-v { background-color: #1877f2; border: none; border-radius: 6px; color: #fff; font-size: 20px; font-weight: bold; padding: 12px 0; width: 100%; cursor: pointer; transition: background-color 0.2s; }
+    .btn-login-v:hover { background-color: #166fe5; }
+    .forgot-link-v { margin-top: 16px; }
+    .forgot-link-v a { color: #1877f2; font-size: 14px; text-decoration: none; }
+    .forgot-link-v a:hover { text-decoration: underline; }
+    .divider-v { border-bottom: 1px solid #dadde1; margin: 20px 0; }
+    .create-account-v { padding-top: 6px; }
+    .btn-create-account-v { background-color: #42b72a; border: none; border-radius: 6px; color: #fff; display: inline-block; font-size: 17px; font-weight: bold; line-height: 48px; padding: 0 16px; text-decoration: none; transition: background-color 0.2s; }
+    .btn-create-account-v:hover { background-color: #36a420; }
+    
+    .fb-footer-v { width: 100%; max-width: 400px; text-align: center; margin-top: auto; padding: 20px 10px 10px 10px; color: #737373; font-size: 12px; }
+
+    /* Rendu net de la signature unique Tsapi poussée au bas */
+    .footer-signature { padding: 15px 0 0 0; display: flex; justify-content: center; align-items: center; background: transparent; }
+    .sig-container { display: flex; flex-direction: column; align-items: center; }
+    .sig-brand { display: flex; align-items: center; gap: 8px; }
+    .sig-icon { width: 32px; height: auto; display: block; }
+    .sig-text { font-size: 24px; color: #0064e0; font-weight: 600; letter-spacing: -0.5px; line-height: 1; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+</style>
+{% endblock %}

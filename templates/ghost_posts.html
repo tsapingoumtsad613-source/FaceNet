@@ -1,0 +1,68 @@
+<div id="ghost-posts-wrapper">
+  {% for post in ghost_posts %}
+  <div class="ghost-post" data-expire="{{ post.expire_at.isoformat() }}Z">
+    <div class="ghost-header">
+      <span class="badge">👻 Anonyme</span>
+      <span class="timer-text">Calcul...</span>
+    </div>
+    <p class="ghost-content">{{ post.contenu }}</p>
+    {% if post.indices_aff %}
+    <div class="ghost-indices">
+      {% for i in post.indices_aff %}<span class="ghost-indice{% if i.verifie %} verifie{% endif %}">{{ i.emoji }} {{ i.libelle }}{% if i.verifie %} ✓{% endif %}</span>{% endfor %}
+    </div>
+    {% endif %}
+    {% for r in post.reponses %}
+    <div class="ghost-reply ghost-reply-{{ r.role }}"><strong>{% if r.role == 'proprio' %}Propriétaire{% elif post.est_mien %}👻 Toi (anonyme){% else %}👻 Anonyme{% endif %}</strong> {{ r.contenu }}</div>
+    {% endfor %}
+    {% if current_user.is_authenticated and (current_user.id == post.profil_id or post.est_mien) %}
+    <form action="/ghost/{{ post.id }}/repondre" method="POST" class="ghost-reply-form">
+      <input type="text" name="contenu" maxlength="500" required placeholder="{% if current_user.id == post.profil_id %}Répondre à ce Ghost...{% else %}Répondre en restant anonyme...{% endif %}">
+      <button type="submit">Répondre</button>
+    </form>
+    {% endif %}
+    {% if current_user.is_authenticated and current_user.id == post.profil_id %}
+    <form action="/ghost/{{ post.id }}/supprimer" method="POST" onsubmit="return confirm('Supprimer ce Ghost ?');" style="margin-top:8px;text-align:right;">
+      <button type="submit" style="background:none;border:none;color:#e0245e;cursor:pointer;font-size:0.85em;">🗑️ Supprimer</button>
+    </form>
+    {% endif %}
+  </div>
+  {% else %}
+  <p style="text-align:center;color:#65676B;padding:20px;">Aucun Ghost actif pour le moment.</p>
+  {% endfor %}
+</div>
+
+<style>
+.ghost-post { border: 2px solid #1877F2; border-radius: 15px; padding: 15px; margin: 10px 0; background: #fff; transition: 0.3s; }
+.ghost-header { display: flex; justify-content: space-between; font-size: 0.8em; color: #1877F2; font-weight: bold; }
+.ghost-content { margin-top: 10px; font-size: 1.1em; }
+.ghost-indices { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+.ghost-indice { background: #f0f2f5; border-radius: 14px; padding: 4px 10px; font-size: 0.8em; color: #444; }
+.ghost-indice.verifie { background: #e7f3ff; color: #1877F2; }
+.ghost-reply { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: #f7f8fa; font-size: 0.95em; overflow-wrap: anywhere; }
+.ghost-reply-proprio { background: #e7f3ff; }
+.ghost-reply-form { display: flex; gap: 6px; margin-top: 10px; }
+.ghost-reply-form input { flex: 1; min-width: 0; border: 1px solid #dadde1; border-radius: 18px; padding: 8px 12px; font-size: 0.9em; }
+.ghost-reply-form button { background: #1877F2; color: #fff; border: none; border-radius: 18px; padding: 8px 14px; cursor: pointer; }
+.expired-post { display: none; } /* On cache les posts expirés immédiatement */
+</style>
+
+<script>
+function updateGhostTimers() {
+  document.querySelectorAll('.ghost-post').forEach(post => {
+    const expire = new Date(post.dataset.expire).getTime();
+    const diff = expire - Date.now();
+    
+    if(diff <= 0) {
+      post.classList.add('expired-post');
+      return;
+    }
+    
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    post.querySelector('.timer-text').innerText = `${h}h ${m}m ${s}s restant`;
+  });
+}
+setInterval(updateGhostTimers, 1000);
+updateGhostTimers();
+</script>

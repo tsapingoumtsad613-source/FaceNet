@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .guide-wrapper {
+        max-width: 720px;
+        margin: 30px auto;
+        padding: 15px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .card-container {
+        background: #ffffff;
+        padding: 30px 25px;
+        border-radius: 20px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e4e6eb;
+    }
+
+    .header-section {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .header-section h2 {
+        color: #1c1e21;
+        font-size: 22px;
+        margin: 0 0 8px 0;
+    }
+
+    .header-section p {
+        color: #65676b;
+        font-size: 14px;
+        margin: 0;
+    }
+
+    .section-title {
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* GRILLE DES PHOTOS DE PROFIL */
+    .faces-grid-5 {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+        margin-bottom: 30px;
+    }
+
+    @media (max-width: 600px) {
+        .faces-grid-5 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    .profile-card {
+        border-radius: 14px;
+        padding: 10px 4px;
+        text-align: center;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Photos de profil Valides (Vert) */
+    .profile-card.valid {
+        background: #f0fdf4;
+        border: 2px solid #22c55e;
+    }
+
+    /* Photos de profil Non Valides (Rouge) */
+    .profile-card.invalid {
+        background: #fef2f2;
+        border: 2px solid #ef4444;
+    }
+
+    .profile-avatar {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .profile-card.valid .profile-avatar {
+        border: 3px solid #22c55e;
+    }
+
+    .profile-card.invalid .profile-avatar {
+        border: 3px solid #ef4444;
+    }
+
+    /* BADGES SUR LES PHOTOS */
+    .badge-status {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    .badge-status.good { background: #22c55e; }
+    .badge-status.bad { background: #ef4444; }
+
+    /* EFFETS D'ERREURS SIMULÉS */
+    .blur-effect { filter: blur(3px); }
+    .dark-effect { filter: brightness(0.3); }
+
+    .example-label {
+        font-size: 11px;
+        font-weight: 600;
+        margin-top: 8px;
+        line-height: 1.2;
+    }
+
+    /* BLOC CONSEILS ET RÈGLES DÉTAILLÉES */
+    .rules-list {
+        background: #f8fafc;
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 25px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .rule-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 12px;
+        font-size: 14px;
+        color: #334155;
+        line-height: 1.4;
+    }
+
+    .rule-item:last-child { margin-bottom: 0; }
+    .rule-item i { 
+        font-size: 16px; 
+        margin-top: 2px;
+    }
+
+    /* BOUTON CONTINUER */
+    .btn-action {
+        width: 100%;
+        padding: 16px;
+        background: #1877f2;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-weight: bold;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background 0.3s ease;
+        text-align: center;
+        text-decoration: none;
+        display: block;
+        box-sizing: border-box;
+    }
+
+    .btn-action:hover { background: #166fe5; }
+</style>
+
+<div class="guide-wrapper">
+    <div class="card-container">
+
+        <!-- En-tête de la page -->
+        <div class="header-section">
+            <h2>Conformité de votre photo de profil</h2>
+            <p>Votre photo de profil doit clairement montrer votre vrai visage pour correspondre à votre document d'identité.</p>
+        </div>
+
+        <!-- 1. LES 5 BONNES PHOTOS DE PROFIL (COCHEE VERTE) -->
+        <div class="section-title" style="color: #15803d;">
+            <span>✅ Exemples de photos de profil valides</span>
+        </div>
+
+        <div class="faces-grid-5">
+            
+            <!-- Profil Valide 1 -->
+            <div class="profile-card valid">
+                <div class="badge-status good">✓</div>
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80" class="profile-avatar" alt="Photo éclairée">
+                <div class="example-label" style="color: #15803d;">Bien éclairée</div>
+            </div>
+
+            <!-- Profil Valide 2 -->
+            <div class="profile-card valid">
+                <div class="badge-status good">✓</div>
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80" class="profile-avatar" alt="Photo de face">
+                <div class="example-label" style="color: #15803d;">Visage de face</div>
+            </div>
+
+            <!-- Profil Valide 3 -->
+            <div class="profile-card valid">
+                <div class="badge-status good">✓</div>
+                <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80" class="profile-avatar" alt="Photo nette">
+                <div class="example-label" style="color: #15803d;">Photo nette</div>
+            </div>
+
+            <!-- Profil Valide 4 -->
+            <div class="profile-card valid">
+                <div class="badge-status good">✓</div>
+                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80" class="profile-avatar" alt="Yeux visibles">
+                <div class="example-label" style="color: #15803d;">Yeux bien visibles</div>
+            </div>
+
+            <!-- Profil Valide 5 -->
+            <div class="profile-card valid">
+                <div class="badge-status good">✓</div>
+                <img src="https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=200&auto=format&fit=crop&q=80" class="profile-avatar" alt="Expression neutre">
+                <div class="example-label" style="color: #15803d;">Expression neutre</div>
+            </div>
+
+        </div>
+
+        <!-- 2. LES 5 MAUVAISES PHOTOS DE PROFIL (CROIX ROUGE) -->
+        <div class="section-title" style="color: #b91c1c;">
+            <span>❌ Photos de profil refusées pour la vérification</span>
+        </div>
+
+        <div class="faces-grid-5">
+            
+            <!-- Profil Invalide 1 (Flou) -->
+            <div class="profile-card invalid">
+                <div class="badge-status bad">✕</div>
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80" class="profile-avatar blur-effect" alt="Photo floue">
+                <div class="example-label" style="color: #b91c1c;">Photo floue</div>
+            </div>
+
+            <!-- Profil Invalide 2 (Sombre) -->
+            <div class="profile-card invalid">
+                <div class="badge-status bad">✕</div>
+                <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80" class="profile-avatar dark-effect" alt="Photo sombre">
+                <div class="example-label" style="color: #b91c1c;">Trop sombre</div>
+            </div>
+
+            <!-- Profil Invalide 3 (Lunettes / Filtre) -->
+            <div class="profile-card invalid">
+                <div class="badge-status bad">✕</div>
+                <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&auto=format&fit=crop&q=80" class="profile-avatar" alt="Lunettes de soleil">
+                <div class="example-label" style="color: #b91c1c;">Lunettes soleil</div>
+            </div>
+
+            <!-- Profil Invalide 4 (De côté / Loin) -->
+            <div class="profile-card invalid">
+                <div class="badge-status bad">✕</div>
+                <img src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80" class="profile-avatar" alt="Profil">
+                <div class="example-label" style="color: #b91c1c;">Visage de profil</div>
+            </div>
+
+            <!-- Profil Invalide 5 (Masqué) -->
+            <div class="profile-card invalid">
+                <div class="badge-status bad">✕</div>
+                <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80" class="profile-avatar" style="clip-path: inset(25% 0 0 0);" alt="Caché">
+                <div class="example-label" style="color: #b91c1c;">Visage caché</div>
+            </div>
+
+        </div>
+
+        <!-- 3. GUIDE DÉTAILLÉ DE CE QU'IL FAUT FAIRE ET ÉVITER -->
+        <div class="rules-list">
+            <h3 style="margin-top: 0; color: #1c1e21; font-size: 15px; margin-bottom: 15px; font-weight: 700;">
+                💡 Recommandations pour réussir votre photo de profil :
+            </h3>
+
+            <!-- Ce qu'il FAUT faire -->
+            <div class="rule-item">
+                <i class="fa-solid fa-circle-check" style="color: #22c55e;"></i>
+                <span><strong>Position :</strong> Placez-vous bien de face et fixez directement l'objectif de l'appareil photo.</span>
+            </div>
+
+            <div class="rule-item">
+                <i class="fa-solid fa-circle-check" style="color: #22c55e;"></i>
+                <span><strong>Luminosité :</strong> Choisissez un endroit bien éclairé (de préférence une lumière naturelle) pour éviter les ombres sur le visage.</span>
+            </div>
+
+            <div class="rule-item">
+                <i class="fa-solid fa-circle-check" style="color: #22c55e;"></i>
+                <span><strong>Qualité & Netteté :</strong> Assurez-vous que l'image est claire, parfaitement nette et en haute résolution.</span>
+            </div>
+
+            <div class="rule-item">
+                <i class="fa-solid fa-circle-check" style="color: #22c55e;"></i>
+                <span><strong>Visibilité :</strong> Gardez vos yeux bien ouverts et veillez à ce que vos cheveux ne masquent pas vos yeux ou votre visage.</span>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 15px 0;">
+
+            <!-- Ce qu'il NE FAUT PAS faire -->
+            <div class="rule-item">
+                <i class="fa-solid fa-circle-xmark" style="color: #ef4444;"></i>
+                <span><strong>Accessoires interdits :</strong> Retirez vos lunettes de soleil, casquettes, chapeaux, bérets ou masques.</span>
+            </div>
+
+            <div class="rule-item">
+                <i class="fa-solid fa-circle-xmark" style="color: #ef4444;"></i>
+                <span><strong>Aucun filtre ni retouche :</strong> N'utilisez aucun filtre de beauté (Snapchat, TikTok, Instagram) ni aucun effet modifiant votre visage.</span>
+            </div>
+
+            <div class="rule-item">
+                <i class="fa-solid fa-circle-xmark" style="color: #ef4444;"></i>
+                <span><strong>Seul sur la photo :</strong> Vous devez être la seule personne visible sur votre photo (pas de photo de groupe ou avec des animaux).</span>
+            </div>
+        </div>
+
+        <!-- Bouton pour passer à l'étape suivante -->
+        <a href="{{ url_for('main.verification_etape_choix_piece') }}" class="btn-action">
+            Ma photo de profil est conforme, continuer
+        </a>
+
+    </div>
+</div>
+{% endblock %}

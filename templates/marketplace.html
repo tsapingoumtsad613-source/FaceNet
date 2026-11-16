@@ -1,0 +1,1249 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="fn-market-container">
+    <div class="fn-market-backdrop" id="market-backdrop" onclick="toggleMarketSidebar(false)"></div>
+
+    <!-- ============ MENU 1 : bouton ☰ (tiroir : navigation + catégories) ============ -->
+    <aside class="fn-market-sidebar" id="market-sidebar">
+        <div class="fn-sidebar-header">
+            <h2>Marketplace</h2>
+            <div style="display:flex; gap:6px;">
+                <a class="fn-btn-icon" href="/marketplace/localisation" title="Paramètres du Marketplace"><i class="fas fa-cog"></i></a>
+                <button class="fn-btn-icon" onclick="toggleMarketSidebar(false)" title="Fermer" aria-label="Fermer le menu"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+
+        <div class="fn-search-bar">
+            <i class="fas fa-search fn-search-icon"></i>
+            <input type="text" placeholder="Rechercher dans le Marketplace" onfocus="toggleMarketSidebar(false); toggleMarketSearch(true)">
+        </div>
+
+        <nav class="fn-sidebar-nav">
+            <ul>
+                <li class="{{ 'active' if not request.args.get('categorie') else '' }}"><a href="{{ url_for('main.marketplace') }}"><i class="fas fa-store"></i> Parcourir tout</a></li>
+                <li><a href="/marketplace/vous"><i class="fas fa-user"></i> Vous</a></li>
+                <li><a href="{{ url_for('main.notifications') }}"><i class="fas fa-bell"></i> Notifications</a></li>
+                <li><a href="#"><i class="fas fa-inbox"></i> Boîte de réception</a></li>
+                <li><a href="/marketplace/vos-annonces"><i class="fas fa-tag"></i> Vos annonces</a></li>
+                <li><a href="#"><i class="fas fa-heart"></i> Articles favoris</a></li>
+            </ul>
+
+            <div class="separator"></div>
+            <h3>Catégories</h3>
+            <ul>
+                <li class="{{ 'active' if request.args.get('categorie') == 'Vehicules' else '' }}"><a href="{{ url_for('main.marketplace', categorie='Vehicules') }}"><i class="fas fa-car"></i> Véhicules</a></li>
+                <li class="{{ 'active' if request.args.get('categorie') == 'Immobilier' else '' }}"><a href="{{ url_for('main.marketplace', categorie='Immobilier') }}"><i class="fas fa-home"></i> Immobilier à louer</a></li>
+                <li class="{{ 'active' if request.args.get('categorie') == 'Electronique' else '' }}"><a href="{{ url_for('main.marketplace', categorie='Electronique') }}"><i class="fas fa-mobile-alt"></i> Électronique</a></li>
+                <li class="{{ 'active' if request.args.get('categorie') == 'Mode' else '' }}"><a href="{{ url_for('main.marketplace', categorie='Mode') }}"><i class="fas fa-tshirt"></i> Mode</a></li>
+                <li class="{{ 'active' if request.args.get('categorie') == 'Maison' else '' }}"><a href="{{ url_for('main.marketplace', categorie='Maison') }}"><i class="fas fa-couch"></i> Maison et jardin</a></li>
+                <li class="{{ 'active' if request.args.get('categorie') == 'Loisirs' else '' }}"><a href="{{ url_for('main.marketplace', categorie='Loisirs') }}"><i class="fas fa-futbol"></i> Loisirs</a></li>
+                <li class="{{ 'active' if request.args.get('categorie') == 'Famille' else '' }}"><a href="{{ url_for('main.marketplace', categorie='Famille') }}"><i class="fas fa-baby-carriage"></i> Famille</a></li>
+                <li class="{{ 'active' if request.args.get('categorie') == 'Autre' else '' }}"><a href="{{ url_for('main.marketplace', categorie='Autre') }}"><i class="fas fa-ellipsis-h"></i> Autre</a></li>
+            </ul>
+        </nav>
+
+        <a href="{{ url_for('main.create_item') }}" class="fn-btn-create">
+            <i class="fas fa-plus"></i> Créer une annonce
+        </a>
+    </aside>
+
+    <main class="fn-market-main">
+        <!-- ============ EN-TÊTE (comme la capture) ============ -->
+        <header class="fn-mkh">
+            <div class="fn-mkh-row">
+                <button class="fn-mkh-menu" onclick="toggleMarketSidebar(true)" title="Menu" aria-label="Ouvrir le menu du marketplace"><i class="fas fa-bars"></i></button>
+                <h1>Marketplace</h1>
+
+                <!-- ============ MENU 2 : bouton ⋯ (raccourcis) ============ -->
+                <div class="fn-mk-menuwrap">
+                    <button class="fn-mkh-circle" id="mk-more-btn" onclick="toggleMkPop('mk-more-menu')" title="Plus d'options" aria-label="Plus d'options"><i class="fas fa-ellipsis"></i></button>
+                    <div class="fn-mk-pop fn-mk-pop-right" id="mk-more-menu">
+                        <a href="/marketplace/vous"><i class="fas fa-user"></i> Vous</a>
+                        <a href="/marketplace/messages"><i class="far fa-envelope"></i> Messagerie</a>
+                        <a href="/marketplace/enregistres"><i class="far fa-bookmark"></i> Éléments enregistrés</a>
+                        <a href="/marketplace/vos-annonces"><i class="fas fa-tag"></i> Vos annonces</a>
+                        <a href="{{ url_for('main.create_item') }}"><i class="fas fa-plus"></i> Créer une annonce</a>
+                        <a href="/marketplace/localisation"><i class="fas fa-location-dot"></i> Localisation</a>
+                        <a href="{{ url_for('main.notifications') }}"><i class="far fa-bell"></i> Notifications</a>
+                    </div>
+                </div>
+
+                <!-- ============ MENU 3 : bouton 🔍 (panneau de recherche) ============ -->
+                <button class="fn-mkh-circle" id="mk-search-btn" onclick="toggleMarketSearch()" title="Rechercher un produit" aria-label="Rechercher"><i class="fas fa-search"></i></button>
+            </div>
+
+            <div class="fn-mk-searchpanel" id="mk-search-panel">
+                <i class="fas fa-search"></i>
+                <input type="text" id="market-search-input" placeholder="Rechercher un produit, une catégorie, une ville…" oninput="filterMarketItems(this.value)" autocomplete="off">
+                <button type="button" onclick="toggleMarketSearch(false, true)" aria-label="Fermer la recherche"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="fn-mk-tabs">
+                <a class="fn-mk-tab" href="{{ url_for('main.create_item') }}">Vendre</a>
+                <button type="button" class="fn-mk-tab active" id="mk-tab-decouvrir" onclick="setTab('decouvrir')">Découvrir</button>
+                <button type="button" class="fn-mk-tab" id="mk-tab-locale" onclick="setTab('locale')">Locale</button>
+
+                <div class="fn-mk-menuwrap">
+                    <button type="button" class="fn-mk-tab" onclick="toggleMkPop('mk-plus-menu')">Plus <i class="fas fa-chevron-down" style="font-size:12px"></i></button>
+                    <div class="fn-mk-pop" id="mk-plus-menu">
+                        <div class="fn-dropdown-title">Catégories</div>
+                        <a href="{{ url_for('main.marketplace') }}"><i class="fas fa-store"></i> Toutes les catégories</a>
+                        <a href="{{ url_for('main.marketplace', categorie='Vehicules') }}"><i class="fas fa-car"></i> Véhicules</a>
+                        <a href="{{ url_for('main.marketplace', categorie='Immobilier') }}"><i class="fas fa-home"></i> Immobilier à louer</a>
+                        <a href="{{ url_for('main.marketplace', categorie='Electronique') }}"><i class="fas fa-mobile-alt"></i> Électronique</a>
+                        <a href="{{ url_for('main.marketplace', categorie='Mode') }}"><i class="fas fa-tshirt"></i> Mode</a>
+                        <a href="{{ url_for('main.marketplace', categorie='Maison') }}"><i class="fas fa-couch"></i> Maison et jardin</a>
+                        <a href="{{ url_for('main.marketplace', categorie='Loisirs') }}"><i class="fas fa-futbol"></i> Loisirs</a>
+                        <a href="{{ url_for('main.marketplace', categorie='Famille') }}"><i class="fas fa-baby-carriage"></i> Famille</a>
+                        <a href="{{ url_for('main.marketplace', categorie='Autre') }}"><i class="fas fa-ellipsis-h"></i> Autre</a>
+                        <div class="fn-dropdown-title">Filtres</div>
+                        <a href="#" onclick="toggleFiltres(true); closeMkPops(); return false;"><i class="fas fa-sliders-h"></i> Lieu, ville et prix</a>
+                    </div>
+                </div>
+
+                <span class="fn-mk-sep"></span>
+                <button type="button" class="fn-mk-pin" onclick="toggleFiltres()" title="Localisation et filtres" aria-label="Localisation et filtres"><i class="fas fa-location-dot"></i></button>
+            </div>
+
+            <!-- Filtres (ouverts par le bouton de localisation) -->
+            <div class="fn-filter-row" id="fn-filter-row">
+                <div class="fn-dropdown-wrapper">
+                    <button class="fn-filter-pill" onclick="toggleFilterDropdown('lieu')">Lieu <i class="fas fa-chevron-down"></i></button>
+                    <div id="dropdown-lieu" class="fn-dropdown-panel">
+                        <div class="fn-dropdown-title">Régions du Cameroun</div>
+                        <a href="#" onclick="selectFilter('lieu',''); return false;">Tout le Cameroun</a>
+                        <a href="#" onclick="selectFilter('lieu','Adamaoua (Ngaoundéré)'); return false;">Adamaoua — Ngaoundéré</a>
+                        <a href="#" onclick="selectFilter('lieu','Centre (Yaoundé)'); return false;">Centre — Yaoundé</a>
+                        <a href="#" onclick="selectFilter('lieu','Est (Bertoua)'); return false;">Est — Bertoua</a>
+                        <a href="#" onclick="selectFilter('lieu','Extrême-Nord (Maroua)'); return false;">Extrême-Nord — Maroua</a>
+                        <a href="#" onclick="selectFilter('lieu','Littoral (Douala)'); return false;">Littoral — Douala</a>
+                        <a href="#" onclick="selectFilter('lieu','Nord (Garoua)'); return false;">Nord — Garoua</a>
+                        <a href="#" onclick="selectFilter('lieu','Nord-Ouest (Bamenda)'); return false;">Nord-Ouest — Bamenda</a>
+                        <a href="#" onclick="selectFilter('lieu','Ouest (Bafoussam)'); return false;">Ouest — Bafoussam</a>
+                        <a href="#" onclick="selectFilter('lieu','Sud (Ebolowa)'); return false;">Sud — Ebolowa</a>
+                        <a href="#" onclick="selectFilter('lieu','Sud-Ouest (Buea)'); return false;">Sud-Ouest — Buea</a>
+                    </div>
+                </div>
+
+                <!-- DÉBUT : Filtre Ville / Quartier -->
+                <div class="fn-dropdown-wrapper" id="fn-mk-ville-wrapper">
+                    <button class="fn-filter-pill" id="fn-mk-ville-btn" onclick="toggleFilterDropdown('ville')">Ville / Quartier <i class="fas fa-chevron-down"></i></button>
+                    <div id="dropdown-ville" class="fn-dropdown-panel">
+                        <div class="fn-dropdown-title">Ville / Quartier</div>
+                        <div class="fn-mk-ville-search">
+                            <input type="text" id="fn-mk-ville-input" placeholder="Saisir une ville ou un quartier…" autocomplete="off">
+                        </div>
+                        <div id="fn-mk-ville-liste"></div>
+                    </div>
+                </div>
+                <!-- FIN : Filtre Ville / Quartier -->
+
+                <div class="fn-dropdown-wrapper">
+                    {% set cat = request.args.get('categorie') %}
+                    {% set cat_labels = {'Vehicules': 'Véhicules', 'Immobilier': 'Immobilier à louer', 'Electronique': 'Électronique', 'Mode': 'Mode', 'Maison': 'Maison et jardin', 'Loisirs': 'Loisirs', 'Famille': 'Famille', 'Autre': 'Autre'} %}
+                    <button class="fn-filter-pill {{ 'fn-filter-pill-active' if cat }}" onclick="toggleFilterDropdown('categorie')">{{ cat_labels.get(cat, 'Catégorie') }} <i class="fas fa-chevron-down"></i></button>
+                    <div id="dropdown-categorie" class="fn-dropdown-panel">
+                        <div class="fn-dropdown-title">Catégories</div>
+                        <a href="{{ url_for('main.marketplace') }}"><i class="fas fa-store"></i> Toutes les catégories</a>
+                        <a href="{{ url_for('main.marketplace', categorie='Vehicules') }}"><i class="fas fa-car"></i> Véhicules</a>
+                        <a href="{{ url_for('main.marketplace', categorie='Immobilier') }}"><i class="fas fa-home"></i> Immobilier à louer</a>
+                        <a href="{{ url_for('main.marketplace', categorie='Electronique') }}"><i class="fas fa-mobile-alt"></i> Électronique</a>
+                        <a href="{{ url_for('main.marketplace', categorie='Mode') }}"><i class="fas fa-tshirt"></i> Mode</a>
+                        <a href="{{ url_for('main.marketplace', categorie='Maison') }}"><i class="fas fa-couch"></i> Maison et jardin</a>
+                        <a href="{{ url_for('main.marketplace', categorie='Loisirs') }}"><i class="fas fa-futbol"></i> Loisirs</a>
+                        <a href="{{ url_for('main.marketplace', categorie='Famille') }}"><i class="fas fa-baby-carriage"></i> Famille</a>
+                        <a href="{{ url_for('main.marketplace', categorie='Autre') }}"><i class="fas fa-ellipsis-h"></i> Autre</a>
+                    </div>
+                </div>
+
+                <div class="fn-dropdown-wrapper">
+                    <button class="fn-filter-pill" onclick="toggleFilterDropdown('prix')">Prix <i class="fas fa-chevron-down"></i></button>
+                    <div id="dropdown-prix" class="fn-dropdown-panel">
+                        <div class="fn-dropdown-title">Fourchette de prix</div>
+                        <a href="#" onclick="selectFilter('prix',''); return false;">Tous les prix</a>
+                        <a href="#" onclick="selectFilter('prix','Moins de 10 000 FCFA'); return false;">Moins de 10 000 FCFA</a>
+                        <a href="#" onclick="selectFilter('prix','10 000 - 50 000 FCFA'); return false;">10 000 – 50 000 FCFA</a>
+                        <a href="#" onclick="selectFilter('prix','50 000 - 150 000 FCFA'); return false;">50 000 – 150 000 FCFA</a>
+                        <a href="#" onclick="selectFilter('prix','150 000 - 500 000 FCFA'); return false;">150 000 – 500 000 FCFA</a>
+                        <a href="#" onclick="selectFilter('prix','500 000 - 2 000 000 FCFA'); return false;">500 000 – 2 000 000 FCFA</a>
+                        <a href="#" onclick="selectFilter('prix','Plus de 2 000 000 FCFA'); return false;">Plus de 2 000 000 FCFA</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ============ GRILLE 2 COLONNES (comme la capture) ============ -->
+        <div class="fn-item-grid" id="fn-item-grid">
+            {% for annonce in annonces %}
+            <a href="{{ url_for('main.item_detail', item_id=annonce.id) }}"
+               class="fn-item-card"
+               data-title="{{ annonce.titre | lower }}"
+               data-id="{{ annonce.id }}"
+               data-titre="{{ annonce.titre }}"
+               data-prix="{{ annonce.prix }}"
+               data-localisation="{{ annonce.localisation or '' }}"
+               data-description="{{ annonce.description or '' }}"
+               data-categorie="{{ annonce.categorie or '' }}"
+               data-image="{{ url_for('static', filename='uploads/' + annonce.image) if annonce.image else url_for('static', filename='uploads/default_annonce.png') }}"
+               data-lat="{{ annonce.latitude if annonce.latitude is defined and annonce.latitude else '' }}"
+               data-lng="{{ annonce.longitude if annonce.longitude is defined and annonce.longitude else '' }}"
+               data-proprietaire="{{ '1' if annonce.proprietaire_id is defined and current_user.is_authenticated and annonce.proprietaire_id == current_user.id else '0' }}"
+               data-vendue="{{ '1' if annonce.vendue is defined and annonce.vendue else '0' }}"
+               onclick="ouvrirAnnonce(event, this)">
+
+                <!-- DÉBUT : Métadonnées Marketplace Pro (statut effectif + vendeur) -->
+                {% set fn_statut = 'vendu' if (annonce.vendue is defined and annonce.vendue) else (annonce.statut if (annonce.statut is defined and annonce.statut in ['disponible', 'reserve', 'vendu']) else 'disponible') %}
+                {% set fn_vendeur_id = annonce.proprietaire_id if (annonce.proprietaire_id is defined and annonce.proprietaire_id) else '' %}
+                <span class="fn-mk-meta" hidden data-statut="{{ fn_statut }}" data-vendeur="{{ fn_vendeur_id }}"></span>
+                <!-- FIN : Métadonnées Marketplace Pro (statut effectif + vendeur) -->
+
+                <div class="fn-item-image">
+                    <img src="{{ url_for('static', filename='uploads/' + annonce.image) if annonce.image else url_for('static', filename='uploads/default_annonce.png') }}" alt="{{ annonce.titre }}" loading="lazy">
+
+                    <span class="fn-mk-near" hidden>À proximité</span>
+
+                    <!-- DÉBUT : Badge de statut de l'article -->
+                    <span class="fn-mk-badge fn-mk-badge-{{ fn_statut }}">{{ {'disponible': 'Disponible', 'reserve': 'Réservé', 'vendu': 'Vendu'}[fn_statut] }}</span>
+                    <!-- FIN : Badge de statut de l'article -->
+
+                    <!-- DÉBUT : Bouton Mettre en favoris -->
+                    <button type="button" class="fn-mk-fav" data-annonce-id="{{ annonce.id }}" title="Mettre en favoris" aria-label="Mettre en favoris" aria-pressed="false"><i class="far fa-heart"></i></button>
+                    <!-- FIN : Bouton Mettre en favoris -->
+                </div>
+
+                <div class="fn-item-info">
+                    <p class="fn-item-line"><span class="fn-item-price">{% if annonce.prix == 0 %}Gratuit{% else %}{{ '{:,}'.format(annonce.prix).replace(',', ' ') }} FCFA{% endif %}</span><span class="fn-item-sep"> · </span><span class="fn-item-title">{{ ('✅ ' if annonce.vendue is defined and annonce.vendue else '') + annonce.titre }}</span></p>
+                    <p class="fn-item-location">{{ annonce.localisation }}</p>
+                </div>
+            </a>
+            {% else %}
+            <div class="fn-empty-state">
+                <i class="fas fa-store"></i>
+                <p>Aucune annonce pour le moment.</p>
+                <a href="{{ url_for('main.create_item') }}" class="fn-btn-create" style="max-width:240px;">
+                    <i class="fas fa-plus"></i> Créer votre première annonce
+                </a>
+            </div>
+            {% endfor %}
+            <div class="fn-empty-state" id="fn-mk-vide-x" style="display:none;">
+                <i class="fas fa-search"></i>
+                <p id="fn-mk-vide-x-txt">Aucune annonce trouvée pour ce filtre.</p>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- ============================================================ -->
+<!-- FENÊTRE D'ANNONCE (MODAL)                                     -->
+<!-- ============================================================ -->
+<div class="fn-modal-backdrop" id="annonce-modal-backdrop" onclick="fermerAnnonce()"></div>
+<div class="fn-modal" id="annonce-modal" role="dialog" aria-modal="true" aria-labelledby="annonce-modal-titre">
+    <button class="fn-modal-close" onclick="fermerAnnonce()" aria-label="Fermer"><i class="fas fa-times"></i></button>
+
+    <div class="fn-modal-image">
+        <img id="annonce-modal-image" src="" alt="">
+    </div>
+
+    <div class="fn-modal-body">
+        <h2 id="annonce-modal-titre">Titre</h2>
+        <p class="fn-modal-prix" id="annonce-modal-prix">0 FCFA</p>
+        <p class="fn-modal-ligne"><i class="fas fa-map-marker-alt"></i> <span id="annonce-modal-loc">Localisation</span></p>
+        <p class="fn-modal-ligne" id="annonce-modal-cat-ligne" style="display:none;"><i class="fas fa-tag"></i> <span id="annonce-modal-cat"></span></p>
+
+        <div class="fn-modal-desc" id="annonce-modal-desc">Description</div>
+
+        <div class="fn-modal-carte-bloc">
+            <div class="fn-modal-carte-titre"><i class="fas fa-map"></i> Localisation sur la carte</div>
+            <div id="annonce-modal-carte" class="fn-modal-carte"></div>
+        </div>
+
+        <div class="fn-modal-actions-proprietaire" id="annonce-modal-actions-prop" style="display:none;">
+            <div class="fn-modal-actions-titre"><i class="fas fa-user-cog"></i> Actions du propriétaire</div>
+
+            <div class="fn-modal-action-ligne">
+                <label for="annonce-modal-nouveau-prix">Modifier le prix (FCFA)</label>
+                <div class="fn-modal-action-input-row">
+                    <input type="number" id="annonce-modal-nouveau-prix" min="0" step="100" placeholder="Nouveau prix">
+                    <button class="fn-modal-btn fn-modal-btn-primary" onclick="modifierPrixAnnonce()"><i class="fas fa-check"></i> Valider</button>
+                </div>
+            </div>
+
+            <div class="fn-modal-action-ligne">
+                <button class="fn-modal-btn fn-modal-btn-warning" onclick="marquerAnnonceVendue()"><i class="fas fa-check-circle"></i> Marquer comme vendue</button>
+                <button class="fn-modal-btn fn-modal-btn-secondary" onclick="republierAnnonceAilleurs()"><i class="fas fa-bullhorn"></i> Republier ailleurs</button>
+            </div>
+
+            <!-- DÉBUT : Sélecteur de statut de l'article (propriétaire) -->
+            <div class="fn-modal-action-ligne">
+                <label for="fn-mk-statut-select">Statut de l'article</label>
+                <div class="fn-modal-action-input-row">
+                    <select id="fn-mk-statut-select" class="fn-mk-select">
+                        <option value="disponible">Disponible</option>
+                        <option value="reserve">Réservé</option>
+                        <option value="vendu">Vendu</option>
+                    </select>
+                    <button type="button" class="fn-modal-btn fn-modal-btn-primary" id="fn-mk-statut-apply"><i class="fas fa-check"></i> Appliquer</button>
+                </div>
+            </div>
+            <!-- FIN : Sélecteur de statut de l'article (propriétaire) -->
+
+            <p class="fn-modal-message" id="annonce-modal-message"></p>
+        </div>
+
+        <!-- DÉBUT : Boutons Discuter avec le vendeur / Favori (fenêtre d'annonce) -->
+        <div class="fn-mk-modal-row" id="fn-mk-modal-row">
+            <button type="button" class="fn-modal-btn fn-modal-btn-primary fn-mk-modal-chat" id="fn-mk-modal-chat" style="display:none;"><i class="fas fa-comment-dots"></i> Discuter avec le vendeur</button>
+            <button type="button" class="fn-modal-btn fn-modal-btn-secondary fn-mk-fav-inline" id="fn-mk-modal-fav" aria-pressed="false"><i class="far fa-heart"></i> <span>Favori</span></button>
+        </div>
+        <!-- FIN : Boutons Discuter avec le vendeur / Favori (fenêtre d'annonce) -->
+
+        <a id="annonce-modal-lien-complet" href="#" class="fn-modal-btn fn-modal-btn-primary fn-modal-btn-large">
+            <i class="fas fa-external-link-alt"></i> Voir la page complète
+        </a>
+    </div>
+</div>
+
+<!-- Champs cachés pour les URLs des routes Flask -->
+<script>
+    window.FNSHI_URLS = {
+        modifierPrix:    "{{ url_for('main.api_modifier_prix', item_id=0) }}",
+        marquerVendue:   "{{ url_for('main.api_marquer_vendue', item_id=0) }}",
+        republier:       "{{ url_for('main.api_republier_ailleurs', item_id=0) }}"
+    };
+    window.FN_MK_CONNECTE = {% if current_user and current_user.is_authenticated %}true{% else %}false{% endif %};
+    window.FN_MK_VILLE_PROFIL = {{ (current_user.ville if (current_user and current_user.ville) else '') | tojson }};
+</script>
+
+<!-- LEAFLET (carte gratuite, aucune clé API) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { background-color: #fff; margin: 0; font-family: Segoe UI, Helvetica, Arial, sans-serif; }
+
+    .fn-market-container { min-height: calc(100vh - var(--header-h, 60px)); position: relative; background: #fff; }
+    .fn-market-main { max-width: 1100px; margin: 0 auto; padding: 0 0 90px; }
+
+    /* ---------- En-tête façon Facebook Marketplace ---------- */
+    .fn-mkh { position: sticky; top: var(--header-h, 60px); z-index: 200; background: #fff; padding: 8px 12px 6px; }
+    .fn-mkh-row { display: flex; align-items: center; gap: 10px; }
+    .fn-mkh-menu { background: none; border: 0; font-size: 24px; color: #050505; width: 40px; height: 44px; cursor: pointer; padding: 0; }
+    .fn-mkh h1 { flex: 1; margin: 0; font-size: 28px; font-weight: 800; color: #050505; letter-spacing: -0.3px; }
+    .fn-mkh-circle { width: 44px; height: 44px; border-radius: 50%; border: 2.5px solid #050505; background: #fff; color: #050505; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+    .fn-mkh-circle:active { background: #f0f2f5; }
+
+    .fn-mk-tabs { display: flex; align-items: center; gap: 4px; padding: 8px 0 4px; overflow-x: auto; scrollbar-width: none; }
+    .fn-mk-tabs::-webkit-scrollbar { display: none; }
+    .fn-mk-tab { border: 0; background: none; border-radius: 20px; padding: 10px 16px; font-size: 18px; color: #050505; cursor: pointer; text-decoration: none; white-space: nowrap; font-family: inherit; }
+    .fn-mk-tab:active { background: #f0f2f5; }
+    .fn-mk-tab.active { background: #e7f3ff; color: #1877f2; font-weight: 600; }
+    .fn-mk-sep { width: 1px; height: 26px; background: #ced0d4; margin: 0 8px 0 auto; flex-shrink: 0; }
+    .fn-mk-pin { border: 0; background: none; font-size: 22px; color: #050505; cursor: pointer; padding: 6px 8px; }
+
+    .fn-mk-menuwrap { position: relative; }
+    .fn-mk-pop { display: none; position: absolute; top: 100%; left: 0; margin-top: 6px; background: #fff; border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.22); min-width: 240px; max-height: 70vh; overflow-y: auto; z-index: 320; padding: 6px 0; }
+    .fn-mk-pop-right { left: auto; right: 0; }
+    .fn-mk-pop.open { display: block; }
+    .fn-mk-pop a { display: flex; align-items: center; gap: 12px; padding: 11px 16px; font-size: 16px; color: #050505; text-decoration: none; }
+    .fn-mk-pop a i { width: 20px; text-align: center; color: #65676b; }
+    .fn-mk-pop a:hover { background: #f0f2f5; }
+
+    .fn-mk-searchpanel { display: none; align-items: center; gap: 10px; background: #f0f2f5; border-radius: 24px; padding: 4px 8px 4px 16px; margin: 8px 0 2px; }
+    .fn-mk-searchpanel.open { display: flex; }
+    .fn-mk-searchpanel > i { color: #65676b; }
+    .fn-mk-searchpanel input { flex: 1; border: 0; background: transparent; font-size: 16px; padding: 10px 0; outline: none; min-width: 0; }
+    .fn-mk-searchpanel button { border: 0; background: #e4e6eb; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; color: #050505; }
+
+    .fn-filter-row { display: none; gap: 8px; flex-wrap: wrap; padding: 8px 0 4px; }
+    .fn-filter-row.open { display: flex; }
+    .fn-filter-pill { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #ccd0d5; border-radius: 20px; padding: 8px 14px; font-size: 14px; font-weight: 600; color: #050505; cursor: pointer; }
+    .fn-filter-pill:hover { background: #f0f2f5; }
+    .fn-filter-pill-active { background: #e7f3ff !important; color: #1877f2; border-color: #1877f2; }
+
+    .fn-dropdown-wrapper { position: relative; }
+    .fn-dropdown-panel { display: none; position: absolute; top: 44px; left: 0; background: white; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.18); min-width: 240px; max-width: 90vw; max-height: 320px; overflow-y: auto; z-index: 310; padding: 6px 0; }
+    .fn-dropdown-panel.open { display: block; }
+    .fn-dropdown-title { font-size: 13px; font-weight: 700; color: #65676b; padding: 8px 14px 4px; }
+    .fn-dropdown-panel a { display: flex; align-items: center; gap: 10px; padding: 8px 14px; font-size: 14px; color: #050505; text-decoration: none; }
+    .fn-dropdown-panel a i { width: 18px; text-align: center; color: #65676b; }
+    .fn-dropdown-panel a:hover { background: #f0f2f5; }
+
+    /* ---------- Tiroir ☰ ---------- */
+    .fn-market-backdrop { display: none; position: fixed; top: var(--header-h, 60px); left: 0; right: 0; bottom: calc(var(--nav-h, 60px) + env(safe-area-inset-bottom, 0px)); background: rgba(0,0,0,0.45); z-index: 289; }
+    .fn-market-backdrop.open { display: block; }
+    .fn-market-sidebar {
+        position: fixed; top: var(--header-h, 60px); left: 0;
+        height: calc(100vh - var(--header-h, 60px) - var(--nav-h, 60px) - env(safe-area-inset-bottom, 0px));
+        width: 340px; max-width: 88vw; z-index: 290; background: white; padding: 16px;
+        transform: translateX(-100%); transition: transform 0.25s ease;
+        box-shadow: 2px 0 20px rgba(0,0,0,0.25); overflow-y: auto; display: flex; flex-direction: column;
+    }
+    .fn-market-sidebar.open { transform: translateX(0); }
+    .fn-sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .fn-sidebar-header h2 { font-size: 24px; margin: 0; }
+    .fn-btn-icon { background: #e4e6eb; border: none; border-radius: 50%; width: 36px; height: 36px; cursor: pointer; font-size: 16px; color: #050505; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+    .fn-search-bar { position: relative; margin-bottom: 20px; }
+    .fn-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #65676b; font-size: 13px; }
+    .fn-search-bar input { width: 100%; padding: 10px 10px 10px 34px; border-radius: 20px; border: none; background: #f0f2f5; font-size: 14px; }
+    .fn-sidebar-nav ul { list-style: none; padding: 0; margin: 0; }
+    .fn-sidebar-nav h3 { font-size: 17px; margin: 4px 0 8px; color: #050505; }
+    .fn-sidebar-nav li a { display: flex; align-items: center; padding: 10px; text-decoration: none; color: #1c1e21; border-radius: 8px; font-weight: 500; }
+    .fn-sidebar-nav li a:hover { background: #f0f2f5; }
+    .fn-sidebar-nav li.active a { background: #e7f3ff; color: #1877f2; }
+    .fn-sidebar-nav li a i { margin-right: 12px; font-size: 20px; width: 25px; text-align: center; }
+    .separator { height: 1px; background: #dddfe2; margin: 15px 0; }
+    .fn-btn-create { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: #e7f3ff; color: #1877f2; text-align: center; padding: 10px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 20px; }
+    .fn-btn-create:hover { background: #d5e9ff; }
+
+    /* ---------- Grille 2 colonnes ---------- */
+    .fn-item-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 8px 8px 0; }
+    @media (min-width: 700px) { .fn-item-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; padding: 12px; } }
+
+    .fn-item-card { position: relative; background: #fff; display: flex; flex-direction: column; text-decoration: none; cursor: pointer; }
+    .fn-item-image { position: relative; width: 100%; aspect-ratio: 1 / 1; background: #f0f2f5; overflow: hidden; }
+    .fn-item-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .fn-item-info { padding: 6px 2px 10px; }
+    .fn-item-line { margin: 0; font-size: 16px; color: #050505; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fn-item-price { font-weight: 600; }
+    .fn-item-title { color: #050505; }
+    .fn-item-location { display: none; }
+    .fn-mk-hidden-x { display: none !important; }
+
+    .fn-empty-state { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: #65676b; text-align: center; }
+    .fn-empty-state i { font-size: 40px; margin-bottom: 12px; color: #ccd0d5; }
+    .fn-empty-state p { font-size: 16px; margin: 0 0 16px; }
+
+    /* Pastilles sur l'image */
+    .fn-mk-near { position: absolute; top: 8px; left: 8px; z-index: 2; background: #fff; color: #050505; padding: 4px 10px; border-radius: 6px; font-size: 14px; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.25); pointer-events: none; }
+    .fn-mk-near[hidden] { display: none; }
+    .fn-mk-badge { position: absolute; left: 8px; bottom: 8px; z-index: 2; padding: 3px 9px; border-radius: 12px; font-size: 12px; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,.25); pointer-events: none; }
+    .fn-mk-badge-disponible { display: none; }
+    .fn-mk-badge-reserve { background: #fff4d6; color: #8a5a00; }
+    .fn-mk-badge-vendu { background: #fde8e8; color: #b42318; }
+    .fn-mk-fav { position: absolute; top: 6px; right: 6px; z-index: 2; width: 34px; height: 34px; border: none; border-radius: 50%; background: rgba(255,255,255,.92); color: #1c1e21; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+    .fn-mk-fav:hover { background: #fff; transform: scale(1.06); }
+    .fn-mk-fav.fn-mk-fav-on { color: #e0245e; }
+
+    /* MODAL */
+    .fn-modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 900; }
+    .fn-modal-backdrop.open { display: block; }
+    .fn-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 12px; width: 92vw; max-width: 560px; max-height: 90vh; overflow-y: auto; z-index: 910; box-shadow: 0 12px 40px rgba(0,0,0,0.35); }
+    .fn-modal.open { display: block; }
+    .fn-modal-close { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.55); color: white; border: none; border-radius: 50%; width: 34px; height: 34px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; z-index: 2; }
+    .fn-modal-close:hover { background: rgba(0,0,0,0.75); }
+    .fn-modal-image { width: 100%; aspect-ratio: 4 / 3; background: #f0f2f5; border-radius: 12px 12px 0 0; overflow: hidden; }
+    .fn-modal-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .fn-modal-body { padding: 16px 18px 20px; }
+    .fn-modal-body h2 { font-size: 20px; margin: 0 0 6px; color: #1c1e21; }
+    .fn-modal-prix { font-size: 22px; font-weight: 700; color: #1877f2; margin: 0 0 10px; }
+    .fn-modal-ligne { font-size: 14px; color: #65676b; margin: 4px 0; display: flex; align-items: center; gap: 8px; }
+    .fn-modal-ligne i { color: #1877f2; width: 16px; text-align: center; }
+    .fn-modal-desc { margin: 12px 0; font-size: 14px; color: #1c1e21; line-height: 1.5; white-space: pre-line; background: #f7f8fa; padding: 10px 12px; border-radius: 8px; }
+    .fn-modal-carte-bloc { margin: 12px 0; }
+    .fn-modal-carte-titre { font-size: 13px; font-weight: 700; color: #65676b; margin-bottom: 6px; }
+    .fn-modal-carte { width: 100%; height: 200px; border-radius: 10px; overflow: hidden; background: #e9ecef; }
+    .fn-modal-actions-proprietaire { margin-top: 14px; padding: 12px; border: 1px dashed #1877f2; border-radius: 10px; background: #f5f9ff; }
+    .fn-modal-actions-titre { font-size: 13px; font-weight: 700; color: #1877f2; margin-bottom: 10px; }
+    .fn-modal-action-ligne { margin-bottom: 10px; }
+    .fn-modal-action-ligne:last-child { margin-bottom: 0; }
+    .fn-modal-action-ligne label { display: block; font-size: 13px; color: #1c1e21; margin-bottom: 4px; }
+    .fn-modal-action-input-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .fn-modal-action-input-row input { flex: 1; min-width: 140px; padding: 8px 10px; border: 1px solid #ccd0d5; border-radius: 8px; font-size: 14px; outline: none; }
+    .fn-modal-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 14px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; }
+    .fn-modal-btn-primary { background: #1877f2; color: white; }
+    .fn-modal-btn-primary:hover { background: #145fca; }
+    .fn-modal-btn-secondary { background: #e4e6eb; color: #050505; }
+    .fn-modal-btn-secondary:hover { background: #d5d7db; }
+    .fn-modal-btn-warning { background: #f7b928; color: #050505; }
+    .fn-modal-btn-warning:hover { background: #e0a51e; }
+    .fn-modal-btn-large { width: 100%; margin-top: 14px; padding: 11px; font-size: 15px; }
+    .fn-modal-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .fn-modal-message { font-size: 13px; margin: 8px 0 0; color: #1877f2; min-height: 16px; }
+
+    @media (max-width: 600px) {
+        .fn-modal { width: 95vw; max-height: 92vh; }
+        .fn-modal-body h2 { font-size: 17px; }
+        .fn-modal-prix { font-size: 19px; }
+        .fn-modal-carte { height: 160px; }
+    }
+</style>
+
+<!-- DÉBUT : Styles Marketplace Pro (filtre ville, chat, toast) -->
+<style>
+    .fn-mk-hidden-ville, .fn-mk-hidden-fav { display: none !important; }
+    .fn-mk-ville-search { padding: 4px 10px 6px; }
+    .fn-mk-ville-search input { width: 100%; padding: 8px 12px; border: none; border-radius: 18px; background: #f0f2f5; font-size: 14px; outline: none; }
+    #dropdown-ville .fn-mk-ville-group-title { font-weight: 700; }
+    #dropdown-ville a.fn-mk-quartier { padding-left: 38px; font-size: 13px; color: #4b4c4f; }
+    .fn-mk-select { flex: 1; min-width: 140px; padding: 8px 10px; border: 1px solid #ccd0d5; border-radius: 8px; font-size: 14px; background: #fff; }
+    .fn-mk-modal-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+    .fn-mk-modal-row .fn-modal-btn { flex: 1; min-width: 160px; }
+    .fn-mk-fav-inline.fn-mk-fav-on i { color: #e0245e; }
+    .fn-mk-nav-badge { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: #1877f2; color: #fff; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+    .fn-sidebar-nav li.fn-mk-li-actif a { background: #e7f3ff; color: #1877f2; }
+    .fn-mk-toast { position: fixed; left: 50%; bottom: 80px; transform: translateX(-50%); z-index: 1200; background: #1c1e21; color: #fff; padding: 10px 16px; border-radius: 20px; font-size: 14px; max-width: 88vw; box-shadow: 0 4px 14px rgba(0,0,0,.3); }
+    .fn-mk-toast.error { background: #b42318; }
+</style>
+<!-- FIN : Styles Marketplace Pro -->
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<script>
+/* ============================================================
+   EN-TÊTE : menus, onglets, recherche, filtres
+   ============================================================ */
+var _mkEtat = { q: '', lieu: '', prix: null, locale: false };
+var MK_VILLE = window.FN_MK_VILLE_PROFIL || '';
+var _MK_PRIX = {
+    'Moins de 10 000 FCFA': [0, 9999], '10 000 - 50 000 FCFA': [10000, 50000],
+    '50 000 - 150 000 FCFA': [50000, 150000], '150 000 - 500 000 FCFA': [150000, 500000],
+    '500 000 - 2 000 000 FCFA': [500000, 2000000], 'Plus de 2 000 000 FCFA': [2000001, Infinity]
+};
+var _MK_DEFAUT = { lieu: 'Lieu', prix: 'Prix' };
+
+function _mkNorm(t) { return (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
+
+function closeMkPops() { document.querySelectorAll('.fn-mk-pop.open').forEach(function (p) { p.classList.remove('open'); }); }
+function toggleMkPop(id) {
+    var p = document.getElementById(id); if (!p) return;
+    var etaitOuvert = p.classList.contains('open');
+    closeMkPops();
+    document.querySelectorAll('.fn-dropdown-panel.open').forEach(function (x) { x.classList.remove('open'); });
+    if (!etaitOuvert) {
+        p.classList.add('open');
+        /* position: fixed => le menu n'est plus coupé par .fn-mk-tabs (overflow-x: auto) */
+        var b = p.previousElementSibling;
+        if (b) {
+            var r = b.getBoundingClientRect();
+            var larg = p.offsetWidth || 240;
+            var gauche = p.classList.contains('fn-mk-pop-right') ? r.right - larg : r.left;
+            p.style.position = 'fixed';
+            p.style.top = (r.bottom + 6) + 'px';
+            p.style.right = 'auto';
+            p.style.left = Math.max(8, Math.min(gauche, window.innerWidth - larg - 8)) + 'px';
+        }
+    }
+}
+window.addEventListener('scroll', closeMkPops, { passive: true });
+
+function toggleFilterDropdown(name) {
+    var panel = document.getElementById('dropdown-' + name);
+    var wasOpen = panel.classList.contains('open');
+    document.querySelectorAll('.fn-dropdown-panel.open').forEach(function (p) { p.classList.remove('open'); });
+    closeMkPops();
+    if (!wasOpen) panel.classList.add('open');
+}
+
+function toggleFiltres(forcer) {
+    var row = document.getElementById('fn-filter-row');
+    var ouvrir = (typeof forcer === 'boolean') ? forcer : !row.classList.contains('open');
+    row.classList.toggle('open', ouvrir);
+    closeMkPops();
+}
+
+function selectFilter(name, value) {
+    var panel = document.getElementById('dropdown-' + name);
+    panel.classList.remove('open');
+    var btn = panel.closest('.fn-dropdown-wrapper').querySelector('.fn-filter-pill');
+    if (!value) {
+        btn.innerHTML = (_MK_DEFAUT[name] || name) + ' <i class="fas fa-chevron-down"></i>';
+        btn.classList.remove('fn-filter-pill-active');
+    } else {
+        btn.innerHTML = value + ' <i class="fas fa-chevron-down"></i>';
+        btn.classList.add('fn-filter-pill-active');
+    }
+    if (name === 'lieu') _mkEtat.lieu = value;
+    if (name === 'prix') _mkEtat.prix = value ? _MK_PRIX[value] : null;
+    appliquerFiltresMk();
+}
+
+function toggleMarketSearch(forcer, vider) {
+    var box = document.getElementById('mk-search-panel');
+    var ouvrir = (typeof forcer === 'boolean') ? forcer : !box.classList.contains('open');
+    box.classList.toggle('open', ouvrir);
+    closeMkPops();
+    var inp = document.getElementById('market-search-input');
+    if (ouvrir) { inp.focus(); }
+    else if (vider) { inp.value = ''; filterMarketItems(''); }
+}
+
+function filterMarketItems(query) {
+    _mkEtat.q = _mkNorm(query);
+    appliquerFiltresMk();
+}
+
+function setTab(nom) {
+    if (nom === 'locale' && !MK_VILLE) {
+        if (window.fnMkToast) window.fnMkToast('Définissez votre ville pour utiliser « Locale ».');
+        window.location.href = '/marketplace/localisation';
+        return;
+    }
+    _mkEtat.locale = (nom === 'locale');
+    document.getElementById('mk-tab-decouvrir').classList.toggle('active', !_mkEtat.locale);
+    document.getElementById('mk-tab-locale').classList.toggle('active', _mkEtat.locale);
+    appliquerFiltresMk();
+}
+
+function _mkEstProche(card) {
+    if (!MK_VILLE) return false;
+    return _mkNorm(card.dataset.localisation).indexOf(_mkNorm(MK_VILLE)) !== -1;
+}
+
+function majProximite() {
+    document.querySelectorAll('.fn-item-card').forEach(function (c) {
+        var n = c.querySelector('.fn-mk-near');
+        if (n) n.hidden = !_mkEstProche(c);
+    });
+    appliquerFiltresMk();
+}
+
+function appliquerFiltresMk() {
+    var cartes = document.querySelectorAll('.fn-item-card'), visibles = 0;
+    var tokensLieu = _mkEtat.lieu ? _mkEtat.lieu.split(/[()]/).map(_mkNorm).filter(Boolean) : [];
+    cartes.forEach(function (c) {
+        var ok = true;
+        if (_mkEtat.q) {
+            var meule = _mkNorm((c.dataset.title || '') + ' ' + (c.dataset.categorie || '') + ' ' + (c.dataset.localisation || ''));
+            ok = meule.indexOf(_mkEtat.q) !== -1;
+        }
+        if (ok && tokensLieu.length) {
+            var loc = _mkNorm(c.dataset.localisation);
+            ok = tokensLieu.some(function (t) { return loc.indexOf(t) !== -1; });
+        }
+        if (ok && _mkEtat.prix) {
+            var p = parseInt(c.dataset.prix, 10);
+            ok = !isNaN(p) && p >= _mkEtat.prix[0] && p <= _mkEtat.prix[1];
+        }
+        if (ok && _mkEtat.locale) ok = _mkEstProche(c);
+        c.classList.toggle('fn-mk-hidden-x', !ok);
+        if (ok) visibles++;
+    });
+    var vide = document.getElementById('fn-mk-vide-x');
+    if (vide) {
+        vide.style.display = (cartes.length && !visibles) ? '' : 'none';
+        var t = document.getElementById('fn-mk-vide-x-txt');
+        if (t) t.textContent = _mkEtat.locale && !_mkEtat.q && !_mkEtat.lieu && !_mkEtat.prix
+            ? 'Aucune annonce près de ' + MK_VILLE + ' pour le moment.' : 'Aucune annonce trouvée pour ce filtre.';
+    }
+}
+
+document.addEventListener('click', function (e) {
+    if (!e.target.closest('.fn-dropdown-wrapper')) {
+        document.querySelectorAll('.fn-dropdown-panel.open').forEach(function (p) { p.classList.remove('open'); });
+    }
+    if (!e.target.closest('.fn-mk-menuwrap')) closeMkPops();
+});
+
+function toggleMarketSidebar(open) {
+    var sidebar = document.getElementById('market-sidebar');
+    var backdrop = document.getElementById('market-backdrop');
+    if (!sidebar || !backdrop) return;
+    closeMkPops();
+    sidebar.classList.toggle('open', open);
+    backdrop.classList.toggle('open', open);
+}
+
+/* Ville de l'utilisateur (enregistrée dans « Localisation ») : badge « À proximité » + onglet « Locale » */
+(function () {
+    majProximite();
+    if (!window.fetch) return;
+    fetch('/api/marketplace/localisation', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { if (d && d.success) { MK_VILLE = d.ville || MK_VILLE; majProximite(); } })
+        .catch(function () {});
+})();
+
+/* ============================================================
+   FENÊTRE D'ANNONCE + CARTE + ACTIONS PROPRIÉTAIRE
+   ============================================================ */
+
+let _carteAnnonce = null;
+let _marqueurAnnonce = null;
+let _annonceCourante = null;
+
+const _COORDS_REGIONS = {
+    'Adamaoua':     { lat: 7.3167,  lng: 13.5833, nom: 'Ngaoundéré' },
+    'Centre':       { lat: 3.8480,  lng: 11.5021, nom: 'Yaoundé' },
+    'Est':          { lat: 4.5770,  lng: 13.6846, nom: 'Bertoua' },
+    'Extrême-Nord': { lat: 10.5910, lng: 14.3159, nom: 'Maroua' },
+    'Littoral':     { lat: 4.0511,  lng: 9.7679,  nom: 'Douala' },
+    'Nord':         { lat: 9.3017,  lng: 13.3921, nom: 'Garoua' },
+    'Nord-Ouest':   { lat: 5.9631,  lng: 10.1591, nom: 'Bamenda' },
+    'Ouest':        { lat: 5.4781,  lng: 10.4178, nom: 'Bafoussam' },
+    'Sud':          { lat: 2.9000,  lng: 11.1500, nom: 'Ebolowa' },
+    'Sud-Ouest':    { lat: 4.1550,  lng: 9.2410,  nom: 'Buea' },
+};
+
+function _devinerCoords(localisation) {
+    if (!localisation) return null;
+    const loc = localisation.toLowerCase();
+    for (const region in _COORDS_REGIONS) {
+        if (loc.includes(region.toLowerCase())) return _COORDS_REGIONS[region];
+    }
+    return null;
+}
+
+function ouvrirAnnonce(event, el) {
+    if (event && event.target.closest('a[href]:not(.fn-item-card)')) return;
+    if (event) event.preventDefault();
+
+    const ds = el.dataset;
+
+    _annonceCourante = {
+        id: ds.id,
+        titre: ds.titre,
+        prix: ds.prix,
+        localisation: ds.localisation,
+        description: ds.description,
+        categorie: ds.categorie,
+        image: ds.image,
+        lat: ds.lat ? parseFloat(ds.lat) : null,
+        lng: ds.lng ? parseFloat(ds.lng) : null,
+        proprietaire: ds.proprietaire === '1',
+        vendue: ds.vendue === '1',
+        lienComplet: el.getAttribute('href'),
+    };
+
+    /* « Vus récemment » : on note l'annonce ouverte (route existante /api/enregistrer-activite) */
+    if (window.FN_MK_CONNECTE && window.fetch) {
+        try {
+            fetch('/api/enregistrer-activite', {
+                method: 'POST', credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'annonce', url: _annonceCourante.lienComplet, titre: _annonceCourante.titre || '' })
+            }).catch(function () {});
+        } catch (e) { /* jamais bloquant */ }
+    }
+
+    document.getElementById('annonce-modal-titre').textContent = _annonceCourante.titre || 'Annonce';
+    document.getElementById('annonce-modal-image').src = _annonceCourante.image || '';
+    document.getElementById('annonce-modal-image').alt = _annonceCourante.titre || '';
+
+    const prixNum = parseInt(_annonceCourante.prix, 10);
+    document.getElementById('annonce-modal-prix').textContent =
+        isNaN(prixNum) ? '' : (prixNum === 0 ? 'Gratuit' : prixNum.toLocaleString('fr-FR').replace(/\u202f|\u00a0/g, ' ') + ' FCFA');
+
+    document.getElementById('annonce-modal-loc').textContent = _annonceCourante.localisation || 'Localisation non précisée';
+
+    const catLigne = document.getElementById('annonce-modal-cat-ligne');
+    if (_annonceCourante.categorie) {
+        catLigne.style.display = '';
+        document.getElementById('annonce-modal-cat').textContent = _annonceCourante.categorie;
+    } else {
+        catLigne.style.display = 'none';
+    }
+
+    document.getElementById('annonce-modal-desc').textContent =
+        _annonceCourante.description || 'Aucune description fournie.';
+
+    document.getElementById('annonce-modal-lien-complet').href = _annonceCourante.lienComplet || '#';
+
+    const blocProp = document.getElementById('annonce-modal-actions-prop');
+    const msg = document.getElementById('annonce-modal-message');
+    msg.textContent = '';
+    document.getElementById('annonce-modal-nouveau-prix').value = '';
+
+    if (_annonceCourante.proprietaire) {
+        blocProp.style.display = '';
+    } else {
+        blocProp.style.display = 'none';
+    }
+
+    document.getElementById('annonce-modal-backdrop').classList.add('open');
+    document.getElementById('annonce-modal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    setTimeout(() => _afficherCarteAnnonce(), 50);
+}
+
+function _afficherCarteAnnonce() {
+    const conteneur = document.getElementById('annonce-modal-carte');
+    if (!conteneur || typeof L === 'undefined') return;
+
+    let coords = null;
+    const nomLieu = _annonceCourante.localisation || '';
+    if (_annonceCourante.lat && _annonceCourante.lng) {
+        coords = { lat: _annonceCourante.lat, lng: _annonceCourante.lng, nom: nomLieu };
+    } else {
+        const devine = _devinerCoords(_annonceCourante.localisation);
+        if (devine) coords = devine;
+    }
+
+    if (!coords) {
+        conteneur.innerHTML =
+            '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#65676b;font-size:13px;text-align:center;padding:10px;">' +
+            'Localisation précise non disponible.<br>Lieu indiqué : ' + (nomLieu || 'non précisé') +
+            '</div>';
+        return;
+    }
+
+    if (!_carteAnnonce) {
+        conteneur.innerHTML = '';
+        _carteAnnonce = L.map(conteneur, { scrollWheelZoom: false }).setView([coords.lat, coords.lng], 11);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(_carteAnnonce);
+    } else {
+        _carteAnnonce.setView([coords.lat, coords.lng], 11);
+    }
+
+    if (_marqueurAnnonce) _carteAnnonce.removeLayer(_marqueurAnnonce);
+    _marqueurAnnonce = L.marker([coords.lat, coords.lng]).addTo(_carteAnnonce);
+    _marqueurAnnonce.bindPopup('<b>' + (nomLieu || coords.nom) + '</b>').openPopup();
+
+    setTimeout(() => _carteAnnonce.invalidateSize(), 100);
+}
+
+function fermerAnnonce() {
+    document.getElementById('annonce-modal-backdrop').classList.remove('open');
+    document.getElementById('annonce-modal').classList.remove('open');
+    document.body.style.overflow = '';
+}
+
+/* Construit l'URL réelle à partir du modèle renvoyé par Flask */
+function _urlAvecId(modele, id) {
+    return modele.replace(/\/0(\/|$)/, '/' + id + '$1');
+}
+
+/* ----- Actions du propriétaire (avec vrai appel serveur) ----- */
+
+async function modifierPrixAnnonce() {
+    if (!_annonceCourante || !_annonceCourante.proprietaire) return;
+    const champ = document.getElementById('annonce-modal-nouveau-prix');
+    const msg = document.getElementById('annonce-modal-message');
+    const nouveauPrix = parseInt(champ.value, 10);
+
+    if (isNaN(nouveauPrix) || nouveauPrix < 100) {
+        msg.style.color = '#d9534f';
+        msg.textContent = 'Le prix doit être un nombre supérieur ou égal à 100.';
+        return;
+    }
+
+    msg.style.color = '#65676b';
+    msg.textContent = 'Enregistrement en cours...';
+
+    try {
+        const url = _urlAvecId(window.FNSHI_URLS.modifierPrix, _annonceCourante.id);
+        const rep = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prix: nouveauPrix })
+        });
+        const data = await rep.json();
+
+        if (!rep.ok || !data.success) {
+            msg.style.color = '#d9534f';
+            msg.textContent = data.message || 'Erreur lors de la mise à jour.';
+            return;
+        }
+
+        _annonceCourante.prix = nouveauPrix;
+        document.getElementById('annonce-modal-prix').textContent =
+            nouveauPrix.toLocaleString('fr-FR').replace(/\u202f|\u00a0/g, ' ') + ' FCFA';
+
+        const carte = document.querySelector('.fn-item-card[data-id="' + _annonceCourante.id + '"]');
+        if (carte) {
+            carte.dataset.prix = nouveauPrix;
+            const prixEl = carte.querySelector('.fn-item-price');
+            if (prixEl) {
+                prixEl.textContent = nouveauPrix.toLocaleString('fr-FR').replace(/\u202f|\u00a0/g, ' ') + ' FCFA';
+            }
+        }
+
+        msg.style.color = '#1877f2';
+        msg.textContent = 'Prix mis à jour avec succès.';
+    } catch (err) {
+        msg.style.color = '#d9534f';
+        msg.textContent = 'Erreur réseau. Veuillez réessayer.';
+    }
+}
+
+async function marquerAnnonceVendue() {
+    if (!_annonceCourante || !_annonceCourante.proprietaire) return;
+    const msg = document.getElementById('annonce-modal-message');
+
+    if (!confirm('Confirmer : marquer cette annonce comme vendue ?')) return;
+
+    msg.style.color = '#65676b';
+    msg.textContent = 'Enregistrement en cours...';
+
+    try {
+        const url = _urlAvecId(window.FNSHI_URLS.marquerVendue, _annonceCourante.id);
+        const rep = await fetch(url, { method: 'POST' });
+        const data = await rep.json();
+
+        if (!rep.ok || !data.success) {
+            msg.style.color = '#d9534f';
+            msg.textContent = data.message || 'Erreur lors de la mise à jour.';
+            return;
+        }
+
+        _annonceCourante.vendue = true;
+        const carte = document.querySelector('.fn-item-card[data-id="' + _annonceCourante.id + '"]');
+        if (carte) {
+            carte.dataset.vendue = '1';
+            carte.style.opacity = '0.55';
+            const titreEl = carte.querySelector('.fn-item-title');
+            if (titreEl && !titreEl.textContent.startsWith('✅ ')) {
+                titreEl.textContent = '✅ ' + titreEl.textContent;
+            }
+        }
+
+        msg.style.color = '#1877f2';
+        msg.textContent = 'Annonce marquée comme vendue.';
+    } catch (err) {
+        msg.style.color = '#d9534f';
+        msg.textContent = 'Erreur réseau. Veuillez réessayer.';
+    }
+}
+
+async function republierAnnonceAilleurs() {
+    if (!_annonceCourante || !_annonceCourante.proprietaire) return;
+    const msg = document.getElementById('annonce-modal-message');
+
+    const nouvelleVille = prompt(
+        'Indiquez la nouvelle ville ou région où republier cette annonce :',
+        _annonceCourante.localisation || ''
+    );
+    if (nouvelleVille === null) return;
+    if (!nouvelleVille.trim()) {
+        msg.style.color = '#d9534f';
+        msg.textContent = 'Veuillez saisir une ville ou une région.';
+        return;
+    }
+
+    msg.style.color = '#65676b';
+    msg.textContent = 'Republication en cours...';
+
+    try {
+        const url = _urlAvecId(window.FNSHI_URLS.republier, _annonceCourante.id);
+        const rep = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ localisation: nouvelleVille.trim() })
+        });
+        const data = await rep.json();
+
+        if (!rep.ok || !data.success) {
+            msg.style.color = '#d9534f';
+            msg.textContent = data.message || 'Erreur lors de la republication.';
+            return;
+        }
+
+        _annonceCourante.localisation = nouvelleVille.trim();
+        document.getElementById('annonce-modal-loc').textContent = nouvelleVille.trim();
+
+        const carte = document.querySelector('.fn-item-card[data-id="' + _annonceCourante.id + '"]');
+        if (carte) {
+            carte.dataset.localisation = nouvelleVille.trim();
+            const locEl = carte.querySelector('.fn-item-location');
+            if (locEl) locEl.textContent = nouvelleVille.trim();
+        }
+        majProximite();
+
+        // On réaffiche la carte avec la nouvelle position
+        _afficherCarteAnnonce();
+
+        msg.style.color = '#1877f2';
+        msg.textContent = 'Annonce republiée à ' + nouvelleVille.trim() + '.';
+    } catch (err) {
+        msg.style.color = '#d9534f';
+        msg.textContent = 'Erreur réseau. Veuillez réessayer.';
+    }
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') { fermerAnnonce(); closeMkPops(); toggleMarketSidebar(false); }
+});
+</script>
+
+<!-- DÉBUT : Script Marketplace Pro (statut, favoris, chat, filtre ville) -->
+<script>
+(function () {
+    'use strict';
+    var BASE = '/marketplace';   /* préfixe du blueprint marketplace_pro */
+    var $ = function (id) { return document.getElementById(id); };
+    var STATUTS = { disponible: 'Disponible', reserve: 'Réservé', vendu: 'Vendu' };
+
+    var etat = { ville: '', villeLabel: '', favorisSeuls: false, favoris: {} };
+
+    /* ---------- petits utilitaires ---------- */
+    function toast(msg, type) {
+        var el = document.createElement('div');
+        el.className = 'fn-mk-toast' + (type ? ' ' + type : '');
+        el.textContent = msg;
+        document.body.appendChild(el);
+        setTimeout(function () { el.style.transition = 'opacity .25s'; el.style.opacity = '0'; setTimeout(function () { el.remove(); }, 260); }, 2600);
+    }
+    window.fnMkToast = toast;
+    function norm(t) { return (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
+    function api(url, opts) {
+        opts = opts || {};
+        opts.credentials = 'same-origin';
+        opts.headers = Object.assign({ 'X-Requested-With': 'XMLHttpRequest' }, opts.headers || {});
+        return fetch(url, opts).then(function (r) {
+            return r.json().catch(function () { return { success: false }; }).then(function (d) { d._status = r.status; return d; });
+        });
+    }
+    function postJson(url, body) {
+        return api(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+    }
+    function carte(id) { return document.querySelector('.fn-item-card[data-id="' + id + '"]'); }
+
+    /* ---------- 1) Filtre Ville / Quartier ---------- */
+    var VILLES = [
+        { v: 'Douala', q: ['Akwa', 'Bonanjo', 'Bonapriso', 'Bonamoussadi', 'Deido', 'Bali', 'Makepe', 'Logpom', 'Ndokotti', 'Bépanda', 'Bonabéri', 'Yassa'] },
+        { v: 'Yaoundé', q: ['Bastos', 'Mvan', 'Essos', 'Mvog-Mbi', 'Nlongkak', 'Melen', 'Biyem-Assi', 'Odza', 'Mendong', 'Ekounou', 'Emana', 'Mimboman', 'Nsimeyong'] },
+        { v: 'Bafoussam', q: ['Tamdja', 'Kamkop', 'Djeleng', 'Banengo', 'Famla', 'Tyo-Ville', 'Ndiengdam'] },
+        { v: 'Bamenda', q: ['Commercial Avenue', 'Up Station', 'Nkwen', 'Mankon', 'Bambili'] },
+        { v: 'Garoua', q: [] }, { v: 'Maroua', q: [] }, { v: 'Ngaoundéré', q: [] }, { v: 'Bertoua', q: [] },
+        { v: 'Buea', q: [] }, { v: 'Limbé', q: [] }, { v: 'Kribi', q: [] }, { v: 'Ebolowa', q: [] },
+        { v: 'Dschang', q: [] }, { v: 'Bafang', q: [] }, { v: 'Mbouda', q: [] }, { v: 'Foumban', q: [] },
+        { v: 'Nkongsamba', q: [] }, { v: 'Edéa', q: [] }
+    ];
+
+    function construireListeVilles(filtre) {
+        var box = $('fn-mk-ville-liste'); if (!box) return;
+        var f = norm(filtre);
+        box.innerHTML = '';
+        function lien(texte, valeur, classe, label) {
+            var a = document.createElement('a');
+            a.href = '#'; a.textContent = texte; if (classe) a.className = classe;
+            a.addEventListener('click', function (e) { e.preventDefault(); choisirVille(valeur, label || texte); });
+            box.appendChild(a);
+        }
+        if (!f) lien('Toutes les villes', '', '', '');
+        VILLES.forEach(function (g) {
+            var villeOk = !f || norm(g.v).indexOf(f) !== -1;
+            var qs = g.q.filter(function (x) { return !f || villeOk || norm(x).indexOf(f) !== -1; });
+            if (!villeOk && !qs.length) return;
+            lien(g.v, g.v, 'fn-mk-ville-group-title');
+            (villeOk && f ? g.q : qs).forEach(function (x) { lien(x, x, 'fn-mk-quartier', x + ' (' + g.v + ')'); });
+        });
+        if (f && !box.children.length) {
+            var vide = document.createElement('div'); vide.className = 'fn-dropdown-title';
+            vide.textContent = 'Appuyez sur Entrée pour filtrer sur « ' + filtre.trim() + ' »';
+            box.appendChild(vide);
+        }
+    }
+
+    function choisirVille(valeur, label) {
+        etat.ville = valeur; etat.villeLabel = label || valeur;
+        var panneau = $('dropdown-ville'); if (panneau) panneau.classList.remove('open');
+        var btn = $('fn-mk-ville-btn');
+        if (btn) {
+            btn.innerHTML = (valeur ? etat.villeLabel : 'Ville / Quartier') + ' <i class="fas fa-chevron-down"></i>';
+            btn.classList.toggle('fn-filter-pill-active', !!valeur);
+        }
+        var inp = $('fn-mk-ville-input'); if (inp) { inp.value = ''; construireListeVilles(''); }
+        appliquerFiltres();
+    }
+
+    function appliquerFiltres() {
+        var terme = norm(etat.ville), visibles = 0, total = 0;
+        document.querySelectorAll('.fn-item-card').forEach(function (c) {
+            total++;
+            var okVille = !terme || norm(c.dataset.localisation).indexOf(terme) !== -1;
+            var okFav = !etat.favorisSeuls || !!etat.favoris[c.dataset.id];
+            c.classList.toggle('fn-mk-hidden-ville', !okVille);
+            c.classList.toggle('fn-mk-hidden-fav', !okFav);
+            if (okVille && okFav) visibles++;
+        });
+        var grille = document.querySelector('.fn-item-grid'), vide = $('fn-mk-vide');
+        if (total && !visibles) {
+            if (!vide && grille) {
+                vide = document.createElement('div'); vide.id = 'fn-mk-vide'; vide.className = 'fn-empty-state';
+                vide.innerHTML = '<i class="fas fa-search"></i><p></p>';
+                grille.appendChild(vide);
+            }
+            if (vide) {
+                vide.style.display = '';
+                vide.querySelector('p').textContent = etat.favorisSeuls && !terme
+                    ? "Vous n'avez encore aucun article en favoris."
+                    : 'Aucune annonce trouvée pour ce filtre.';
+            }
+        } else if (vide) { vide.style.display = 'none'; }
+    }
+
+    /* ---------- 2) Favoris ---------- */
+    function majBoutonsFavori(id) {
+        var on = !!etat.favoris[id];
+        document.querySelectorAll('.fn-mk-fav[data-annonce-id="' + id + '"]').forEach(function (b) {
+            b.classList.toggle('fn-mk-fav-on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+            b.title = on ? 'Retirer des favoris' : 'Mettre en favoris';
+            b.innerHTML = '<i class="' + (on ? 'fas' : 'far') + ' fa-heart"></i>';
+        });
+        var mb = $('fn-mk-modal-fav');
+        if (mb && window._fnMkCourante && String(window._fnMkCourante.id) === String(id)) {
+            mb.classList.toggle('fn-mk-fav-on', on); mb.setAttribute('aria-pressed', on ? 'true' : 'false');
+            mb.innerHTML = '<i class="' + (on ? 'fas' : 'far') + ' fa-heart"></i> <span>' + (on ? 'Enregistré' : 'Favori') + '</span>';
+        }
+    }
+
+    function basculerFavori(id) {
+        var avant = !!etat.favoris[id];
+        if (avant) delete etat.favoris[id]; else etat.favoris[id] = true;
+        majBoutonsFavori(id);
+        if (etat.favorisSeuls) appliquerFiltres();
+        postJson(BASE + '/api/annonce/' + id + '/favori', { etat: !avant }).then(function (d) {
+            if (!d.success) {
+                if (avant) etat.favoris[id] = true; else delete etat.favoris[id];
+                majBoutonsFavori(id); if (etat.favorisSeuls) appliquerFiltres();
+                toast(d._status === 401 ? 'Connectez-vous pour utiliser les favoris.' : (d.message || 'Action impossible.'), 'error');
+            } else {
+                toast(d.favori ? 'Ajouté aux favoris.' : 'Retiré des favoris.');
+            }
+        }).catch(function () {
+            if (avant) etat.favoris[id] = true; else delete etat.favoris[id];
+            majBoutonsFavori(id); toast('Erreur réseau.', 'error');
+        });
+    }
+
+    function chargerFavoris() {
+        api(BASE + '/api/favoris/ids').then(function (d) {
+            if (!d.success) return;
+            (d.ids || []).forEach(function (i) { etat.favoris[String(i)] = true; });
+            document.querySelectorAll('.fn-mk-fav').forEach(function (b) { majBoutonsFavori(b.dataset.annonceId); });
+            if (etat.favorisSeuls) appliquerFiltres();
+        }).catch(function () {});
+    }
+
+    /* ---------- 3) Discuter avec le vendeur ---------- */
+    function ouvrirMessagerie(sellerId, productId) {
+        window.location.href = BASE + '/messages?seller_id=' + encodeURIComponent(sellerId) + '&product_id=' + encodeURIComponent(productId);
+    }
+
+    /* ---------- 4) Statut de l'article ---------- */
+    function majCarteStatut(id, statut) {
+        var c = carte(id); if (!c) return;
+        var meta = c.querySelector('.fn-mk-meta'); if (meta) meta.dataset.statut = statut;
+        var badge = c.querySelector('.fn-mk-badge');
+        if (badge) { badge.className = 'fn-mk-badge fn-mk-badge-' + statut; badge.textContent = STATUTS[statut]; }
+        c.dataset.vendue = statut === 'vendu' ? '1' : '0';
+        c.style.opacity = statut === 'vendu' ? '0.55' : '';
+        var titre = c.querySelector('.fn-item-title');
+        if (titre) {
+            var aPrefixe = titre.textContent.indexOf('✅ ') === 0;
+            if (statut === 'vendu' && !aPrefixe) titre.textContent = '✅ ' + titre.textContent;
+            if (statut !== 'vendu' && aPrefixe) titre.textContent = titre.textContent.slice(2);
+        }
+        if (typeof _annonceCourante !== 'undefined' && _annonceCourante && String(_annonceCourante.id) === String(id)) {
+            _annonceCourante.vendue = (statut === 'vendu');
+        }
+        if (window._fnMkCourante && String(window._fnMkCourante.id) === String(id)) {
+            window._fnMkCourante.statut = statut;
+            var sel = $('fn-mk-statut-select'); if (sel) sel.value = statut;
+        }
+    }
+
+    function appliquerStatut() {
+        var cur = window._fnMkCourante; if (!cur || !cur.proprietaire) return;
+        var sel = $('fn-mk-statut-select'), msg = $('annonce-modal-message'), btn = $('fn-mk-statut-apply');
+        var valeur = sel.value;
+        msg.style.color = '#65676b'; msg.textContent = 'Enregistrement en cours...'; btn.disabled = true;
+        postJson(BASE + '/api/annonce/' + cur.id + '/statut', { statut: valeur }).then(function (d) {
+            btn.disabled = false;
+            if (!d.success) { msg.style.color = '#d9534f'; msg.textContent = d.message || 'Erreur lors de la mise à jour.'; sel.value = cur.statut; return; }
+            majCarteStatut(cur.id, d.statut);
+            msg.style.color = '#1877f2'; msg.textContent = 'Statut mis à jour : ' + d.statut_label + '.';
+        }).catch(function () { btn.disabled = false; msg.style.color = '#d9534f'; msg.textContent = 'Erreur réseau. Veuillez réessayer.'; });
+    }
+
+    /* ---------- 5) Accrochage sur la fenêtre d'annonce EXISTANTE (sans la modifier) ---------- */
+    if (typeof window.ouvrirAnnonce === 'function') {
+        var _ouvrirOrigine = window.ouvrirAnnonce;
+        window.ouvrirAnnonce = function (event, el) {
+            var r = _ouvrirOrigine.apply(this, arguments);
+            try {
+                var modale = $('annonce-modal');
+                if (!modale || !modale.classList.contains('open')) return r;
+                var meta = el.querySelector('.fn-mk-meta');
+                var cur = {
+                    id: el.dataset.id,
+                    vendeur: meta ? meta.dataset.vendeur : '',
+                    statut: meta ? meta.dataset.statut : 'disponible',
+                    proprietaire: el.dataset.proprietaire === '1'
+                };
+                window._fnMkCourante = cur;
+                var sel = $('fn-mk-statut-select'); if (sel) sel.value = cur.statut;
+                var chat = $('fn-mk-modal-chat');
+                if (chat) chat.style.display = (!cur.proprietaire && cur.vendeur) ? '' : 'none';
+                majBoutonsFavori(cur.id);
+            } catch (e) { /* jamais bloquant */ }
+            return r;
+        };
+    }
+
+    /* Le bouton existant « Marquer comme vendue » met aussi à jour le badge */
+    if (typeof window.marquerAnnonceVendue === 'function') {
+        var _vendueOrigine = window.marquerAnnonceVendue;
+        window.marquerAnnonceVendue = async function () {
+            var r = await _vendueOrigine.apply(this, arguments);
+            try {
+                if (typeof _annonceCourante !== 'undefined' && _annonceCourante && _annonceCourante.vendue) {
+                    majCarteStatut(_annonceCourante.id, 'vendu');
+                }
+            } catch (e) { /* jamais bloquant */ }
+            return r;
+        };
+    }
+
+    /* ---------- 6) Écouteurs ---------- */
+    /* Phase de capture : le bouton cœur (dans la carte, qui est un lien <a>) n'ouvre ni la fenêtre ni la page */
+    document.addEventListener('click', function (e) {
+        var fav = e.target.closest('.fn-mk-fav');
+        if (fav) { e.preventDefault(); e.stopPropagation(); basculerFavori(fav.dataset.annonceId); return; }
+        var chat = e.target.closest('.fn-mk-chat-btn');
+        if (chat) { e.preventDefault(); e.stopPropagation(); ouvrirMessagerie(chat.dataset.sellerId, chat.dataset.productId); }
+    }, true);
+
+    var mChat = $('fn-mk-modal-chat');
+    if (mChat) mChat.addEventListener('click', function () {
+        var cur = window._fnMkCourante; if (cur && cur.vendeur) ouvrirMessagerie(cur.vendeur, cur.id);
+    });
+    var mFav = $('fn-mk-modal-fav');
+    if (mFav) mFav.addEventListener('click', function () { var cur = window._fnMkCourante; if (cur) basculerFavori(cur.id); });
+    var bStatut = $('fn-mk-statut-apply');
+    if (bStatut) bStatut.addEventListener('click', appliquerStatut);
+
+    var inpVille = $('fn-mk-ville-input');
+    if (inpVille) {
+        inpVille.addEventListener('input', function () { construireListeVilles(inpVille.value); });
+        inpVille.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && inpVille.value.trim()) { e.preventDefault(); choisirVille(inpVille.value.trim(), inpVille.value.trim()); }
+        });
+    }
+
+    /* Liens « Boîte de réception » et « Articles favoris » du tiroir (étaient en href="#") */
+    var iconeInbox = document.querySelector('.fn-sidebar-nav a i.fa-inbox');
+    if (iconeInbox) {
+        var aInbox = iconeInbox.closest('a'); aInbox.setAttribute('href', BASE + '/messages');
+        api(BASE + '/api/non_lus').then(function (d) {
+            if (d && d.success && d.count > 0) {
+                var b = document.createElement('span'); b.className = 'fn-mk-nav-badge'; b.textContent = d.count > 99 ? '99+' : d.count;
+                aInbox.appendChild(b);
+            }
+        }).catch(function () {});
+    }
+    var iconeFav = document.querySelector('.fn-sidebar-nav a i.fa-heart');
+    if (iconeFav) {
+        var aFav = iconeFav.closest('a');
+        aFav.addEventListener('click', function (e) {
+            e.preventDefault();
+            etat.favorisSeuls = !etat.favorisSeuls;
+            aFav.closest('li').classList.toggle('fn-mk-li-actif', etat.favorisSeuls);
+            appliquerFiltres();
+            if (typeof toggleMarketSidebar === 'function') toggleMarketSidebar(false);
+            toast(etat.favorisSeuls ? 'Affichage : vos articles favoris.' : 'Affichage : toutes les annonces.');
+        });
+    }
+
+    construireListeVilles('');
+    chargerFavoris();
+})();
+</script>
+<!-- FIN : Script Marketplace Pro -->
+{% endblock %}

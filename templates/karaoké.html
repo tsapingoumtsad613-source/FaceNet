@@ -1,0 +1,1361 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ song.title | default('Karaoké') }} — Studio Live | FaceNet</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ============================================================
+           KARAOKÉ LIVE — scène sombre, projecteur rose/cyan
+           (reprend --fn-blue / --fn-bg de settings.html pour la cohérence
+           du reste de l'app, mais l'identité forte ici est l'accent
+           scène rose→cyan déjà amorcé sur .btn-extract / .beat-pad)
+           ============================================================ */
+        :root {
+            --stage-bg: #0b0c10;
+            --stage-panel: #16181d;
+            --stage-line: #2a2d34;
+            --stage-text: #f2f3f5;
+            --stage-dim: #6b7078;
+            --accent-a: #fe2c55;   /* rose scène */
+            --accent-b: #00f2fe;   /* cyan scène */
+            --accent-grad: linear-gradient(135deg, var(--accent-a) 0%, #ff6b8b 45%, var(--accent-b) 100%);
+            --danger: #ff3b30;
+            --ok: #17c964;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: var(--stage-bg);
+            color: var(--stage-text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .ks-stage {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* --- halo de projecteur en fond, discret, unique geste visuel --- */
+        .ks-stage::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(60% 40% at 50% 8%, rgba(254,44,85,0.18), transparent 60%),
+                radial-gradient(50% 35% at 85% 90%, rgba(0,242,254,0.10), transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ---------------- TOP BAR ---------------- */
+        .ks-topbar {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            z-index: 2;
+        }
+
+        .ks-back {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid var(--stage-line);
+            color: var(--stage-text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            flex-shrink: 0;
+            font-size: 15px;
+        }
+
+        .ks-track-meta {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .ks-track-meta .ks-title {
+            font-weight: 700;
+            font-size: 15px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ks-track-meta .ks-artist {
+            font-size: 12px;
+            color: var(--stage-dim);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ks-cover {
+            width: 42px;
+            height: 42px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: #222;
+            flex-shrink: 0;
+        }
+
+        .ks-lang-tag {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 20px;
+            background: rgba(0,242,254,0.12);
+            color: var(--accent-b);
+            border: 1px solid rgba(0,242,254,0.3);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        /* ---------------- ZONE PAROLES ---------------- */
+        .ks-lyrics-zone {
+            flex: 1;
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 0 24px;
+        }
+
+        .ks-lyrics-zone::before,
+        .ks-lyrics-zone::after {
+            content: "";
+            position: absolute;
+            left: 0; right: 0;
+            height: 70px;
+            pointer-events: none;
+            z-index: 2;
+        }
+        .ks-lyrics-zone::before { top: 0; background: linear-gradient(var(--stage-bg), transparent); }
+        .ks-lyrics-zone::after { bottom: 0; background: linear-gradient(transparent, var(--stage-bg)); }
+
+        .ks-lyrics-track {
+            width: 100%;
+            max-width: 560px;
+            text-align: center;
+            transition: transform 0.45s cubic-bezier(.22,.61,.36,1);
+            will-change: transform;
+        }
+
+        .ks-line {
+            font-family: 'Poppins', 'Segoe UI', sans-serif;
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--stage-dim);
+            padding: 14px 0;
+            transition: color 0.3s ease, transform 0.3s ease, opacity 0.3s ease;
+            transform: scale(0.92);
+            opacity: 0.55;
+        }
+
+        .ks-line.ks-current {
+            font-size: 27px;
+            font-weight: 800;
+            color: var(--stage-text);
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .ks-line .ks-word {
+            transition: color 0.15s linear;
+        }
+
+        .ks-line.ks-current .ks-word.ks-sung {
+            background: var(--accent-grad);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .ks-lyrics-empty {
+            text-align: center;
+            color: var(--stage-dim);
+            font-size: 14px;
+            max-width: 320px;
+            line-height: 1.6;
+        }
+
+        .ks-lyrics-empty i {
+            font-size: 26px;
+            display: block;
+            margin-bottom: 10px;
+            background: var(--accent-grad);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .ks-lyrics-source {
+            position: absolute;
+            bottom: 10px;
+            left: 0; right: 0;
+            text-align: center;
+            font-size: 10px;
+            color: var(--stage-dim);
+            z-index: 2;
+            letter-spacing: 0.3px;
+        }
+
+        /* ---------------- PROGRESSION ---------------- */
+        .ks-progress-wrap {
+            padding: 0 20px 10px;
+            z-index: 2;
+        }
+
+        .ks-progress-bar {
+            width: 100%;
+            height: 4px;
+            border-radius: 4px;
+            background: var(--stage-line);
+            position: relative;
+            cursor: pointer;
+        }
+
+        .ks-progress-fill {
+            position: absolute;
+            top: 0; left: 0; height: 100%;
+            width: 0%;
+            border-radius: 4px;
+            background: var(--accent-grad);
+        }
+
+        .ks-time-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--stage-dim);
+            margin-top: 6px;
+        }
+
+        /* ---------------- MODE & VOIX ---------------- */
+        .ks-options-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 4px 20px 14px;
+            z-index: 2;
+        }
+
+        .ks-mode-switch {
+            display: flex;
+            background: var(--stage-panel);
+            border: 1px solid var(--stage-line);
+            border-radius: 30px;
+            padding: 3px;
+        }
+
+        .ks-mode-btn {
+            border: none;
+            background: transparent;
+            color: var(--stage-dim);
+            font-size: 12px;
+            font-weight: 700;
+            padding: 7px 13px;
+            border-radius: 30px;
+            cursor: pointer;
+        }
+
+        .ks-mode-btn.active {
+            background: var(--accent-grad);
+            color: #fff;
+        }
+
+        .ks-voice-select {
+            position: relative;
+        }
+
+        .ks-voice-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--stage-panel);
+            border: 1px solid var(--stage-line);
+            color: var(--stage-text);
+            font-size: 12px;
+            font-weight: 700;
+            padding: 9px 14px;
+            border-radius: 30px;
+            cursor: pointer;
+        }
+
+        .ks-voice-btn i.ks-voice-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--accent-grad);
+        }
+
+        .ks-voice-menu {
+            display: none;
+            position: absolute;
+            bottom: 46px;
+            right: 0;
+            background: var(--stage-panel);
+            border: 1px solid var(--stage-line);
+            border-radius: 14px;
+            padding: 6px;
+            width: 180px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        }
+
+        .ks-voice-menu.open { display: block; }
+
+        .ks-voice-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 10px;
+            border-radius: 9px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--stage-text);
+        }
+
+        .ks-voice-option:hover { background: rgba(255,255,255,0.06); }
+        .ks-voice-option.selected { background: rgba(254,44,85,0.12); color: #ff6b8b; }
+        .ks-voice-option i { width: 18px; text-align: center; }
+
+        /* ---------------- PISTES (duo / groupe) ---------------- */
+        .ks-tracks-row {
+            display: flex;
+            gap: 8px;
+            padding: 0 20px 10px;
+            overflow-x: auto;
+            z-index: 2;
+        }
+
+        .ks-track-chip {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            background: var(--stage-panel);
+            border: 1px solid var(--stage-line);
+            border-radius: 20px;
+            padding: 6px 12px 6px 6px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--stage-dim);
+        }
+
+        .ks-track-chip .ks-avatar {
+            width: 20px; height: 20px; border-radius: 50%;
+            background: var(--accent-grad);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 9px; color: #fff;
+        }
+
+        .ks-track-chip.recorded { color: var(--stage-text); border-color: var(--ok); }
+        .ks-track-chip.add-track { cursor: pointer; border-style: dashed; }
+
+        /* ---------------- DOCK D'ENREGISTREMENT ---------------- */
+        .ks-dock {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 26px;
+            padding: 10px 20px 26px;
+            z-index: 2;
+        }
+
+        .ks-dock-btn {
+            width: 46px; height: 46px;
+            border-radius: 50%;
+            background: var(--stage-panel);
+            border: 1px solid var(--stage-line);
+            color: var(--stage-text);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .ks-record-btn {
+            width: 76px; height: 76px;
+            border-radius: 50%;
+            background: var(--accent-grad);
+            border: 4px solid rgba(255,255,255,0.15);
+            display: flex; align-items: center; justify-content: center;
+            color: #fff;
+            font-size: 26px;
+            cursor: pointer;
+            box-shadow: 0 6px 22px rgba(254,44,85,0.35);
+            transition: transform 0.15s ease;
+        }
+
+        .ks-record-btn:active { transform: scale(0.94); }
+
+        .ks-record-btn.recording {
+            background: var(--danger);
+            animation: ks-pulse 1.2s infinite;
+        }
+
+        @keyframes ks-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255,59,48,0.5); }
+            70% { box-shadow: 0 0 0 18px rgba(255,59,48,0); }
+            100% { box-shadow: 0 0 0 0 rgba(255,59,48,0); }
+        }
+
+        .ks-status-label {
+            position: absolute;
+            bottom: 108px;
+            left: 0; right: 0;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--stage-dim);
+            z-index: 2;
+        }
+
+        .ks-status-label.live { color: var(--danger); }
+
+        /* ---------------- ÉCRAN DE PRÉVISUALISATION ---------------- */
+        .ks-preview-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.72);
+            backdrop-filter: blur(6px);
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 50;
+        }
+
+        .ks-preview-overlay.open { display: flex; }
+
+        .ks-preview-sheet {
+            width: 100%;
+            max-width: 480px;
+            background: var(--stage-panel);
+            border-radius: 22px 22px 0 0;
+            border: 1px solid var(--stage-line);
+            padding: 22px 20px 26px;
+            animation: ks-sheet-up 0.25s ease-out;
+        }
+
+        @keyframes ks-sheet-up {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .ks-preview-sheet h3 {
+            margin: 0 0 4px;
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .ks-preview-sheet p {
+            margin: 0 0 18px;
+            font-size: 12.5px;
+            color: var(--stage-dim);
+        }
+
+        .ks-preview-waveform {
+            height: 56px;
+            border-radius: 10px;
+            background: repeating-linear-gradient(90deg, rgba(255,255,255,0.08) 0 2px, transparent 2px 6px);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--stage-dim);
+            font-size: 12px;
+        }
+
+        .ks-preview-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .ks-btn {
+            flex: 1;
+            border: none;
+            padding: 13px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 13.5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .ks-btn-ghost { background: rgba(255,255,255,0.06); color: var(--stage-text); }
+        .ks-btn-primary { background: var(--accent-grad); color: #fff; }
+        .ks-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ---------------- FEUILLE DE PARTAGE ---------------- */
+        .ks-share-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.72);
+            backdrop-filter: blur(6px);
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 60;
+        }
+
+        .ks-share-overlay.open { display: flex; }
+
+        .ks-share-sheet {
+            width: 100%;
+            max-width: 480px;
+            background: var(--stage-panel);
+            border-radius: 22px 22px 0 0;
+            border: 1px solid var(--stage-line);
+            padding: 20px 20px 28px;
+            animation: ks-sheet-up 0.25s ease-out;
+        }
+
+        .ks-share-sheet h3 {
+            margin: 0 0 4px;
+            font-size: 17px;
+            font-weight: 800;
+        }
+
+        .ks-share-sheet p {
+            margin: 0 0 20px;
+            font-size: 12.5px;
+            color: var(--stage-dim);
+        }
+
+        .ks-share-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .ks-share-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            padding: 18px 10px;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--stage-line);
+            cursor: pointer;
+            transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ks-share-option:active { transform: scale(0.96); }
+
+        .ks-share-option:hover {
+            border-color: rgba(254,44,85,0.4);
+            background: rgba(254,44,85,0.06);
+        }
+
+        .ks-share-icon {
+            width: 46px; height: 46px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+            color: #fff;
+        }
+
+        .ks-share-icon.feed { background: linear-gradient(135deg, #0866FF, #4599ff); }
+        .ks-share-icon.story { background: linear-gradient(135deg, #a83bff, #fe2c55); }
+        .ks-share-icon.reel { background: linear-gradient(135deg, #fe2c55, #ff6b8b); }
+        .ks-share-icon.lien { background: linear-gradient(135deg, #00c9a7, #00f2fe); }
+
+        .ks-share-label { font-size: 12.5px; font-weight: 700; }
+        .ks-share-sub { font-size: 10.5px; color: var(--stage-dim); text-align: center; }
+
+        .ks-share-option.loading .ks-share-icon {
+            animation: ks-spin-soft 0.9s linear infinite;
+        }
+
+        @keyframes ks-spin-soft {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .ks-share-cancel {
+            width: 100%;
+            padding: 13px;
+            border-radius: 10px;
+            border: none;
+            background: rgba(255,255,255,0.06);
+            color: var(--stage-text);
+            font-weight: 700;
+            font-size: 13.5px;
+            cursor: pointer;
+        }
+
+        .ks-share-link-box {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--stage-line);
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 14px;
+            font-size: 11.5px;
+            color: var(--stage-dim);
+        }
+
+        .ks-share-link-box.show { display: flex; }
+
+        .ks-share-link-box span {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .ks-share-link-box button {
+            border: none;
+            background: var(--accent-grad);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 7px 10px;
+            border-radius: 7px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .ks-toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #101114;
+            border: 1px solid var(--stage-line);
+            color: var(--stage-text);
+            padding: 12px 18px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 80;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.25s ease;
+        }
+
+        .ks-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .ks-toast.error { border-color: var(--danger); color: #ffb3af; }
+        .ks-toast.ok { border-color: var(--ok); color: #a8f5c4; }
+
+        @media (max-width: 380px) {
+            .ks-line.ks-current { font-size: 22px; }
+            .ks-record-btn { width: 68px; height: 68px; font-size: 22px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="ks-stage">
+
+    <!-- ============ TOP BAR ============ -->
+    <div class="ks-topbar">
+        <a href="{{ url_for('main.studio_musical') }}" class="ks-back"><i class="fas fa-chevron-left"></i></a>
+        <img class="ks-cover" src="{{ song.cover_url | default(url_for('static', filename='images/default_cover.png')) }}" alt="">
+        <div class="ks-track-meta">
+            <div class="ks-title">{{ song.title | default('Titre inconnu') }}</div>
+            <div class="ks-artist">{{ song.artist | default('Artiste inconnu') }}</div>
+        </div>
+        <span class="ks-lang-tag" id="ksLangTag">…</span>
+    </div>
+
+    <!-- ============ ZONE PAROLES ============ -->
+    <div class="ks-lyrics-zone">
+        <div class="ks-lyrics-track" id="ksLyricsTrack">
+            <div class="ks-lyrics-empty" id="ksLyricsEmpty">
+                <i class="fas fa-wand-magic-sparkles"></i>
+                Recherche des paroles en cours…<br>
+                On synchronise le texte sur le rythme de la chanson.
+            </div>
+        </div>
+        <div class="ks-lyrics-source" id="ksLyricsSource"></div>
+    </div>
+
+    <!-- ============ PROGRESSION ============ -->
+    <div class="ks-progress-wrap">
+        <div class="ks-progress-bar" id="ksProgressBar">
+            <div class="ks-progress-fill" id="ksProgressFill"></div>
+        </div>
+        <div class="ks-time-row">
+            <span id="ksTimeCurrent">0:00</span>
+            <span id="ksTimeTotal">0:00</span>
+        </div>
+    </div>
+
+    <!-- ============ MODE + VOIX ============ -->
+    <div class="ks-options-row">
+        <div class="ks-mode-switch" id="ksModeSwitch">
+            <button class="ks-mode-btn active" data-mode="solo">Solo</button>
+            <button class="ks-mode-btn" data-mode="duo">Duo</button>
+            <button class="ks-mode-btn" data-mode="groupe">Groupe</button>
+        </div>
+
+        <div class="ks-voice-select">
+            <button class="ks-voice-btn" id="ksVoiceBtn"><i class="ks-voice-dot"></i><span id="ksVoiceLabel">Voix normale</span> <i class="fas fa-chevron-up" style="font-size:10px;"></i></button>
+            <div class="ks-voice-menu" id="ksVoiceMenu">
+                <div class="ks-voice-option selected" data-fx="normal"><i class="fas fa-microphone"></i> Voix normale</div>
+                <div class="ks-voice-option" data-fx="aigu"><i class="fas fa-arrow-up"></i> Aiguë</div>
+                <div class="ks-voice-option" data-fx="grave"><i class="fas fa-arrow-down"></i> Grave</div>
+                <div class="ks-voice-option" data-fx="robot"><i class="fas fa-robot"></i> Robot</div>
+                <div class="ks-voice-option" data-fx="echo"><i class="fas fa-water"></i> Écho</div>
+                <div class="ks-voice-option" data-fx="studio"><i class="fas fa-record-vinyl"></i> Studio</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ PISTES (duo / groupe) ============ -->
+    <div class="ks-tracks-row" id="ksTracksRow" style="display:none;"></div>
+
+    <!-- ============ STATUT + DOCK ============ -->
+    <div class="ks-status-label" id="ksStatusLabel">Appuie sur ● pour chanter</div>
+    <div class="ks-dock">
+        <button class="ks-dock-btn" id="ksPlayPauseBtn"><i class="fas fa-play"></i></button>
+        <button class="ks-record-btn" id="ksRecordBtn"><i class="fas fa-microphone"></i></button>
+        <button class="ks-dock-btn" id="ksRestartBtn"><i class="fas fa-rotate-left"></i></button>
+    </div>
+</div>
+
+<!-- ============ AUDIO SOURCE (instrumental / son original) ============ -->
+<audio id="ksBackingAudio" src="{{ song.audio_url | default('') }}" preload="auto"></audio>
+
+<!-- ============ ÉCRAN DE PRÉVISUALISATION APRÈS ENREGISTREMENT ============ -->
+<div class="ks-preview-overlay" id="ksPreviewOverlay">
+    <div class="ks-preview-sheet">
+        <h3>Ta performance est prête 🎤</h3>
+        <p>Écoute ton mix avant de le publier sur ton profil FaceNet.</p>
+        <div class="ks-preview-waveform" id="ksPreviewWaveform">Aperçu du mix…</div>
+        <audio id="ksPreviewAudio" controls style="width:100%; margin-bottom:16px;"></audio>
+        <div class="ks-preview-actions">
+            <button class="ks-btn ks-btn-ghost" id="ksRetryBtn"><i class="fas fa-rotate-left"></i> Recommencer</button>
+            <button class="ks-btn ks-btn-primary" id="ksShareTriggerBtn"><i class="fas fa-share-nodes"></i> Partager</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============ FEUILLE DE PARTAGE ============ -->
+<div class="ks-share-overlay" id="ksShareOverlay">
+    <div class="ks-share-sheet">
+        <h3>Où veux-tu partager ça ?</h3>
+        <p>Ta performance sur « {{ song.title | default('cette chanson') }} »</p>
+
+        <div class="ks-share-link-box" id="ksShareLinkBox">
+            <span id="ksShareLinkText"></span>
+            <button id="ksCopyLinkBtn">Copier</button>
+        </div>
+
+        <div class="ks-share-grid">
+            <div class="ks-share-option" data-destination="feed">
+                <div class="ks-share-icon feed"><i class="fas fa-house"></i></div>
+                <div class="ks-share-label">Fil d'actualité</div>
+                <div class="ks-share-sub">Comme une publication</div>
+            </div>
+            <div class="ks-share-option" data-destination="story">
+                <div class="ks-share-icon story"><i class="fas fa-bolt"></i></div>
+                <div class="ks-share-label">Story</div>
+                <div class="ks-share-sub">Visible 24h</div>
+            </div>
+            <div class="ks-share-option" data-destination="reel">
+                <div class="ks-share-icon reel"><i class="fas fa-film"></i></div>
+                <div class="ks-share-label">Reels</div>
+                <div class="ks-share-sub">Format vidéo courte</div>
+            </div>
+            <div class="ks-share-option" data-destination="lien">
+                <div class="ks-share-icon lien"><i class="fas fa-link"></i></div>
+                <div class="ks-share-label">Copier le lien</div>
+                <div class="ks-share-sub">Partager partout</div>
+            </div>
+        </div>
+
+        <button class="ks-share-cancel" id="ksShareCancelBtn">Annuler</button>
+    </div>
+</div>
+
+<div class="ks-toast" id="ksToast"></div>
+
+<script>
+/* ============================================================
+   KARAOKÉ LIVE — moteur front
+   - Récupère les paroles synchronisées (ligne + mots horodatés)
+   - Défilement + surlignage en rythme avec la lecture
+   - Enregistrement micro + effet de voix + mixage avec l'instru
+   - Modes Solo / Duo / Groupe (pistes multiples superposées)
+   ============================================================ */
+(function () {
+    const SONG_KEY = {{ song.key | default('') | tojson }};
+    const SONG_TITLE = {{ song.title | default('') | tojson }};
+    const SONG_ARTIST = {{ song.artist | default('') | tojson }};
+    const SONG_AUDIO_URL = {{ song.audio_url | default('') | tojson }};
+    const SONG_DURATION_HINT = {{ song.duration_seconds | default(0) }};
+    const LYRICS_ENDPOINT = SONG_KEY ? ("{{ url_for('main.karaoke_lyrics') }}?" + new URLSearchParams({
+        key: SONG_KEY, title: SONG_TITLE, artist: SONG_ARTIST, audio_url: SONG_AUDIO_URL
+    }).toString()) : "";
+    const PUBLISH_ENDPOINT = "{{ url_for('main.karaoke_publish') }}";
+
+    const backingAudio = document.getElementById('ksBackingAudio');
+    const lyricsTrack = document.getElementById('ksLyricsTrack');
+    const lyricsEmpty = document.getElementById('ksLyricsEmpty');
+    const lyricsSourceEl = document.getElementById('ksLyricsSource');
+    const langTag = document.getElementById('ksLangTag');
+    const progressBar = document.getElementById('ksProgressBar');
+    const progressFill = document.getElementById('ksProgressFill');
+    const timeCurrent = document.getElementById('ksTimeCurrent');
+    const timeTotal = document.getElementById('ksTimeTotal');
+    const playPauseBtn = document.getElementById('ksPlayPauseBtn');
+    const restartBtn = document.getElementById('ksRestartBtn');
+    const recordBtn = document.getElementById('ksRecordBtn');
+    const statusLabel = document.getElementById('ksStatusLabel');
+    const modeSwitch = document.getElementById('ksModeSwitch');
+    const tracksRow = document.getElementById('ksTracksRow');
+    const voiceBtn = document.getElementById('ksVoiceBtn');
+    const voiceMenu = document.getElementById('ksVoiceMenu');
+    const voiceLabel = document.getElementById('ksVoiceLabel');
+    const previewOverlay = document.getElementById('ksPreviewOverlay');
+    const previewAudio = document.getElementById('ksPreviewAudio');
+    const retryBtn = document.getElementById('ksRetryBtn');
+    const shareTriggerBtn = document.getElementById('ksShareTriggerBtn');
+    const shareOverlay = document.getElementById('ksShareOverlay');
+    const shareCancelBtn = document.getElementById('ksShareCancelBtn');
+    const shareLinkBox = document.getElementById('ksShareLinkBox');
+    const shareLinkText = document.getElementById('ksShareLinkText');
+    const copyLinkBtn = document.getElementById('ksCopyLinkBtn');
+    const toastEl = document.getElementById('ksToast');
+
+    let lyricsLines = [];       // [{start, end, text, words:[{start,end,text}]}]
+    let currentLineIndex = -1;
+    let currentMode = 'solo';
+    let currentFx = 'normal';
+    let takes = [{ id: 1, label: 'Toi', recorded: false, buffer: null }];
+
+    let audioCtx = null;
+    let micStream = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let isRecording = false;
+    let recordStartOffset = 0;
+    let lastMixBlobUrl = null;
+    let lastMixBuffer = null;
+
+    function showToast(msg, kind) {
+        toastEl.textContent = msg;
+        toastEl.className = 'ks-toast show' + (kind ? ' ' + kind : '');
+        setTimeout(() => { toastEl.className = 'ks-toast'; }, 3200);
+    }
+
+    function fmtTime(sec) {
+        sec = Math.max(0, Math.floor(sec || 0));
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return m + ':' + String(s).padStart(2, '0');
+    }
+
+    /* ---------------- 1. RÉCUPÉRATION DES PAROLES SYNCHRONISÉES ---------------- */
+    async function loadLyrics() {
+        if (!LYRICS_ENDPOINT) {
+            renderNoLyrics();
+            return;
+        }
+        try {
+            const res = await fetch(LYRICS_ENDPOINT);
+            if (!res.ok) throw new Error('lyrics_fetch_failed');
+            const data = await res.json();
+            // Format attendu du backend :
+            // { lines: [{start, end, text, words:[{start,end,text}]}], language: "fr", source: "audio_transcription" }
+            lyricsLines = Array.isArray(data.lines) ? data.lines : [];
+            langTag.textContent = (data.language || '??').toUpperCase();
+            lyricsSourceEl.textContent = describeSource(data.source);
+            renderLyrics();
+        } catch (err) {
+            langTag.textContent = '—';
+            renderNoLyrics();
+        }
+    }
+
+    function describeSource(source) {
+        switch (source) {
+            case 'catalog': return 'Paroles officielles';
+            case 'audio_transcription': return 'Paroles détectées automatiquement depuis l\'audio';
+            case 'ai_fallback': return 'Texte approximatif généré par Tsapi AI';
+            default: return '';
+        }
+    }
+
+    function renderNoLyrics() {
+        lyricsTrack.innerHTML = '';
+        lyricsTrack.appendChild(lyricsEmpty);
+        lyricsEmpty.innerHTML = '<i class="fas fa-microphone-lines"></i>Aucune parole synchronisée pour ce titre.<br>Tu peux quand même chanter par-dessus l\'instrumental.';
+    }
+
+    function renderLyrics() {
+        if (!lyricsLines.length) { renderNoLyrics(); return; }
+        lyricsTrack.innerHTML = '';
+        lyricsLines.forEach((line, i) => {
+            const div = document.createElement('div');
+            div.className = 'ks-line';
+            div.dataset.index = i;
+            if (line.words && line.words.length) {
+                line.words.forEach((w, wi) => {
+                    const span = document.createElement('span');
+                    span.className = 'ks-word';
+                    span.dataset.start = w.start;
+                    span.dataset.end = w.end;
+                    span.textContent = w.text + (wi < line.words.length - 1 ? ' ' : '');
+                    div.appendChild(span);
+                });
+            } else {
+                div.textContent = line.text;
+            }
+            lyricsTrack.appendChild(div);
+        });
+    }
+
+    /* ---------------- 2. DÉFILEMENT SYNCHRONISÉ AVEC LA LECTURE ---------------- */
+    function syncLyricsToPlayback(t) {
+        if (!lyricsLines.length) return;
+        let idx = lyricsLines.findIndex(l => t >= l.start && t < l.end);
+        if (idx === -1) {
+            // entre deux lignes : garde la dernière ligne passée en surbrillance atténuée
+            idx = lyricsLines.reduce((acc, l, i) => (t >= l.start ? i : acc), currentLineIndex);
+        }
+        if (idx !== currentLineIndex) {
+            currentLineIndex = idx;
+            const lineEls = lyricsTrack.querySelectorAll('.ks-line');
+            lineEls.forEach(el => el.classList.remove('ks-current'));
+            const activeEl = lineEls[idx];
+            if (activeEl) {
+                activeEl.classList.add('ks-current');
+                const offset = activeEl.offsetTop - (lyricsTrack.parentElement.clientHeight / 2) + (activeEl.clientHeight / 2);
+                lyricsTrack.style.transform = 'translateY(' + (-offset) + 'px)';
+            }
+        }
+        // Surlignage mot par mot façon "vidéoke" si les timestamps mot existent
+        const activeEl = lyricsTrack.querySelector('.ks-line.ks-current');
+        if (activeEl) {
+            activeEl.querySelectorAll('.ks-word').forEach(w => {
+                const ws = parseFloat(w.dataset.start), we = parseFloat(w.dataset.end);
+                w.classList.toggle('ks-sung', t >= ws && !isNaN(ws));
+            });
+        }
+    }
+
+    /* ---------------- 3. LECTURE / TRANSPORT ---------------- */
+    backingAudio.addEventListener('loadedmetadata', () => {
+        timeTotal.textContent = fmtTime(backingAudio.duration || SONG_DURATION_HINT);
+    });
+
+    backingAudio.addEventListener('timeupdate', () => {
+        const t = backingAudio.currentTime;
+        const dur = backingAudio.duration || SONG_DURATION_HINT || 1;
+        progressFill.style.width = Math.min(100, (t / dur) * 100) + '%';
+        timeCurrent.textContent = fmtTime(t);
+        syncLyricsToPlayback(t);
+    });
+
+    backingAudio.addEventListener('ended', () => {
+        playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+        if (isRecording) stopRecording();
+    });
+
+    playPauseBtn.addEventListener('click', () => {
+        if (backingAudio.paused) {
+            backingAudio.play();
+            playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+        } else {
+            backingAudio.pause();
+            playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+        }
+    });
+
+    restartBtn.addEventListener('click', () => {
+        backingAudio.currentTime = 0;
+        currentLineIndex = -1;
+        lyricsTrack.style.transform = 'translateY(0)';
+    });
+
+    progressBar.addEventListener('click', (e) => {
+        const rect = progressBar.getBoundingClientRect();
+        const ratio = (e.clientX - rect.left) / rect.width;
+        const dur = backingAudio.duration || SONG_DURATION_HINT || 0;
+        backingAudio.currentTime = ratio * dur;
+    });
+
+    /* ---------------- 4. MODE SOLO / DUO / GROUPE ---------------- */
+    modeSwitch.addEventListener('click', (e) => {
+        const btn = e.target.closest('.ks-mode-btn');
+        if (!btn) return;
+        modeSwitch.querySelectorAll('.ks-mode-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentMode = btn.dataset.mode;
+        if (currentMode === 'solo') {
+            takes = [{ id: 1, label: 'Toi', recorded: takes[0] ? takes[0].recorded : false, buffer: takes[0] ? takes[0].buffer : null }];
+        } else if (currentMode === 'duo' && takes.length < 2) {
+            takes.push({ id: 2, label: 'Duo', recorded: false, buffer: null });
+        } else if (currentMode === 'groupe' && takes.length < 4) {
+            while (takes.length < 3) takes.push({ id: takes.length + 1, label: 'Voix ' + (takes.length + 1), recorded: false, buffer: null });
+        }
+        renderTracks();
+    });
+
+    function renderTracks() {
+        if (currentMode === 'solo') { tracksRow.style.display = 'none'; return; }
+        tracksRow.style.display = 'flex';
+        tracksRow.innerHTML = '';
+        takes.forEach(t => {
+            const chip = document.createElement('div');
+            chip.className = 'ks-track-chip' + (t.recorded ? ' recorded' : '');
+            chip.innerHTML = '<span class="ks-avatar">' + t.label.charAt(0) + '</span>' + t.label + (t.recorded ? ' <i class="fas fa-circle-check" style="color:var(--ok);margin-left:2px;"></i>' : '');
+            tracksRow.appendChild(chip);
+        });
+        if (currentMode === 'groupe' && takes.length < 4) {
+            const addChip = document.createElement('div');
+            addChip.className = 'ks-track-chip add-track';
+            addChip.innerHTML = '<i class="fas fa-plus"></i> Ajouter';
+            addChip.addEventListener('click', () => {
+                takes.push({ id: takes.length + 1, label: 'Voix ' + (takes.length + 1), recorded: false, buffer: null });
+                renderTracks();
+            });
+            tracksRow.appendChild(addChip);
+        }
+    }
+
+    /* ---------------- 5. SÉLECTEUR D'EFFET DE VOIX ---------------- */
+    voiceBtn.addEventListener('click', () => voiceMenu.classList.toggle('open'));
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.ks-voice-select')) voiceMenu.classList.remove('open');
+    });
+    voiceMenu.addEventListener('click', (e) => {
+        const opt = e.target.closest('.ks-voice-option');
+        if (!opt) return;
+        voiceMenu.querySelectorAll('.ks-voice-option').forEach(o => o.classList.remove('selected'));
+        opt.classList.add('selected');
+        currentFx = opt.dataset.fx;
+        voiceLabel.textContent = opt.textContent.trim();
+        voiceMenu.classList.remove('open');
+    });
+
+    /* ---------------- 6. ENREGISTREMENT MICRO ---------------- */
+    function getAudioCtx() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        return audioCtx;
+    }
+
+    async function startRecording() {
+        try {
+            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (err) {
+            showToast("Autorise le micro pour pouvoir chanter.", 'error');
+            return;
+        }
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(micStream);
+        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+        mediaRecorder.onstop = onRecordingStopped;
+        mediaRecorder.start();
+
+        recordStartOffset = backingAudio.currentTime;
+        backingAudio.play();
+        playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+
+        isRecording = true;
+        recordBtn.classList.add('recording');
+        recordBtn.innerHTML = '<i class="fas fa-stop"></i>';
+        statusLabel.textContent = 'Enregistrement en cours — chante !';
+        statusLabel.classList.add('live');
+    }
+
+    function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+        if (micStream) micStream.getTracks().forEach(t => t.stop());
+        backingAudio.pause();
+        isRecording = false;
+        recordBtn.classList.remove('recording');
+        recordBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+        statusLabel.textContent = 'Appuie sur ● pour chanter';
+        statusLabel.classList.remove('live');
+    }
+
+    recordBtn.addEventListener('click', () => {
+        if (isRecording) stopRecording();
+        else startRecording();
+    });
+
+    async function onRecordingStopped() {
+        statusLabel.textContent = 'Mixage de ta voix avec l\'instru…';
+        try {
+            const micBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+            const mixBuffer = await mixVoiceWithBacking(micBlob, currentFx, recordStartOffset);
+            lastMixBuffer = mixBuffer;
+            const wavBlob = bufferToWavBlob(mixBuffer);
+            if (lastMixBlobUrl) URL.revokeObjectURL(lastMixBlobUrl);
+            lastMixBlobUrl = URL.createObjectURL(wavBlob);
+
+            const activeTake = takes.find(t => !t.recorded) || takes[0];
+            activeTake.recorded = true;
+            activeTake.buffer = mixBuffer;
+            renderTracks();
+
+            previewAudio.src = lastMixBlobUrl;
+            previewOverlay.classList.add('open');
+            statusLabel.textContent = 'Appuie sur ● pour chanter';
+        } catch (err) {
+            console.error(err);
+            showToast("Le mixage a échoué, réessaie.", 'error');
+            statusLabel.textContent = 'Appuie sur ● pour chanter';
+        }
+    }
+
+    /* ---------------- 7. EFFETS DE VOIX + MIXAGE (Web Audio API) ---------------- */
+    // Décode un Blob en AudioBuffer
+    async function decodeBlobToBuffer(blob, ctx) {
+        const arrayBuf = await blob.arrayBuffer();
+        return await ctx.decodeAudioData(arrayBuf);
+    }
+
+    // Construit une petite réponse impulsionnelle synthétique pour la réverbe
+    function buildImpulseResponse(ctx, duration, decay) {
+        const rate = ctx.sampleRate;
+        const length = rate * duration;
+        const impulse = ctx.createBuffer(2, length, rate);
+        for (let ch = 0; ch < 2; ch++) {
+            const data = impulse.getChannelData(ch);
+            for (let i = 0; i < length; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+            }
+        }
+        return impulse;
+    }
+
+    async function mixVoiceWithBacking(micBlob, fx, startOffset) {
+        const ctx = getAudioCtx();
+        const [voiceBufferRaw, backingBufferFull] = await Promise.all([
+            decodeBlobToBuffer(micBlob, ctx),
+            fetchAndDecodeBacking(ctx)
+        ]);
+
+        // Pitch approximatif via playbackRate (méthode légère, standard pour le karaoké web)
+        const rateMap = { normal: 1, aigu: 1.25, grave: 0.8, robot: 1, echo: 1, studio: 1 };
+        const playbackRate = rateMap[fx] || 1;
+        const voiceDuration = voiceBufferRaw.duration / playbackRate;
+
+        const totalDuration = Math.max(startOffset + voiceDuration, backingBufferFull ? backingBufferFull.duration : voiceDuration);
+        const offlineCtx = new OfflineAudioContext(2, Math.ceil(totalDuration * ctx.sampleRate), ctx.sampleRate);
+
+        // Piste instrumentale
+        if (backingBufferFull) {
+            const backingSrc = offlineCtx.createBufferSource();
+            backingSrc.buffer = backingBufferFull;
+            const backingGain = offlineCtx.createGain();
+            backingGain.gain.value = 0.9;
+            backingSrc.connect(backingGain).connect(offlineCtx.destination);
+            backingSrc.start(0);
+        }
+
+        // Piste voix + effet
+        const voiceSrc = offlineCtx.createBufferSource();
+        voiceSrc.buffer = voiceBufferRaw;
+        voiceSrc.playbackRate.value = playbackRate;
+
+        let node = voiceSrc;
+        const voiceGain = offlineCtx.createGain();
+        voiceGain.gain.value = 1.4;
+
+        if (fx === 'robot') {
+            const filter = offlineCtx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.value = 900;
+            filter.Q.value = 12;
+            node.connect(filter);
+            node = filter;
+        } else if (fx === 'echo' || fx === 'studio') {
+            const delay = offlineCtx.createDelay();
+            delay.delayTime.value = fx === 'echo' ? 0.28 : 0.12;
+            const feedback = offlineCtx.createGain();
+            feedback.gain.value = fx === 'echo' ? 0.35 : 0.18;
+            const convolver = offlineCtx.createConvolver();
+            convolver.buffer = buildImpulseResponse(offlineCtx, fx === 'echo' ? 1.4 : 2.2, fx === 'echo' ? 3 : 4.5);
+            const wetGain = offlineCtx.createGain();
+            wetGain.gain.value = fx === 'echo' ? 0.4 : 0.3;
+
+            node.connect(delay);
+            delay.connect(feedback);
+            feedback.connect(delay);
+            delay.connect(convolver);
+            convolver.connect(wetGain);
+
+            node.connect(voiceGain);
+            wetGain.connect(voiceGain);
+            voiceGain.connect(offlineCtx.destination);
+            voiceSrc.start(startOffset);
+            return await offlineCtx.startRendering();
+        }
+
+        node.connect(voiceGain);
+        voiceGain.connect(offlineCtx.destination);
+        voiceSrc.start(startOffset);
+
+        return await offlineCtx.startRendering();
+    }
+
+    let backingBufferCache = null;
+    async function fetchAndDecodeBacking(ctx) {
+        if (backingBufferCache) return backingBufferCache;
+        if (!backingAudio.src) return null;
+        try {
+            const res = await fetch(backingAudio.src);
+            const arrayBuf = await res.arrayBuffer();
+            backingBufferCache = await ctx.decodeAudioData(arrayBuf);
+            return backingBufferCache;
+        } catch (err) {
+            console.warn('Instrumental non mixable (CORS ou format) :', err);
+            return null;
+        }
+    }
+
+    // Convertit un AudioBuffer en Blob WAV (PCM 16-bit) — export universel, sans dépendance
+    function bufferToWavBlob(buffer) {
+        const numChannels = buffer.numberOfChannels;
+        const sampleRate = buffer.sampleRate;
+        const length = buffer.length * numChannels * 2 + 44;
+        const arrBuf = new ArrayBuffer(length);
+        const view = new DataView(arrBuf);
+
+        function writeString(offset, str) {
+            for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+        }
+
+        writeString(0, 'RIFF');
+        view.setUint32(4, length - 8, true);
+        writeString(8, 'WAVE');
+        writeString(12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true);
+        view.setUint16(22, numChannels, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * numChannels * 2, true);
+        view.setUint16(32, numChannels * 2, true);
+        view.setUint16(34, 16, true);
+        writeString(36, 'data');
+        view.setUint32(40, length - 44, true);
+
+        const channels = [];
+        for (let c = 0; c < numChannels; c++) channels.push(buffer.getChannelData(c));
+
+        let offset = 44;
+        for (let i = 0; i < buffer.length; i++) {
+            for (let c = 0; c < numChannels; c++) {
+                const sample = Math.max(-1, Math.min(1, channels[c][i]));
+                view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+                offset += 2;
+            }
+        }
+        return new Blob([arrBuf], { type: 'audio/wav' });
+    }
+
+    /* ---------------- 8. ÉCRAN DE PRÉVISUALISATION ---------------- */
+    retryBtn.addEventListener('click', () => {
+        previewOverlay.classList.remove('open');
+        backingAudio.currentTime = recordStartOffset;
+    });
+
+    /* ---------------- 9. FEUILLE DE PARTAGE (fil / story / reels / lien) ---------------- */
+    shareTriggerBtn.addEventListener('click', () => {
+        shareLinkBox.classList.remove('show');
+        shareOverlay.classList.add('open');
+    });
+
+    shareCancelBtn.addEventListener('click', () => shareOverlay.classList.remove('open'));
+
+    shareOverlay.addEventListener('click', (e) => {
+        if (e.target === shareOverlay) shareOverlay.classList.remove('open');
+    });
+
+    const destinationLabels = {
+        feed: 'ton fil d\'actualité',
+        story: 'ta story',
+        reel: 'tes reels',
+        lien: null,
+    };
+
+    document.querySelectorAll('.ks-share-option').forEach(opt => {
+        opt.addEventListener('click', () => sharePerformance(opt.dataset.destination, opt));
+    });
+
+    copyLinkBtn.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(shareLinkText.textContent);
+            showToast('Lien copié !', 'ok');
+        } catch (err) {
+            showToast('Sélectionne et copie le lien manuellement.', 'error');
+        }
+    });
+
+    async function sharePerformance(destination, optionEl) {
+        if (!lastMixBuffer) return;
+        document.querySelectorAll('.ks-share-option').forEach(o => o.style.pointerEvents = 'none');
+        optionEl.classList.add('loading');
+
+        try {
+            const wavBlob = bufferToWavBlob(lastMixBuffer);
+            const formData = new FormData();
+            formData.append('song_key', SONG_KEY);
+            formData.append('song_title', SONG_TITLE);
+            formData.append('song_artist', SONG_ARTIST);
+            formData.append('mode', currentMode);
+            formData.append('voice_effect', currentFx);
+            formData.append('destination', destination);
+            formData.append('audio', wavBlob, 'performance.wav');
+
+            if (!PUBLISH_ENDPOINT) throw new Error('no_endpoint');
+            const res = await fetch(PUBLISH_ENDPOINT, { method: 'POST', body: formData });
+            if (!res.ok) throw new Error('publish_failed');
+            const data = await res.json();
+
+            if (destination === 'lien' && data.share_url) {
+                shareLinkText.textContent = data.share_url;
+                shareLinkBox.classList.add('show');
+                try { await navigator.clipboard.writeText(data.share_url); showToast('Lien copié !', 'ok'); }
+                catch (e) { /* pas grave, le lien reste affiché */ }
+            } else {
+                shareOverlay.classList.remove('open');
+                previewOverlay.classList.remove('open');
+                showToast('Partagé sur ' + destinationLabels[destination] + ' 🎉', 'ok');
+            }
+        } catch (err) {
+            showToast('Le partage a échoué, réessaie.', 'error');
+        } finally {
+            optionEl.classList.remove('loading');
+            document.querySelectorAll('.ks-share-option').forEach(o => o.style.pointerEvents = 'auto');
+        }
+    }
+
+    /* ---------------- INIT ---------------- */
+    loadLyrics();
+})();
+</script>
+</body>
+</html>
+{% endblock %}

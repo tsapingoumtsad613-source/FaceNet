@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- DÉBUT : Hub des groupes -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/groupes.css') }}">
+<div class="gp-wrap" id="gpRoot">
+    <header class="gp-hub-head">
+        <h1>Groupes</h1>
+        <div class="gp-head-actions">
+            <button type="button" class="gp-icon-btn" id="gpNotifBtn" aria-label="Notifications des groupes"><i class="fas fa-bell"></i><span class="gp-dot" id="gpNotifDot" hidden></span></button>
+            <button type="button" class="gp-btn gp-btn-primary" id="gpCreerBtn"><i class="fas fa-plus"></i> Créer un groupe</button>
+        </div>
+    </header>
+    <nav class="gp-tabs" id="gpTabs" role="tablist" aria-label="Sections des groupes">
+        <button type="button" role="tab" data-tab="fil" class="active">Fil</button>
+        <button type="button" role="tab" data-tab="mes">Mes groupes</button>
+        <button type="button" role="tab" data-tab="decouvrir">Découvrir</button>
+        <button type="button" role="tab" data-tab="invitations">Invitations <span class="gp-count" id="gpInvCount" hidden></span></button>
+    </nav>
+    <div class="gp-searchbar" id="gpSearchBar" hidden>
+        <input type="search" id="gpSearchInput" placeholder="Rechercher un groupe…" autocomplete="off" aria-label="Rechercher un groupe">
+        <select id="gpCatSelect" aria-label="Catégorie"><option value="">Toutes les catégories</option></select>
+    </div>
+    <div id="gpBody" aria-live="polite"></div>
+</div>
+<div id="gpModalRoot"></div>
+<div id="gpToast" class="gp-toast" role="status" aria-live="polite"></div>
+<script>window.GP = { page: 'hub', moi: {{ session.get('user_id') | tojson }}, categories: {{ categories | tojson }} };</script>
+<script src="{{ url_for('static', filename='js/groupes.js') }}"></script>
+<!-- FIN : Hub des groupes -->
+{% endblock %}

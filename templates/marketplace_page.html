@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    .mkp { max-width: 720px; margin: 0 auto; background: #fff; min-height: calc(100vh - var(--header-h, 60px)); padding: 0 14px 90px; box-sizing: border-box; font-family: Segoe UI, Helvetica, Arial, sans-serif; color: #050505; }
+    .mkp-top { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; padding: 14px 0 10px; }
+    .mkp-top a { color: #050505; font-size: 22px; text-decoration: none; width: 44px; height: 44px; display: flex; align-items: center; }
+    .mkp-top h1 { margin: 0; text-align: center; font-size: 19px; font-weight: 700; }
+    .mkp-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .mkp-card { text-decoration: none; color: #050505; display: block; }
+    .mkp-img { position: relative; aspect-ratio: 1 / 1; background: #f0f2f5; overflow: hidden; }
+    .mkp-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .mkp-st { position: absolute; left: 8px; bottom: 8px; padding: 3px 9px; border-radius: 12px; font-size: 12px; font-weight: 700; }
+    .mkp-st-reserve { background: #fff4d6; color: #8a5a00; }
+    .mkp-st-vendu { background: #fde8e8; color: #b42318; }
+    .mkp-st-disponible { display: none; }
+    .mkp-line { margin: 6px 0 10px; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mkp-vide { text-align: center; color: #65676b; padding: 50px 10px; font-size: 16px; }
+    .mkp-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 8px; padding: 9px 14px; font-size: 14px; font-weight: 600; cursor: pointer; background: #e4e6eb; color: #050505; text-decoration: none; }
+    .mkp-btn.pri { background: #1877f2; color: #fff; }
+    .mkp-btn.dng { background: #fde8e8; color: #b42318; }
+    .mkp-btn:disabled { opacity: .6; cursor: not-allowed; }
+    .mkp-person { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f0f2f5; }
+    .mkp-person img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: #e4e6eb; }
+    .mkp-person a.n { flex: 1; color: #050505; text-decoration: none; font-weight: 600; font-size: 16px; display: flex; align-items: center; gap: 5px; }
+    .mkp-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 18px; }
+    .mkp-stat { border: 1px solid #ced0d4; border-radius: 14px; padding: 14px; }
+    .mkp-stat b { display: block; font-size: 22px; }
+    .mkp-stat span { color: #65676b; font-size: 14px; }
+    .mkp-act { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f0f2f5; align-items: flex-start; }
+    .mkp-act img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; background: #f0f2f5; }
+    .mkp-act-body { flex: 1; min-width: 0; }
+    .mkp-act-body p { margin: 0 0 6px; font-size: 15px; }
+    .mkp-act-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+    .mkp-act-msg { font-size: 13px; color: #1877f2; min-height: 16px; margin-top: 4px; }
+    .mkp-input { width: 100%; box-sizing: border-box; padding: 12px 14px; border: 1px solid #ced0d4; border-radius: 10px; font-size: 16px; outline: none; }
+    .mkp-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+    .mkp-chip { border: 1px solid #ced0d4; background: #fff; border-radius: 20px; padding: 8px 14px; font-size: 14px; cursor: pointer; }
+    .mkp-chip.on { background: #e7f3ff; color: #1877f2; border-color: #1877f2; }
+    .mkp-star { color: #f7b928; letter-spacing: 1px; }
+    .mkp-avis { padding: 12px 0; border-bottom: 1px solid #f0f2f5; }
+    .mkp-avis p { margin: 4px 0 0; font-size: 15px; }
+    .mkp-note { display: flex; gap: 6px; margin: 8px 0; }
+    .mkp-note button { font-size: 28px; background: none; border: 0; cursor: pointer; color: #ccd0d5; padding: 0; }
+    .mkp-note button.on { color: #f7b928; }
+    .mkp-h2 { font-size: 18px; font-weight: 700; margin: 22px 0 8px; }
+    .mkp-toast { position: fixed; left: 50%; bottom: 80px; transform: translateX(-50%); background: #1c1e21; color: #fff; padding: 10px 16px; border-radius: 20px; font-size: 14px; z-index: 1200; max-width: 88vw; }
+    @media (min-width: 700px) { .mkp-grid { grid-template-columns: repeat(3, 1fr); } }
+</style>
+
+{% macro prix_txt(p) %}{% if p == 0 %}Gratuit{% else %}{{ '{:,}'.format(p).replace(',', ' ') }} FCFA{% endif %}{% endmacro %}
+{% macro badge() %}<svg viewBox="0 0 24 24" width="16" height="16" role="img" aria-label="Profil vérifié"><path fill="#1877f2" d="M12 1.5l2.6 1.9 3.2-.1 1 3.1 2.6 1.9-1 3.1 1 3.1-2.6 1.9-1 3.1-3.2-.1L12 22.5l-2.6-1.9-3.2.1-1-3.1-2.6-1.9 1-3.1-1-3.1 2.6-1.9 1-3.1 3.2.1z"/><path fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M7.8 12.3l2.9 2.9 5.6-5.8"/></svg>{% endmacro %}
+{% macro grille(fiches, vide) %}
+    {% if fiches %}
+    <div class="mkp-grid">
+        {% for f in fiches %}
+        <a class="mkp-card" href="{{ f.url }}">
+            <div class="mkp-img"><img src="{{ f.image }}" alt="">
+                <span class="mkp-st mkp-st-{{ f.statut }}">{{ {'disponible': 'Disponible', 'reserve': 'Réservé', 'vendu': 'Vendu'}[f.statut] }}</span></div>
+            <p class="mkp-line"><b>{{ prix_txt(f.prix) }}</b> · {{ f.titre }}</p>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}<div class="mkp-vide">{{ vide }}</div>{% endif %}
+{% endmacro %}
+{% macro etoiles(n) %}<span class="mkp-star">{% for i in range(1, 6) %}{{ '★' if i <= n else '☆' }}{% endfor %}</span>{% endmacro %}
+{% macro liste_gens(gens, vide, bouton) %}
+    {% if gens %}
+        {% for g in gens %}
+        <div class="mkp-person" id="mkp-g-{{ g.id }}">
+            <img src="{{ g.avatar }}" alt="">
+            <a class="n" href="{{ g.url }}"><span>{{ g.nom }}</span>{% if g.verifie %}{{ badge() }}{% endif %}</a>
+            {% if bouton %}<button class="mkp-btn" onclick="mkpNePlusSuivre({{ g.id }}, this)">Ne plus suivre</button>{% endif %}
+        </div>
+        {% endfor %}
+    {% else %}<div class="mkp-vide">{{ vide }}</div>{% endif %}
+{% endmacro %}
+
+<div class="mkp">
+    <div class="mkp-top">
+        <a href="{{ retour }}" aria-label="Retour"><i class="fas fa-chevron-left"></i></a>
+        <h1>{{ titre }}</h1>
+        <span></span>
+    </div>
+
+    {% if mode == 'enregistres' %}
+        {{ grille(fiches, "Aucun élément enregistré. Touchez le cœur d'une annonce pour la retrouver ici.") }}
+
+    {% elif mode == 'annonces' %}
+        <p style="margin:0 0 12px;"><a class="mkp-btn pri" href="{{ url_for('main.create_item') }}"><i class="fas fa-plus"></i> Créer une annonce</a></p>
+        {{ grille(fiches, "Vous n'avez encore aucune annonce.") }}
+
+    {% elif mode == 'recents' %}
+        {% if items %}
+        <p style="margin:0 0 10px;"><button class="mkp-btn" onclick="mkpEffacerRecents(this)"><i class="fas fa-trash"></i> Effacer l'historique</button></p>
+        {% for it in items %}
+        <a class="mkp-act" href="{{ it.url }}" style="text-decoration:none;color:inherit;">
+            {% if it.fiche %}<img src="{{ it.fiche.image }}" alt="">{% endif %}
+            <div class="mkp-act-body"><p><b>{{ it.titre }}</b></p><p style="color:#65676b;font-size:13px;">{{ it.date }}</p></div>
+        </a>
+        {% endfor %}
+        {% else %}<div class="mkp-vide">Aucune annonce consultée récemment.</div>{% endif %}
+
+    {% elif mode == 'actions' %}
+        {% if fiches %}
+        {% for f in fiches %}
+        <div class="mkp-act" id="mkp-a-{{ f.id }}" data-id="{{ f.id }}" data-loc="{{ f.localisation }}">
+            <img src="{{ f.image }}" alt="">
+            <div class="mkp-act-body">
+                <p><b class="mkp-prix">{{ prix_txt(f.prix) }}</b> · {{ f.titre }}</p>
+                <div class="mkp-act-btns">
+                    <button class="mkp-btn" onclick="mkpStatut({{ f.id }}, 'reserve', this)">Réservé</button>
+                    <button class="mkp-btn" onclick="mkpStatut({{ f.id }}, 'disponible', this)">Disponible</button>
+                    <button class="mkp-btn pri" onclick="mkpVendue({{ f.id }}, this)">Vendue</button>
+                    <button class="mkp-btn" onclick="mkpPrix({{ f.id }})">Prix</button>
+                    <button class="mkp-btn" onclick="mkpRepublier({{ f.id }})">Republier ailleurs</button>
+                </div>
+                <div class="mkp-act-msg" id="mkp-m-{{ f.id }}">Statut actuel : {{ {'disponible': 'Disponible', 'reserve': 'Réservé', 'vendu': 'Vendu'}[f.statut] }}</div>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}<div class="mkp-vide">Vous n'avez encore aucune annonce.</div>{% endif %}
+
+    {% elif mode == 'activites' %}
+        <div class="mkp-stats">
+            <div class="mkp-stat"><b>{{ stats.total }}</b><span>Annonces</span></div>
+            <div class="mkp-stat"><b>{{ stats.disponibles }}</b><span>Disponibles</span></div>
+            <div class="mkp-stat"><b>{{ stats.reservees }}</b><span>Réservées</span></div>
+            <div class="mkp-stat"><b>{{ stats.vendues }}</b><span>Vendues</span></div>
+            <div class="mkp-stat"><b>{{ '{:,}'.format(stats.revenu).replace(',', ' ') }} FCFA</b><span>Total des ventes</span></div>
+            <div class="mkp-stat"><b>{{ stats.favoris }}</b><span>Mises en favoris</span></div>
+        </div>
+        {{ grille(fiches, "Aucune activité de vente pour le moment.") }}
+
+    {% elif mode == 'followers' %}
+        {{ liste_gens(gens, "Personne ne vous suit pour le moment.", false) }}
+
+    {% elif mode == 'suivis' %}
+        {{ liste_gens(gens, "Vous ne suivez personne pour le moment.", true) }}
+
+    {% elif mode == 'statut' %}
+        <div class="mkp-stat" style="margin-top:10px;">
+            <b><i class="fas fa-shield-halved" style="color:#1877f2"></i> Accès complet</b>
+            <span>Vous pouvez acheter, vendre, discuter avec les vendeurs et publier des annonces sur le Marketplace.</span>
+        </div>
+        <p style="color:#65676b;font-size:14px;line-height:1.5;">Si une annonce enfreint les règles de la communauté, l'accès peut être limité. Vous en serez informé par notification.</p>
+
+    {% elif mode == 'localisation' %}
+        <p style="color:#65676b;margin:6px 0 12px;">Votre ville sert à afficher « À proximité » et l'onglet « Locale » du Marketplace.</p>
+        <input class="mkp-input" id="mkp-ville" maxlength="80" value="{{ ville }}" placeholder="Votre ville ou quartier">
+        <div class="mkp-chips">
+            {% for v in villes %}<button type="button" class="mkp-chip{{ ' on' if v == ville else '' }}" onclick="mkpChoisirVille('{{ v }}')">{{ v }}</button>{% endfor %}
+        </div>
+        <button class="mkp-btn pri" onclick="mkpSauverVille(this)"><i class="fas fa-check"></i> Enregistrer</button>
+
+    {% elif mode == 'avis' %}
+        <div class="mkp-stat" style="margin-bottom:6px;">
+            <b>{{ moyenne if recus else '—' }} / 5 {{ etoiles(moyenne|round|int) }}</b>
+            <span>{{ recus|length }} avis reçu{{ 's' if recus|length > 1 else '' }}</span>
+        </div>
+        <div class="mkp-h2">Avis reçus</div>
+        {% for a in recus %}
+        <div class="mkp-avis"><b>{{ a.auteur.nom if a.auteur else 'Utilisateur' }}</b> {{ etoiles(a.note) }} <span style="color:#65676b;font-size:13px;">{{ a.date }}</span>
+            {% if a.commentaire %}<p>{{ a.commentaire }}</p>{% endif %}</div>
+        {% else %}<div class="mkp-vide">Aucun avis reçu pour le moment.</div>{% endfor %}
+        <div class="mkp-h2">Avis que vous avez donnés</div>
+        {% for a in donnes %}
+        <div class="mkp-avis">{% if a.vendeur %}<a href="/marketplace/vendeur/{{ a.vendeur.id }}" style="color:#050505;font-weight:700;text-decoration:none;">{{ a.vendeur.nom }}</a>{% else %}<b>Utilisateur</b>{% endif %} {{ etoiles(a.note) }} <span style="color:#65676b;font-size:13px;">{{ a.date }}</span>
+            {% if a.commentaire %}<p>{{ a.commentaire }}</p>{% endif %}</div>
+        {% else %}<div class="mkp-vide">Vous n'avez noté aucun vendeur.</div>{% endfor %}
+
+    {% elif mode == 'vendeur' %}
+        <div class="mkp-person" style="border:0;">
+            <img src="{{ vendeur.avatar }}" alt="" style="width:64px;height:64px;">
+            <div style="flex:1;">
+                <div style="font-size:20px;font-weight:600;display:flex;align-items:center;gap:6px;">{{ vendeur.nom }}{% if vendeur.verifie %}{{ badge() }}{% endif %}</div>
+                <div style="color:#65676b;font-size:14px;">{{ moyenne if avis else '—' }} / 5 {{ etoiles(moyenne|round|int) }} · {{ avis|length }} avis</div>
+            </div>
+            {% if not est_moi %}<a class="mkp-btn" href="/marketplace/messages?seller_id={{ vendeur.id }}"><i class="fas fa-comment-dots"></i></a>{% endif %}
+        </div>
+        <div class="mkp-h2">Annonces</div>
+        {{ grille(fiches, "Aucune annonce.") }}
+        {% if not est_moi %}
+        <div class="mkp-h2">Laisser un avis</div>
+        <div class="mkp-note" id="mkp-note">{% for i in range(1, 6) %}<button type="button" data-n="{{ i }}" class="{{ 'on' if mon_avis and i <= mon_avis.note else '' }}">★</button>{% endfor %}</div>
+        <input class="mkp-input" id="mkp-com" maxlength="500" placeholder="Votre commentaire (facultatif)" value="{{ mon_avis.commentaire if mon_avis else '' }}">
+        <p style="margin:12px 0;"><button class="mkp-btn pri" onclick="mkpEnvoyerAvis({{ vendeur.id }}, this)">Envoyer mon avis</button></p>
+        {% endif %}
+        <div class="mkp-h2">Avis</div>
+        {% for a in avis %}
+        <div class="mkp-avis"><b>{{ a.auteur.nom if a.auteur else 'Utilisateur' }}</b> {{ etoiles(a.note) }} <span style="color:#65676b;font-size:13px;">{{ a.date }}</span>
+            {% if a.commentaire %}<p>{{ a.commentaire }}</p>{% endif %}</div>
+        {% else %}<div class="mkp-vide">Aucun avis pour le moment.</div>{% endfor %}
+    {% endif %}
+</div>
+
+<script>
+(function () {
+    'use strict';
+    var URLS = {
+        vendue:    "{{ url_for('main.api_marquer_vendue', item_id=0) }}",
+        prix:      "{{ url_for('main.api_modifier_prix', item_id=0) }}",
+        republier: "{{ url_for('main.api_republier_ailleurs', item_id=0) }}"
+    };
+    function avecId(u, id) { return u.replace(/\/0(?=\/|$)/, '/' + id); }
+    function toast(t) {
+        var d = document.createElement('div'); d.className = 'mkp-toast'; d.textContent = t; document.body.appendChild(d);
+        setTimeout(function () { d.remove(); }, 2600);
+    }
+    function post(url, body) {
+        return fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) })
+            .then(function (r) {
+                return r.json().catch(function () {
+                    return { success: false, message: r.status === 404 ? 'Page introuvable (404) : ' + url : 'Réponse inattendue du serveur (' + r.status + ').', error: r.status === 404 ? 'Page introuvable (404) : ' + url : 'Réponse inattendue du serveur (' + r.status + ').' };
+                });
+            });
+    }
+    function msg(id, t) { var m = document.getElementById('mkp-m-' + id); if (m) { m.textContent = t; } }
+    var LIB = { disponible: 'Disponible', reserve: 'Réservé', vendu: 'Vendu' };
+
+    window.mkpStatut = function (id, statut, btn) {
+        btn.disabled = true;
+        post('/marketplace/api/annonce/' + id + '/statut', { statut: statut }).then(function (d) {
+            btn.disabled = false;
+            msg(id, d && d.success ? 'Statut actuel : ' + LIB[statut] : ((d && d.message) || 'Action impossible.'));
+        }).catch(function () { btn.disabled = false; msg(id, 'Erreur réseau.'); });
+    };
+    window.mkpVendue = function (id, btn) {
+        if (!confirm('Marquer cette annonce comme vendue ?')) { return; }
+        btn.disabled = true;
+        post(avecId(URLS.vendue, id)).then(function (d) {
+            btn.disabled = false;
+            msg(id, d && d.success ? 'Statut actuel : Vendu' : ((d && d.message) || 'Action impossible.'));
+        }).catch(function () { btn.disabled = false; msg(id, 'Erreur réseau.'); });
+    };
+    window.mkpPrix = function (id) {
+        var v = prompt('Nouveau prix en FCFA (100 minimum) :');
+        if (v === null) { return; }
+        var n = parseInt(v, 10);
+        if (isNaN(n) || n < 100) { msg(id, 'Le prix doit être un nombre supérieur ou égal à 100.'); return; }
+        post(avecId(URLS.prix, id), { prix: n }).then(function (d) {
+            if (d && d.success) {
+                var el = document.querySelector('#mkp-a-' + id + ' .mkp-prix');
+                if (el) { el.textContent = n.toLocaleString('fr-FR').replace(/\u202f|\u00a0/g, ' ') + ' FCFA'; }
+                msg(id, 'Prix mis à jour.');
+            } else { msg(id, (d && d.message) || 'Action impossible.'); }
+        }).catch(function () { msg(id, 'Erreur réseau.'); });
+    };
+    window.mkpRepublier = function (id) {
+        var ligne = document.getElementById('mkp-a-' + id);
+        var ville = prompt('Nouvelle ville ou région pour cette annonce :', ligne ? ligne.dataset.loc : '');
+        if (ville === null) { return; }
+        if (!ville.trim()) { msg(id, 'Veuillez saisir une ville.'); return; }
+        post(avecId(URLS.republier, id), { localisation: ville.trim() }).then(function (d) {
+            if (d && d.success && ligne) { ligne.dataset.loc = ville.trim(); }
+            msg(id, d && d.success ? 'Annonce republiée à ' + ville.trim() + '.' : ((d && d.message) || 'Action impossible.'));
+        }).catch(function () { msg(id, 'Erreur réseau.'); });
+    };
+    window.mkpNePlusSuivre = function (id, btn) {
+        btn.disabled = true;
+        post('/api/suivre/' + id).then(function (d) {
+            if (d && d.success) {
+                if (d.suivi === false) { var l = document.getElementById('mkp-g-' + id); if (l) { l.remove(); } }
+                else { btn.disabled = false; btn.textContent = 'Ne plus suivre'; }
+            } else { btn.disabled = false; toast((d && d.error) || 'Action impossible.'); }
+        }).catch(function () { btn.disabled = false; toast('Erreur réseau.'); });
+    };
+    window.mkpEffacerRecents = function (btn) {
+        if (!confirm("Effacer tout l'historique des annonces consultées ?")) { return; }
+        btn.disabled = true;
+        post('/api/marketplace/recents/effacer').then(function (d) {
+            if (d && d.success) { location.reload(); } else { btn.disabled = false; toast((d && d.error) || 'Action impossible.'); }
+        }).catch(function () { btn.disabled = false; toast('Erreur réseau.'); });
+    };
+    window.mkpChoisirVille = function (v) {
+        var i = document.getElementById('mkp-ville'); if (i) { i.value = v; }
+        document.querySelectorAll('.mkp-chip').forEach(function (c) { c.classList.toggle('on', c.textContent === v); });
+    };
+    window.mkpSauverVille = function (btn) {
+        var i = document.getElementById('mkp-ville'); btn.disabled = true;
+        post('/api/marketplace/localisation', { ville: i ? i.value : '' }).then(function (d) {
+            btn.disabled = false;
+            toast(d && d.success ? (d.ville ? 'Localisation enregistrée : ' + d.ville : 'Localisation supprimée.') : ((d && d.error) || 'Enregistrement impossible.'));
+        }).catch(function () { btn.disabled = false; toast('Erreur réseau.'); });
+    };
+    var note = 0;
+    var zone = document.getElementById('mkp-note');
+    if (zone) {
+        note = zone.querySelectorAll('button.on').length;
+        zone.addEventListener('click', function (e) {
+            var b = e.target.closest('button[data-n]'); if (!b) { return; }
+            note = parseInt(b.dataset.n, 10);
+            zone.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', parseInt(x.dataset.n, 10) <= note); });
+        });
+    }
+    window.mkpEnvoyerAvis = function (vendeurId, btn) {
+        if (!note) { toast('Choisissez une note de 1 à 5.'); return; }
+        var c = document.getElementById('mkp-com'); btn.disabled = true;
+        post('/api/marketplace/avis', { vendeur_id: vendeurId, note: note, commentaire: c ? c.value : '' }).then(function (d) {
+            btn.disabled = false;
+            if (d && d.success) { toast('Merci pour votre avis !'); setTimeout(function () { location.reload(); }, 700); }
+            else { toast((d && d.error) || 'Enregistrement impossible.'); }
+        }).catch(function () { btn.disabled = false; toast('Erreur réseau.'); });
+    };
+})();
+</script>
+{% endblock %}

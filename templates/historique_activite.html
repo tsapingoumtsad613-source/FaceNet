@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historique d'activité | FaceNet</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root { --fn-blue: #0866FF; --fn-bg: #F0F2F5; --fn-gray: #65676B; --fn-border: #e4e6eb; --white: #ffffff; --text-dark: #1c1e21; }
+        body { background: var(--fn-bg); margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: var(--text-dark); }
+        .fn-page { max-width: 640px; margin: 0 auto; padding: 16px; }
+        .fn-topbar { display: flex; align-items: center; gap: 14px; padding: 8px 0 18px; }
+        .fn-topbar a { color: var(--text-dark); font-size: 20px; text-decoration: none; }
+        .fn-topbar h1 { font-size: 20px; margin: 0; }
+        .fn-card { background: var(--white); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+        .fn-meta { font-size: 0.78rem; color: var(--fn-gray); margin-bottom: 6px; display: flex; gap: 8px; align-items: center; }
+        .fn-contenu { font-size: 0.92rem; white-space: pre-wrap; word-break: break-word; }
+        .fn-tag { background: #eef0f2; border-radius: 8px; padding: 1px 8px; font-size: 0.72rem; }
+        .fn-empty { text-align: center; color: var(--fn-gray); padding: 30px 10px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+<div class="fn-page">
+    <div class="fn-topbar">
+        <a href="{{ url_for('main.settings') }}"><i class="fas fa-arrow-left"></i></a>
+        <h1>Historique d'activité</h1>
+    </div>
+
+    {% for p in publications %}
+    <div class="fn-card">
+        <div class="fn-meta">
+            <span>{{ p.date_creation.strftime('%d/%m/%Y à %H:%M') if p.date_creation else '' }}</span>
+            {% if p.confidentialite %}<span class="fn-tag">{{ p.confidentialite }}</span>{% endif %}
+        </div>
+        <div class="fn-contenu">{{ p.contenu or '(publication sans texte — média uniquement)' }}</div>
+    </div>
+    {% else %}
+    <div class="fn-empty">Tu n'as encore publié aucun contenu.</div>
+    {% endfor %}
+</div>
+</body>
+</html>
+{% endblock %}

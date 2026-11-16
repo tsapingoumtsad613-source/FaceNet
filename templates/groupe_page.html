@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="group-container" style="display: flex; min-height: 100vh; font-family: Arial, sans-serif;">
+
+    <div class="sidebar" style="width: 300px; background: #f0f2f5; padding: 20px; border-right: 1px solid #ddd;">
+        <h2 style="font-size: 20px; color: #1c1e21;">Gestion du groupe</h2>
+        <hr style="border: 0.5px solid #cccccc;">
+
+        <!-- Bouton "Créer un groupe" : toujours visible, même sans groupe ouvert -->
+        <button type="button" onclick="openCreateGroupModal()" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background: #1877f2; color: #fff; border: none; padding: 10px 12px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; margin-bottom: 14px;">
+            <i class="fas fa-plus"></i> Créer un groupe
+        </button>
+
+        <ul style="list-style: none; padding: 0;">
+            <li style="padding: 10px 0;"><a href="{{ '/groupes/' ~ group.id if group else '#' }}" style="text-decoration: none; color: #1c1e21; font-weight: bold;">🏠 Accueil du groupe</a></li>
+            <li style="padding: 10px 0;">
+                <a href="#" onclick="toggleMembersPanel(event)" style="text-decoration: none; color: #65676b;">
+                    👥 Membres{% if group and group.membres %} ({{ group.membres|length }}){% endif %}
+                </a>
+            </li>
+        </ul>
+
+        {% if group and current_user.is_authenticated and (not group.membres or current_user in group.membres) %}
+        <button type="button" onclick="openAddMembersModal()" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background: #f0f2f5; color: #1c1e21; border: 1px solid #ccd0d5; padding: 9px 12px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; margin-bottom: 6px;">
+            <i class="fas fa-user-plus"></i> Ajouter des membres
+        </button>
+        {% endif %}
+
+        <!-- Panneau "Membres" : masqué par défaut, affiché au clic sur le lien ci-dessus -->
+        {% if group %}
+        <div id="members-panel" style="display: none; background: #fff; border-radius: 8px; padding: 8px; margin: 6px 0 14px; max-height: 260px; overflow-y: auto; border: 1px solid #e4e6eb;">
+            {% if group.membres %}
+                {% for membre in group.membres %}
+                <div style="display: flex; align-items: center; gap: 8px; padding: 6px 4px;">
+                    <img src="{{ url_for('static', filename='uploads/' + (membre.avatar if membre.avatar else 'default_avatar.png')) }}" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover; background: #e4e6eb;">
+                    <span style="font-size: 13px; color: #1c1e21;">{{ membre.username }}</span>
+                    {% if group.admin_id == membre.id %}
+                    <span style="font-size: 11px; color: #1877f2; font-weight: 700; margin-left: auto;">Admin</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="font-size: 13px; color: #65676b; padding: 6px 4px;">Aucun membre pour l'instant.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if current_user.is_authenticated and group and current_user.id == group.admin_id %}
+        <hr style="border: 0.5px solid #cccccc;">
+        <p style="font-size: 14px; color: #65676b; font-weight: bold; margin: 10px 0;">PARAMÈTRES ADMIN</p>
+        <ul style="list-style: none; padding: 0;">
+            <li style="padding: 5px 0;"><a href="#" style="color: #d32f2f; text-decoration: none; font-size: 14px;">Supprimer le groupe</a></li>
+            <li style="padding: 5px 0;"><a href="#" style="color: #d32f2f; text-decoration: none; font-size: 14px;">Modifier le nom du groupe</a></li>
+        </ul>
+        {% endif %}
+    </div>
+
+    <div class="feed" style="flex: 1; padding: 20px 40px; background: #ffffff;">
+        {% if group %}
+        <div class="group-header" style="margin-bottom: 30px;">
+            <h1 style="font-size: 28px; margin-bottom: 5px; color: #1c1e21; display: flex; align-items: center; gap: 6px;">
+                {{ group.name }}
+                {% if group.admin and group.admin.badge_expire %}
+                <svg viewBox="0 0 24 24" width="20" height="20" style="vertical-align: middle;">
+                    <path fill="#1877F2" d="M23 12l-2.44-2.78.34-3.68-3.61-.82-1.89-3.18L12 3 8.6 1.54 6.71 4.72l-3.61.81.34 3.68L1 12l2.44 2.78-.34 3.69 3.61.82 1.89 3.18L12 21l3.4 1.46 1.89-3.18 3.61-.82-.34-3.68L23 12z"></path>
+                    <path fill="white" d="M10.5 15.6L6.4 11.8L7.8 10.4L10.2 12.8L16.2 6.8L17.6 8.2L10.2 15.6Z"></path>
+                </svg>
+                {% endif %}
+            </h1>
+            <p style="color: #65676b; margin: 0;">{{ group.description if group.description else 'Pas de description.' }}</p>
+        </div>
+
+        <div class="post-box" style="background: #f7f8fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e4e6eb;">
+            <form action="{{ url_for('groupe.groupe_publier', group_id=group.id) }}" method="POST">
+                <textarea name="content" placeholder="Exprimez-vous dans ce groupe..."
+                          style="width: 100%; border: 1px solid #dddfe2; padding: 10px; border-radius: 8px; resize: none; font-size: 15px; box-sizing: border-box;" rows="3" required></textarea>
+                <button type="submit" style="margin-top: 10px; background: #1877f2; color: white; border: none; padding: 8px 20px; border-radius: 6px; font-weight: bold; cursor: pointer;">
+                    Publier dans le groupe
+                </button>
+            </form>
+        </div>
+
+        <div class="posts-feed">
+            {% if posts %}
+                {% for post in posts %}
+                <div class="post" style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background: #fff;">
+                    <p style="display: flex; align-items: center; gap: 4px; margin: 0 0 8px 0;">
+                        <strong>{{ post.auteur_rel.username }}</strong>
+                        {% if post.auteur_rel.badge_expire %}
+                        <svg viewBox="0 0 24 24" width="18" height="18" style="vertical-align: middle;">
+                            <path fill="#1877F2" d="M23 12l-2.44-2.78.34-3.68-3.61-.82-1.89-3.18L12 3 8.6 1.54 6.71 4.72l-3.61.81.34 3.68L1 12l2.44 2.78-.34 3.69 3.61.82 1.89 3.18L12 21l3.4 1.46 1.89-3.18 3.61-.82-.34-3.68L23 12z"></path>
+                            <path fill="white" d="M10.5 15.6L6.4 11.8L7.8 10.4L10.2 12.8L16.2 6.8L17.6 8.2L10.2 15.6Z"></path>
+                        </svg>
+                        {% endif %}
+                        <span style="color: #65676b; font-size: 12px;">• {{ post.date_pub.strftime('%d %b %Y') if post.date_pub else 'Récemment' }}</span>
+                    </p>
+                    <p style="font-size: 15px; color: #1c1e21; line-height: 1.4;">{{ post.contenu }}</p>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: #65676b; text-align: center; margin-top: 20px;">Aucune publication dans ce groupe pour le moment.</p>
+            {% endif %}
+        </div>
+
+        {% else %}
+        <!-- Aucun groupe précis n'est ouvert : on affiche "Vos groupes" + invitation à en créer un -->
+        <div class="group-header" style="margin-bottom: 24px;">
+            <h1 style="font-size: 28px; margin-bottom: 5px; color: #1c1e21;">Vos groupes</h1>
+            <p style="color: #65676b; margin: 0;">Rejoignez ou créez un groupe pour échanger avec des personnes qui partagent vos centres d'intérêt.</p>
+        </div>
+
+        {% if mes_groupes %}
+        <div class="mes-groupes-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px;">
+            {% for g in mes_groupes %}
+            <a href="/groupes/{{ g.id }}" style="text-decoration: none; color: inherit; border: 1px solid #e4e6eb; border-radius: 10px; padding: 14px; display: block; background: #fff;">
+                <strong style="font-size: 15px; color: #1c1e21;">{{ g.name }}</strong>
+                <p style="font-size: 13px; color: #65676b; margin: 4px 0 0;">{{ g.description if g.description else 'Pas de description.' }}</p>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; color: #65676b; padding: 48px 20px; border: 1px dashed #ccd0d5; border-radius: 10px;">
+            <i class="fas fa-people-group" style="font-size: 36px; color: #c7cad1; margin-bottom: 10px; display: block;"></i>
+            <p style="margin: 0 0 14px;">Vous n'avez pas encore de groupe.</p>
+            <button type="button" onclick="openCreateGroupModal()" style="background: #1877f2; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                Créer votre premier groupe
+            </button>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MODALE : Créer un groupe
+     Poste vers /groupes/creer — voir note d'implémentation
+     backend fournie séparément.
+═══════════════════════════════════════════════ -->
+<div id="create-group-backdrop" onclick="closeCreateGroupModal()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9998;"></div>
+<div id="create-group-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#fff; border-radius:12px; width:92%; max-width:420px; z-index:9999; box-shadow:0 8px 30px rgba(0,0,0,.25);">
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid #e4e6eb;">
+        <strong style="font-size:16px; color:#1c1e21;">Créer un groupe</strong>
+        <span onclick="closeCreateGroupModal()" style="cursor:pointer; font-size:18px; color:#65676b;">✕</span>
+    </div>
+    <form id="create-group-form" action="/groupes/creer" method="POST" style="padding: 16px;">
+        <label style="font-size:13px; font-weight:700; color:#1c1e21; display:block; margin-bottom:4px;">Nom du groupe</label>
+        <input type="text" name="name" required maxlength="80" placeholder="Ex : Passionnés de photographie"
+               style="width:100%; box-sizing:border-box; border:1px solid #dddfe2; border-radius:8px; padding:9px 12px; font-size:14px; margin-bottom:12px;">
+
+        <label style="font-size:13px; font-weight:700; color:#1c1e21; display:block; margin-bottom:4px;">Description</label>
+        <textarea name="description" rows="3" placeholder="De quoi parle ce groupe ?"
+                  style="width:100%; box-sizing:border-box; border:1px solid #dddfe2; border-radius:8px; padding:9px 12px; font-size:14px; resize:none; margin-bottom:12px;"></textarea>
+
+        <label style="font-size:13px; font-weight:700; color:#1c1e21; display:block; margin-bottom:6px;">Confidentialité</label>
+        <select name="confidentialite" style="width:100%; box-sizing:border-box; border:1px solid #dddfe2; border-radius:8px; padding:9px 12px; font-size:14px; margin-bottom:16px;">
+            <option value="public">Public — tout le monde peut voir le groupe et ses publications</option>
+            <option value="prive">Privé — seuls les membres voient les publications</option>
+        </select>
+
+        <button type="submit" style="width:100%; background:#1877f2; color:#fff; border:none; padding:11px; border-radius:8px; font-weight:bold; font-size:15px; cursor:pointer;">
+            Créer le groupe
+        </button>
+    </form>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MODALE : Ajouter des membres
+     Réutilise l'API existante /api/amis (déjà utilisée ailleurs
+     dans FaceNet) pour proposer la liste d'ami(e)s à ajouter.
+═══════════════════════════════════════════════ -->
+{% if group %}
+<div id="add-members-backdrop" onclick="closeAddMembersModal()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9998;"></div>
+<div id="add-members-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#fff; border-radius:12px; width:92%; max-width:420px; max-height:80vh; z-index:9999; box-shadow:0 8px 30px rgba(0,0,0,.25); display:flex; flex-direction:column;">
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid #e4e6eb; flex-shrink:0;">
+        <strong style="font-size:16px; color:#1c1e21;">Ajouter des membres</strong>
+        <span onclick="closeAddMembersModal()" style="cursor:pointer; font-size:18px; color:#65676b;">✕</span>
+    </div>
+    <div style="padding: 10px 16px; flex-shrink:0;">
+        <input type="text" id="add-members-search" oninput="filterAddMembersList(this.value)" placeholder="Rechercher un(e) ami(e)..."
+               style="width:100%; box-sizing:border-box; border:1px solid #dddfe2; border-radius:20px; padding:9px 14px; font-size:14px;">
+    </div>
+    <div id="add-members-list" style="padding: 4px 12px 12px; overflow-y:auto; flex:1;">
+        <p style="color:#65676b; font-size:13px; padding:8px;">Chargement de vos amis...</p>
+    </div>
+    <div style="padding: 12px 16px; border-top:1px solid #e4e6eb; flex-shrink:0;">
+        <button type="button" onclick="confirmAddMembers()" style="width:100%; background:#1877f2; color:#fff; border:none; padding:11px; border-radius:8px; font-weight:bold; font-size:15px; cursor:pointer;">
+            Ajouter au groupe
+        </button>
+    </div>
+</div>
+{% endif %}
+
+<script>
+/* ══════════════════════════════════════════════
+   CRÉER UN GROUPE
+═══════════════════════════════════════════════ */
+function openCreateGroupModal() {
+    document.getElementById('create-group-backdrop').style.display = 'block';
+    document.getElementById('create-group-modal').style.display = 'block';
+}
+function closeCreateGroupModal() {
+    document.getElementById('create-group-backdrop').style.display = 'none';
+    document.getElementById('create-group-modal').style.display = 'none';
+}
+
+/* ══════════════════════════════════════════════
+   PANNEAU MEMBRES (affichage/masquage)
+═══════════════════════════════════════════════ */
+function toggleMembersPanel(e) {
+    if (e) e.preventDefault();
+    const panel = document.getElementById('members-panel');
+    if (!panel) return;
+    panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
+}
+
+/* ══════════════════════════════════════════════
+   AJOUTER DES MEMBRES — réutilise /api/amis
+═══════════════════════════════════════════════ */
+let groupAllFriendsCache = null;
+let groupSelectedMemberIds = new Set();
+const CURRENT_GROUP_ID = {{ group.id if group else 'null' }};
+const CURRENT_GROUP_MEMBER_IDS = new Set([{% if group and group.membres %}{% for m in group.membres %}{{ m.id }}{{ ',' if not loop.last else '' }}{% endfor %}{% endif %}]);
+
+function openAddMembersModal() {
+    document.getElementById('add-members-backdrop').style.display = 'block';
+    document.getElementById('add-members-modal').style.display = 'flex';
+    document.getElementById('add-members-search').value = '';
+    groupSelectedMemberIds = new Set();
+    loadGroupFriends();
+}
+function closeAddMembersModal() {
+    document.getElementById('add-members-backdrop').style.display = 'none';
+    document.getElementById('add-members-modal').style.display = 'none';
+}
+function loadGroupFriends() {
+    const box = document.getElementById('add-members-list');
+    if (groupAllFriendsCache) { renderGroupFriends(''); return; }
+    box.innerHTML = '<p style="color:#65676b;font-size:13px;padding:8px;">Chargement de vos amis...</p>';
+    fetch('/api/amis').then(r => r.json()).then(data => {
+        groupAllFriendsCache = data.amis || [];
+        renderGroupFriends('');
+    }).catch(() => { box.innerHTML = '<p style="color:#65676b;font-size:13px;padding:8px;">Impossible de charger vos amis.</p>'; });
+}
+function filterAddMembersList(v) { renderGroupFriends(v); }
+function renderGroupFriends(filter) {
+    const box = document.getElementById('add-members-list');
+    const list = (groupAllFriendsCache || []).filter(a => !CURRENT_GROUP_MEMBER_IDS.has(a.id));
+    const f = (filter || '').toLowerCase();
+    const filtered = list.filter(a => !f || (a.nom_complet || '').toLowerCase().includes(f));
+    if (!filtered.length) { box.innerHTML = '<p style="color:#65676b;font-size:13px;padding:8px;">Aucun(e) ami(e) à ajouter.</p>'; return; }
+    box.innerHTML = filtered.map(function (a) {
+        const checked = groupSelectedMemberIds.has(String(a.id)) ? 'checked' : '';
+        return '<label style="display:flex; align-items:center; gap:10px; padding:8px 4px; cursor:pointer;">' +
+            '<img src="/static/uploads/' + (a.avatar || 'default_avatar.png') + '" style="width:34px;height:34px;border-radius:50%;object-fit:cover;background:#e4e6eb;">' +
+            '<span style="flex:1; font-size:14px; color:#1c1e21;">' + (a.nom_complet || '') + '</span>' +
+            '<input type="checkbox" value="' + a.id + '" ' + checked + ' onchange="toggleGroupMemberSelection(this)">' +
+            '</label>';
+    }).join('');
+}
+function toggleGroupMemberSelection(el) {
+    if (el.checked) groupSelectedMemberIds.add(el.value); else groupSelectedMemberIds.delete(el.value);
+}
+function confirmAddMembers() {
+    if (!groupSelectedMemberIds.size || !CURRENT_GROUP_ID) { closeAddMembersModal(); return; }
+    const body = new FormData();
+    body.append('user_ids', Array.from(groupSelectedMemberIds).join(','));
+    fetch('/groupes/' + CURRENT_GROUP_ID + '/ajouter-membres', { method: 'POST', body: body })
+        .then(function () { window.location.reload(); })
+        .catch(function () { closeAddMembersModal(); });
+}
+</script>
+{% endblock %}
