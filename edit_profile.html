@@ -1,0 +1,979 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.ep-lbl-row, .vis-row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:5px; }
+.ep-lbl-row label, .vis-row label { margin:0 !important; }
+.ep-vis { position:relative; display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:12px; color:#65676b; user-select:none; flex-shrink:0; font-weight:600; }
+.ep-vis input { position:absolute; opacity:0; width:0; height:0; }
+.ep-vis-track { width:34px; height:20px; border-radius:10px; background:#ccd0d5; position:relative; transition:background .2s; }
+.ep-vis-track::after { content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; transition:transform .2s; box-shadow:0 1px 2px rgba(0,0,0,.3); }
+.ep-vis input:checked ~ .ep-vis-track { background:#1877f2; }
+.ep-vis input:checked ~ .ep-vis-track::after { transform:translateX(14px); }
+.ep-vis input:focus-visible ~ .ep-vis-track { outline:2px solid #1877f2; outline-offset:2px; }
+.ep-vis input:checked ~ .ep-vis-txt::after { content:'Visible'; }
+.ep-vis input:not(:checked) ~ .ep-vis-txt::after { content:'Masqué'; }
+.ep-dates { display:flex; gap:10px; margin-top:8px; }
+.ep-dates > div { flex:1; min-width:0; }
+.ep-dates span { display:block; font-size:12px; color:#65676b; margin-bottom:3px; }
+.ep-dates input { width:100%; padding:8px; border:1px solid #ddd; border-radius:5px; box-sizing:border-box; font-family:inherit; }
+.ep-hint { font-size:12px; color:#65676b; margin:4px 0 0; line-height:1.4; }
+.fn-logo-res { color:#8a8d91; }
+.social-row .fn-res-autre { order:4; }
+.social-row .fn-res-err { order:5; flex:1 1 100%; color:#b3122d; background:#fff0f2; border:1px solid #e41e3f; border-radius:6px; padding:6px 10px; font-size:13px; line-height:1.4; }
+.social-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; align-items:center; }
+.social-row .fn-res-prev { order:1; width:36px; height:36px; border-radius:50%; background:#f0f2f5; display:inline-flex; align-items:center; justify-content:center; flex:none; font-size:17px; }
+.social-row select { order:2; flex:1 1 140px; min-width:0; padding:8px; border:1px solid #ddd; border-radius:6px; font-family:inherit; font-size:14px; }
+.social-row button { order:3; flex:none; background:#f0f2f5; border:none; border-radius:6px; width:32px; height:32px; cursor:pointer; font-size:15px; color:#d32f2f; }
+.social-row input { order:4; flex:1 1 100%; min-width:0; padding:8px; border:1px solid #ddd; border-radius:6px; font-family:inherit; font-size:14px; box-sizing:border-box; }
+.lien-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; align-items:center; }
+.lien-row .lien-ico { order:1; width:36px; height:36px; border-radius:50%; background:#f0f2f5; display:inline-flex; align-items:center; justify-content:center; flex:none; font-size:16px; }
+.lien-row input[name="lien_nom[]"] { order:2; flex:1 1 140px; min-width:0; padding:8px; border:1px solid #ddd; border-radius:6px; font-family:inherit; font-size:14px; box-sizing:border-box; }
+.lien-row button { order:3; flex:none; background:#f0f2f5; border:none; border-radius:6px; width:32px; height:32px; cursor:pointer; font-size:15px; color:#d32f2f; }
+.lien-row input[name="lien_url[]"] { order:4; flex:1 1 100%; min-width:0; padding:8px; border:1px solid #ddd; border-radius:6px; font-family:inherit; font-size:14px; box-sizing:border-box; }
+.lien-aide { font-size:12px; color:#65676b; margin:0 0 8px; }
+.btn-add-social { background:#f0f2f5; border:none; border-radius:6px; padding:8px 12px; font-size:13px; font-weight:600; cursor:pointer; color:#1c1e21; margin-top:4px; }
+.ep-focus { animation: epFlash 1.8s ease-out 1; border-radius:8px; }
+@keyframes epFlash { 0% { box-shadow:0 0 0 3px rgba(24,119,242,.55); background:rgba(24,119,242,.08); } 100% { box-shadow:0 0 0 3px rgba(24,119,242,0); background:transparent; } }
+</style>
+{% set vis = visibilite|default({}) %}{% set parcours = parcours|default({}) %}
+{% set _s = saisie if (saisie is defined and saisie) else {} %}
+{% macro vis_toggle(vis, nom) %}<label class="ep-vis" title="Afficher cette information sur mon profil"><input type="checkbox" name="vis_{{ nom }}" value="1" {% if vis.get(nom, True) %}checked{% endif %}><span class="ep-vis-track"></span><span class="ep-vis-txt"></span></label>{% endmacro %}
+{% macro fn_logo_reseau(plat) -%}
+{%- set p = (plat or '')|string|trim|lower -%}
+{%- set ns = namespace(c=(logos_reseaux.get(plat) if (logos_reseaux is defined and logos_reseaux) else '')) -%}
+{%- for nom, cls in [('facebook', 'fa-brands fa-facebook'), ('instagram', 'fa-brands fa-instagram'), ('twitter / x', 'fa-brands fa-x-twitter'), ('tiktok', 'fa-brands fa-tiktok'), ('linkedin', 'fa-brands fa-linkedin'), ('youtube', 'fa-brands fa-youtube'), ('snapchat', 'fa-brands fa-snapchat'), ('threads', 'fa-brands fa-threads'), ('bluesky', 'fa-brands fa-bluesky'), ('pinterest', 'fa-brands fa-pinterest'), ('reddit', 'fa-brands fa-reddit'), ('tumblr', 'fa-brands fa-tumblr'), ('mastodon', 'fa-brands fa-mastodon'), ('quora', 'fa-brands fa-quora'), ('vk', 'fa-brands fa-vk'), ('weibo', 'fa-brands fa-weibo'), ('whatsapp', 'fa-brands fa-whatsapp'), ('telegram', 'fa-brands fa-telegram'), ('messenger', 'fa-brands fa-facebook-messenger'), ('discord', 'fa-brands fa-discord'), ('skype', 'fa-brands fa-skype'), ('viber', 'fa-brands fa-viber'), ('line', 'fa-brands fa-line'), ('wechat', 'fa-brands fa-weixin'), ('slack', 'fa-brands fa-slack'), ('spotify', 'fa-brands fa-spotify'), ('soundcloud', 'fa-brands fa-soundcloud'), ('apple music', 'fa-brands fa-itunes-note'), ('deezer', 'fa-brands fa-deezer'), ('bandcamp', 'fa-brands fa-bandcamp'), ('mixcloud', 'fa-brands fa-mixcloud'), ('twitch', 'fa-brands fa-twitch'), ('vimeo', 'fa-brands fa-vimeo-v'), ('github', 'fa-brands fa-github'), ('gitlab', 'fa-brands fa-gitlab'), ('behance', 'fa-brands fa-behance'), ('dribbble', 'fa-brands fa-dribbble'), ('artstation', 'fa-brands fa-artstation'), ('deviantart', 'fa-brands fa-deviantart'), ('figma', 'fa-brands fa-figma'), ('codepen', 'fa-brands fa-codepen'), ('stack overflow', 'fa-brands fa-stack-overflow'), ('medium', 'fa-brands fa-medium'), ('flickr', 'fa-brands fa-flickr'), ('patreon', 'fa-brands fa-patreon'), ('etsy', 'fa-brands fa-etsy'), ('goodreads', 'fa-brands fa-goodreads'), ('imdb', 'fa-brands fa-imdb'), ('strava', 'fa-brands fa-strava'), ('autre', 'fa-solid fa-link')] -%}{%- if not ns.c and p == nom -%}{%- set ns.c = cls -%}{%- endif -%}{%- endfor -%}
+{%- for mot, cls in [('stack overflow', 'fa-brands fa-stack-overflow'), ('apple music', 'fa-brands fa-itunes-note'), ('soundcloud', 'fa-brands fa-soundcloud'), ('artstation', 'fa-brands fa-artstation'), ('deviantart', 'fa-brands fa-deviantart'), ('instagram', 'fa-brands fa-instagram'), ('pinterest', 'fa-brands fa-pinterest'), ('messenger', 'fa-brands fa-facebook-messenger'), ('goodreads', 'fa-brands fa-goodreads'), ('facebook', 'fa-brands fa-facebook'), ('linkedin', 'fa-brands fa-linkedin'), ('snapchat', 'fa-brands fa-snapchat'), ('mastodon', 'fa-brands fa-mastodon'), ('whatsapp', 'fa-brands fa-whatsapp'), ('telegram', 'fa-brands fa-telegram'), ('bandcamp', 'fa-brands fa-bandcamp'), ('mixcloud', 'fa-brands fa-mixcloud'), ('dribbble', 'fa-brands fa-dribbble'), ('twitter', 'fa-brands fa-x-twitter'), ('youtube', 'fa-brands fa-youtube'), ('threads', 'fa-brands fa-threads'), ('bluesky', 'fa-brands fa-bluesky'), ('discord', 'fa-brands fa-discord'), ('spotify', 'fa-brands fa-spotify'), ('behance', 'fa-brands fa-behance'), ('codepen', 'fa-brands fa-codepen'), ('patreon', 'fa-brands fa-patreon'), ('tiktok', 'fa-brands fa-tiktok'), ('reddit', 'fa-brands fa-reddit'), ('tumblr', 'fa-brands fa-tumblr'), ('wechat', 'fa-brands fa-weixin'), ('deezer', 'fa-brands fa-deezer'), ('twitch', 'fa-brands fa-twitch'), ('github', 'fa-brands fa-github'), ('gitlab', 'fa-brands fa-gitlab'), ('medium', 'fa-brands fa-medium'), ('flickr', 'fa-brands fa-flickr'), ('strava', 'fa-brands fa-strava'), ('quora', 'fa-brands fa-quora'), ('weibo', 'fa-brands fa-weibo'), ('skype', 'fa-brands fa-skype'), ('viber', 'fa-brands fa-viber'), ('slack', 'fa-brands fa-slack'), ('vimeo', 'fa-brands fa-vimeo-v'), ('figma', 'fa-brands fa-figma'), ('etsy', 'fa-brands fa-etsy'), ('imdb', 'fa-brands fa-imdb')] -%}{%- if not ns.c and mot in p -%}{%- set ns.c = cls -%}{%- endif -%}{%- endfor -%}
+<i class="{{ ns.c or 'fa-solid fa-link' }} fn-logo-res" aria-hidden="true"></i>
+{%- endmacro %}
+{% macro fn_options_reseaux(sel) -%}
+{%- set ns = namespace(trouve=false) -%}
+{%- set groupes = [('Réseaux sociaux', [('Facebook', 'Facebook'), ('Instagram', 'Instagram'), ('Twitter / X', 'X (Twitter)'), ('TikTok', 'TikTok'), ('LinkedIn', 'LinkedIn'), ('YouTube', 'YouTube'), ('Snapchat', 'Snapchat'), ('Threads', 'Threads'), ('Bluesky', 'Bluesky'), ('Pinterest', 'Pinterest'), ('Reddit', 'Reddit'), ('Tumblr', 'Tumblr'), ('Mastodon', 'Mastodon'), ('Quora', 'Quora'), ('VK', 'VK'), ('Weibo', 'Weibo')]), ('Messagerie', [('WhatsApp', 'WhatsApp'), ('Telegram', 'Telegram'), ('Messenger', 'Messenger'), ('Discord', 'Discord'), ('Skype', 'Skype'), ('Viber', 'Viber'), ('Line', 'Line'), ('WeChat', 'WeChat'), ('Slack', 'Slack')]), ('Musique et audio', [('Spotify', 'Spotify'), ('SoundCloud', 'SoundCloud'), ('Apple Music', 'Apple Music'), ('Deezer', 'Deezer'), ('Bandcamp', 'Bandcamp'), ('Mixcloud', 'Mixcloud')]), ('Vidéo et streaming', [('Twitch', 'Twitch'), ('Vimeo', 'Vimeo')]), ('Création et professionnel', [('GitHub', 'GitHub'), ('GitLab', 'GitLab'), ('Behance', 'Behance'), ('Dribbble', 'Dribbble'), ('ArtStation', 'ArtStation'), ('DeviantArt', 'DeviantArt'), ('Figma', 'Figma'), ('CodePen', 'CodePen'), ('Stack Overflow', 'Stack Overflow'), ('Medium', 'Medium'), ('Flickr', 'Flickr'), ('Patreon', 'Patreon'), ('Etsy', 'Etsy'), ('Goodreads', 'Goodreads'), ('IMDb', 'IMDb'), ('Strava', 'Strava')]), ('Autre', [('Autre', 'Autre (lien personnalisé)')])] -%}
+{%- for g, items in groupes -%}{%- for v, l in items -%}{%- if v == sel -%}{%- set ns.trouve = true -%}{%- endif -%}{%- endfor -%}{%- endfor -%}
+{%- if sel and not ns.trouve %}<option value="{{ sel }}" selected>{{ sel }}</option>{% endif -%}
+{%- for g, items in groupes %}<optgroup label="{{ g }}">{% for v, l in items %}<option value="{{ v }}"{% if v == sel %} selected{% endif %}>{{ l }}</option>{% endfor %}</optgroup>{% endfor -%}
+{%- endmacro %}
+{% macro dates_parcours(parcours, prefixe, aide) %}<div class="ep-dates"><div><span>Début</span><input type="month" name="{{ prefixe }}_debut" value="{{ parcours.get(prefixe ~ '_debut', '') }}" placeholder="AAAA-MM" aria-label="Date de début"></div><div><span>Fin</span><input type="month" name="{{ prefixe }}_fin" value="{{ parcours.get(prefixe ~ '_fin', '') }}" placeholder="AAAA-MM" aria-label="Date de fin"></div></div><p class="ep-hint">{{ aide }}</p>{% endmacro %}
+<div style="max-width: 560px; margin: 40px auto 60px; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <h2 style="text-align: center; color: #1877f2;">Modifier mon Profil</h2>
+    {% if name_error is defined and name_error %}
+    <div role="alert" style="background:#fff0f2; border:1px solid #e41e3f; color:#b3122d; padding:12px 14px; border-radius:8px; margin:0 0 16px; font-size:14px; line-height:1.4;">⚠️ {{ name_error }}
+        {% if name_suggestions is defined and name_suggestions %}
+        <div style="margin-top:10px; color:#1c1e21; font-size:13px;">Noms proches que vous pouvez utiliser :
+            <div style="margin-top:6px;">{% for s in name_suggestions %}<span style="display:inline-block; background:#fff; border:1px solid #dddfe2; border-radius:14px; padding:4px 10px; margin:0 6px 6px 0; font-weight:600;">{{ s }}</span>{% endfor %}</div>
+        </div>
+        {% endif %}
+    </div>
+    {% elif jours_restants_nom is defined and jours_restants_nom %}
+    <div style="background:#f0f2f5; border:1px solid #dddfe2; color:#65676b; padding:10px 14px; border-radius:8px; margin:0 0 16px; font-size:13px; line-height:1.4;">🔒 Vous pourrez modifier votre nom dans {{ jours_restants_nom }} jour{{ 's' if jours_restants_nom > 1 else '' }}.</div>
+    {% endif %}
+    {% if social_error is defined and social_error %}
+    <div role="alert" style="background:#fff0f2; border:1px solid #e41e3f; color:#b3122d; padding:12px 14px; border-radius:8px; margin:0 0 16px; font-size:14px; line-height:1.4;">⚠️ {{ social_error }}</div>
+    {% endif %}
+    <form action="{{ url_for('main.edit_profile') }}" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="vis_champs" value="birth_date,sexe,situation_amoureuse,langues,email,phone,site_web,reseaux_sociaux,ville,localisation,emploi_actuel,entreprise,ecole,universite,groupes_musicaux_preferes,films_preferes,jeux_video_preferes,emissions_tv_preferees,loisirs,sports_preferes,livres_preferes,plat_prefere,animaux_preferes,chaines_podcasts,citation_preferee,competences,pays_visites,destination_reve">
+
+        {% if current_user.badge_expire %}
+        <div class="ep-hint" style="background:#f0f6ff;border:1px solid #cfe0fb;border-radius:8px;padding:10px 12px;margin:0 0 14px;line-height:1.45;">
+            ✅ En tant qu'abonné(e) Tsapi Verified, toute modification de votre <strong>nom</strong> ou de votre <strong>photo de profil</strong> devra être revérifiée (scan de votre pièce d'identité). Les autres informations s'enregistrent normalement.
+            <a href="#" onclick="fnOuvrirAssistant(); return false;" style="color:#1877f2;font-weight:700;text-decoration:none;">En savoir plus</a>
+        </div>
+        {% endif %}
+        <!-- ═══ PHOTO DE COUVERTURE + PHOTO DE PROFIL (aperçu + bouton caméra) ═══ -->
+        <div style="position: relative; margin: 0 0 55px 0;">
+            <div id="ep-cover-preview" style="width: 100%; height: 150px; border-radius: 10px; background-size: cover; background-position: center; background-color: #dfe3ee;
+                {% if current_user.couverture %}background-image: url('{{ url_for('static', filename='uploads/' + current_user.couverture) }}');{% endif %}">
+            </div>
+            <button type="button" onclick="document.getElementById('ep-cover-input').click()"
+                    style="position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; border-radius: 50%; background: #fff; color: #050505; border: 1px solid #ccd0d5; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
+                📷
+            </button>
+            <input type="file" id="ep-cover-input" name="cover_pic" accept="image/*" style="display:none;" onchange="epPreviewFile(this, 'ep-cover-preview')">
+
+            <div style="position: absolute; left: 20px; bottom: -45px;">
+                <div id="ep-avatar-preview" style="width: 90px; height: 90px; border-radius: 50%; border: 3px solid #fff; background-size: cover; background-position: center; background-color: #dfe3ee;
+                    {% if current_user.avatar %}background-image: url('{{ url_for('static', filename='uploads/' + current_user.avatar) }}');{% endif %}">
+                </div>
+                <button type="button" onclick="document.getElementById('ep-avatar-input').click()"
+                        style="position: absolute; right: -2px; bottom: -2px; width: 30px; height: 30px; border-radius: 50%; background: #fff; color: #050505; border: 1px solid #ccd0d5; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
+                    📷
+                </button>
+                <input type="file" id="ep-avatar-input" name="profile_pic" accept="image/*" style="display:none;" onchange="epPreviewFile(this, 'ep-avatar-preview')">
+            </div>
+        </div>
+
+        <script>
+        function epPreviewFile(input, previewId) {
+            if (!input.files || !input.files[0]) return;
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById(previewId).style.backgroundImage = "url('" + e.target.result + "')";
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+        document.currentScript.closest('form').addEventListener('submit', function() {
+            var j = document.getElementById('ep-birth-day').value.trim();
+            var m = document.getElementById('ep-birth-month').value.trim();
+            var a = document.getElementById('ep-birth-year').value.trim();
+            if (j && m && a) {
+                document.getElementById('ep-birth-date-hidden').value =
+                    a + '-' + m.padStart(2, '0') + '-' + j.padStart(2, '0');
+            }
+        });
+        </script>
+
+        {% set _nom_verrouille = (jours_restants_nom is defined and jours_restants_nom) %}
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; {% if _nom_verrouille %}color:#8a8d91;{% endif %}">Nom Complet</label>
+            {% if _nom_verrouille %}
+            <input type="text" name="nom_complet" value="{{ current_user.nom_complet or '' }}" disabled aria-disabled="true" title="Nom verrouillé pendant {{ jours_restants_nom }} jour{{ 's' if jours_restants_nom > 1 else '' }}" style="width: 100%; padding: 10px; border: 1px solid #dddfe2; border-radius: 5px; box-sizing: border-box; background:#e4e6eb; color:#8a8d91; cursor:not-allowed; -webkit-text-fill-color:#8a8d91; opacity:1;">
+            <p class="ep-hint">🔒 Nom verrouillé : vous pourrez le modifier de nouveau dans {{ jours_restants_nom }} jour{{ 's' if jours_restants_nom > 1 else '' }}.</p>
+            {% else %}
+            <input type="text" name="nom_complet" value="{{ _s.get('nom_complet', current_user.nom_complet or '') }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+            <p class="ep-hint">ℹ️ Le nom ne peut être modifié qu'une fois tous les 15 jours.</p>
+            {% endif %}
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Biographie</label>
+            <textarea name="bio" rows="3" maxlength="90" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; resize: none; font-family: inherit;">{{ current_user.bio if current_user.bio else '' }}</textarea>
+            <p class="ep-hint">🔒 La biographie est toujours visible sur votre profil (90 caractères maximum).</p>
+        </div>
+
+        <h3 style="color:#1877f2; border-top:1px solid #eee; padding-top:15px; margin-bottom:12px; font-size:16px;">Informations personnelles</h3>
+        <p class="ep-hint" style="margin:-6px 0 14px;">Pour chaque information, choisissez avec l'interrupteur si elle s'affiche sur votre profil (<strong>Visible</strong>) ou non (<strong>Masqué</strong>). Une information masquée reste invisible pour les autres, même dans « À propos ».</p>
+        <div style="margin-bottom: 15px;">
+            <div class="ep-lbl-row"><label style="font-weight: bold;">Date de Naissance</label>{{ vis_toggle(vis, 'birth_date') }}</div>
+            <div style="display: flex; gap: 8px;">
+                <input type="number" id="ep-birth-day" placeholder="JJ" min="1" max="31"
+                       value="{{ current_user.birth_date.day if current_user.birth_date else '' }}"
+                       style="width: 70px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+                <input type="number" id="ep-birth-month" placeholder="MM" min="1" max="12"
+                       value="{{ current_user.birth_date.month if current_user.birth_date else '' }}"
+                       style="width: 70px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+                <input type="number" id="ep-birth-year" placeholder="AAAA" min="1900" max="2026"
+                       value="{{ current_user.birth_date.year if current_user.birth_date else '' }}"
+                       style="width: 100px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+            </div>
+            <input type="hidden" name="birth_date" id="ep-birth-date-hidden">
+        </div>
+        <div style="display:flex; gap:10px; margin-bottom: 15px;">
+            <div style="flex:1;">
+                <div class="ep-lbl-row"><label style="font-weight: bold;">Sexe</label>{{ vis_toggle(vis, 'sexe') }}</div>
+                <select name="sexe" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+                    <option value="" {% if not current_user.sexe %}selected{% endif %}>Non précisé</option>
+                    <option value="Homme" {% if current_user.sexe == 'Homme' %}selected{% endif %}>Homme</option>
+                    <option value="Femme" {% if current_user.sexe == 'Femme' %}selected{% endif %}>Femme</option>
+                    <option value="Autre" {% if current_user.sexe == 'Autre' %}selected{% endif %}>Autre</option>
+                </select>
+            </div>
+            <div style="flex:1;">
+                <div class="ep-lbl-row"><label style="font-weight: bold;">Situation amoureuse</label>{{ vis_toggle(vis, 'situation_amoureuse') }}</div>
+                <select name="situation_amoureuse" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+                    <option value="" {% if not current_user.situation_amoureuse %}selected{% endif %}>Non précisé</option>
+                    <option value="Célibataire" {% if current_user.situation_amoureuse == 'Célibataire' %}selected{% endif %}>Célibataire</option>
+                    <option value="En couple" {% if current_user.situation_amoureuse == 'En couple' %}selected{% endif %}>En couple</option>
+                    <option value="En concubinage" {% if current_user.situation_amoureuse == 'En concubinage' %}selected{% endif %}>En concubinage</option>
+                    <option value="Fiancé(e)" {% if current_user.situation_amoureuse == 'Fiancé(e)' %}selected{% endif %}>Fiancé(e)</option>
+                    <option value="Marié(e)" {% if current_user.situation_amoureuse == 'Marié(e)' %}selected{% endif %}>Marié(e)</option>
+                    <option value="C'est compliqué" {% if current_user.situation_amoureuse == "C'est compliqué" %}selected{% endif %}>C'est compliqué</option>
+                    <option value="Séparé(e)" {% if current_user.situation_amoureuse == 'Séparé(e)' %}selected{% endif %}>Séparé(e)</option>
+                    <option value="Divorcé(e)" {% if current_user.situation_amoureuse == 'Divorcé(e)' %}selected{% endif %}>Divorcé(e)</option>
+                    <option value="Veuf(ve)" {% if current_user.situation_amoureuse == 'Veuf(ve)' %}selected{% endif %}>Veuf(ve)</option>
+                </select>
+            </div>
+        </div>
+{# AJOUT ADDITIF : identifier le/la partenaire (ami réel, ou nom saisi avec confirmation stricte) #}
+{% set _ptn = (partenaire if partenaire is defined else (partenaire_edit if partenaire_edit is defined else none)) %}
+<style>
+.ptn-box { margin: 0 0 18px; padding: 12px 14px; background: #f7f8fa; border: 1px solid #e4e6eb; border-radius: 10px; text-align: left; }
+.ptn-title { font-weight: 700; font-size: 14px; margin-bottom: 8px; color: #050505; }
+.ptn-chip { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid #e4e6eb; border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; }
+.ptn-chip .ptn-av { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: #e4e6eb; }
+.ptn-chip .ptn-ini { width: 38px; height: 38px; border-radius: 50%; background: #e7f3ff; color: #1877f2; display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0; }
+.ptn-chip .ptn-who { flex: 1; min-width: 0; line-height: 1.25; }
+.ptn-chip .ptn-who strong { display: block; font-size: 14px; color: #050505; overflow-wrap: anywhere; }
+.ptn-chip .ptn-who small { font-size: 12px; color: #65676b; }
+.ptn-rm { border: none; background: #f0f2f5; border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 700; cursor: pointer; color: #050505; font-family: inherit; }
+.ptn-rm:hover { background: #e4e6eb; }
+.ptn-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.ptn-btn { border: 1px solid #ccd0d5; background: #fff; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 700; cursor: pointer; color: #050505; font-family: inherit; }
+.ptn-btn:hover { background: #f0f2f5; }
+.ptn-btn.primary { background: #1877f2; border-color: #1877f2; color: #fff; }
+.ptn-btn.primary:disabled { opacity: .45; cursor: not-allowed; }
+.ptn-hint { font-size: 12px; color: #65676b; margin: 8px 0 0; line-height: 1.4; }
+.ptn-ov { display: none; position: fixed; inset: 0; z-index: 2147483000; background: rgba(15,23,42,.5); align-items: flex-end; justify-content: center; }
+.ptn-ov.open { display: flex; }
+.ptn-sheet { background: #fff; color: #050505; width: 100%; max-width: 520px; max-height: 86vh; overflow-y: auto; border-radius: 18px 18px 0 0; padding: 14px 16px 22px; text-align: left; box-shadow: 0 -8px 32px rgba(15,23,42,.3); }
+@media (min-width: 560px) { .ptn-ov { align-items: center; } .ptn-sheet { border-radius: 16px; } }
+.ptn-sh-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 16px; }
+.ptn-x { border: none; background: #f0f2f5; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 14px; }
+.ptn-search, .ptn-input { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; font-family: inherit; }
+.ptn-list { margin-top: 8px; max-height: 50vh; overflow-y: auto; }
+.ptn-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 6px; border: none; background: none; border-radius: 8px; cursor: pointer; text-align: left; font-family: inherit; font-size: 14px; font-weight: 600; color: #050505; }
+.ptn-item:hover { background: #f0f2f5; }
+.ptn-item img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.ptn-note { font-size: 13px; color: #65676b; padding: 8px 4px; line-height: 1.45; }
+.ptn-warn { background: #fff8e1; border: 1px solid #f7d56a; border-radius: 10px; padding: 12px; font-size: 14px; line-height: 1.5; color: #4a3b00; margin-bottom: 12px; }
+.ptn-check { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; line-height: 1.45; margin: 12px 0; cursor: pointer; }
+.ptn-check input { margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0; }
+.ptn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+</style>
+<div class="ptn-box" style="display:none;" data-situation-initial="{{ current_user.situation_amoureuse or '' }}">
+    <input type="hidden" name="partenaire_present" value="1">
+    <input type="hidden" name="partenaire_id" class="ptn-id" value="{{ _ptn.id if (_ptn and _ptn.id) else '' }}">
+    <input type="hidden" name="partenaire_nom" class="ptn-nom" value="{{ _ptn.nom if _ptn else '' }}">
+    <input type="hidden" name="partenaire_confirme" class="ptn-conf" value="">
+    <div class="ptn-title">💞 Avec qui ?</div>
+    <div class="ptn-chip-zone"></div>
+    <div class="ptn-actions">
+        <button type="button" class="ptn-btn ptn-open-friends">👥 Choisir parmi mes amis</button>
+        <button type="button" class="ptn-btn ptn-open-manual">✍️ Personne qui n'est pas dans mes amis</button>
+    </div>
+    <p class="ptn-hint">Facultatif. Une personne de votre liste d'amis est liée à son vrai profil. Pour toute autre personne, vous devrez confirmer que c'est bien elle. Cette information suit le réglage Visible / Masqué de la situation amoureuse.</p>
+</div>
+<script>
+(function () {
+    var form = document.currentScript.closest('form'); if (!form) return;
+    var box = form.querySelector('.ptn-box'), sel = form.querySelector('select[name="situation_amoureuse"]'); if (!box || !sel) return;
+    var STATUTS = ['En couple', 'En concubinage', 'Fiancé(e)', 'Marié(e)', "C'est compliqué"];
+    var elId = box.querySelector('.ptn-id'), elNom = box.querySelector('.ptn-nom'), elConf = box.querySelector('.ptn-conf'), zone = box.querySelector('.ptn-chip-zone');
+    var initial = box.getAttribute('data-situation-initial') || '';
+    var cur = { avatar: {{ (_ptn.avatar if _ptn and _ptn.avatar else '') | tojson }}, manuel: {{ 'true' if (_ptn and _ptn.manuel) else 'false' }} };
+    var friends = null, ov = null;
+
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+    function norm(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+    function eff() { return sel.value || initial; }
+
+    function refresh() {
+        box.style.display = STATUTS.indexOf(eff()) >= 0 ? 'block' : 'none';
+        if (box.style.display === 'none') { elId.value = ''; elNom.value = ''; elConf.value = ''; }
+        var nom = elNom.value;
+        if (!nom) { zone.innerHTML = ''; return; }
+        var av = elId.value && cur.avatar ? '<img class="ptn-av" src="/static/uploads/' + esc(cur.avatar) + '" alt="">' : '<span class="ptn-ini">' + esc(nom.charAt(0).toUpperCase()) + '</span>';
+        zone.innerHTML = '<div class="ptn-chip">' + av + '<div class="ptn-who"><strong>' + esc(nom) + '</strong><small>' + (elId.value ? 'Ami(e) FaceNet' : 'Saisi manuellement · non lié(e) à un profil') + '</small></div><button type="button" class="ptn-rm">Retirer</button></div>';
+        zone.querySelector('.ptn-rm').onclick = function () { elId.value = ''; elNom.value = ''; elConf.value = ''; cur.avatar = ''; refresh(); };
+    }
+    function pick(id, nom, avatar) { elId.value = id; elNom.value = nom; elConf.value = ''; cur.avatar = avatar || ''; refresh(); closeOv(); }
+    function pickManual(nom) { elId.value = ''; elNom.value = nom; elConf.value = '1'; cur.avatar = ''; refresh(); closeOv(); }
+
+    function build() {
+        if (ov) return;
+        ov = document.createElement('div'); ov.className = 'ptn-ov'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
+        ov.innerHTML = '<div class="ptn-sheet"><div class="ptn-sh-head"><strong class="ptn-sh-title"></strong><button type="button" class="ptn-x" aria-label="Fermer">✕</button></div><div class="ptn-sh-body"></div></div>';
+        document.body.appendChild(ov);
+        ov.addEventListener('click', function (e) { if (e.target === ov) closeOv(); });
+        ov.querySelector('.ptn-x').onclick = closeOv;
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeOv(); });
+    }
+    function openOv(titre) { build(); ov.querySelector('.ptn-sh-title').textContent = titre; ov.classList.add('open'); return ov.querySelector('.ptn-sh-body'); }
+    function closeOv() { if (ov) ov.classList.remove('open'); }
+    function loadFriends() {
+        if (friends) return Promise.resolve(friends);
+        return fetch('/api/amis', { credentials: 'same-origin' }).then(function (r) { return r.json(); })
+            .then(function (d) { friends = (d && d.amis) || []; return friends; });
+    }
+
+    function viewFriends() {
+        var body = openOv('Choisir parmi mes amis');
+        body.innerHTML = '<input type="search" class="ptn-search" placeholder="Rechercher un(e) ami(e)" aria-label="Rechercher un(e) ami(e)"><div class="ptn-list"><div class="ptn-note">Chargement de vos amis…</div></div>';
+        var list = body.querySelector('.ptn-list'), inp = body.querySelector('.ptn-search');
+        function draw() {
+            var f = norm(inp.value), items = (friends || []).filter(function (a) { return !f || norm(a.nom_complet).indexOf(f) >= 0; });
+            if (!items.length) { list.innerHTML = '<div class="ptn-note">' + (friends && friends.length ? 'Aucun(e) ami(e) ne correspond.' : "Vous n'avez pas encore d'ami(e) : utilisez « Personne qui n'est pas dans mes amis ».") + '</div>'; return; }
+            list.innerHTML = items.map(function (a, i) { return '<button type="button" class="ptn-item" data-i="' + i + '"><img src="/static/uploads/' + esc(a.avatar || 'default_avatar.png') + '" alt=""><span>' + esc(a.nom_complet) + '</span></button>'; }).join('');
+            list.querySelectorAll('.ptn-item').forEach(function (b) { b.onclick = function () { var a = items[+b.getAttribute('data-i')]; pick(String(a.id), a.nom_complet, a.avatar); }; });
+        }
+        inp.oninput = draw; inp.focus();
+        loadFriends().then(draw).catch(function () { list.innerHTML = '<div class="ptn-note">Impossible de charger vos amis pour le moment. Réessayez plus tard.</div>'; });
+    }
+
+    function viewManual(prefill) {
+        var body = openOv("Personne qui n'est pas dans mes amis");
+        body.innerHTML = '<div class="ptn-note">Saisissez le nom complet de la personne. Vous devrez ensuite confirmer que c\'est bien elle.</div><input type="text" class="ptn-input" maxlength="80" placeholder="Nom complet" aria-label="Nom complet du/de la partenaire" value="' + esc(prefill || '') + '"><div class="ptn-note ptn-err" style="color:#c0392b;display:none;"></div><div class="ptn-row"><button type="button" class="ptn-btn primary ptn-go">Continuer</button><button type="button" class="ptn-btn ptn-cancel">Annuler</button></div>';
+        var inp = body.querySelector('.ptn-input'), err = body.querySelector('.ptn-err');
+        inp.focus();
+        body.querySelector('.ptn-cancel').onclick = closeOv;
+        body.querySelector('.ptn-go').onclick = function () {
+            var nom = inp.value.replace(/\s+/g, ' ').trim();
+            if (nom.length < 2 || nom.length > 80 || /[<>]/.test(nom)) { err.textContent = 'Saisissez un nom de 2 à 80 caractères.'; err.style.display = 'block'; return; }
+            loadFriends().catch(function () { return []; }).then(function (fr) {
+                var same = (fr || []).filter(function (a) { return norm(a.nom_complet) === norm(nom); })[0];
+                if (same) viewSameFriend(nom, same); else viewConfirm(nom);
+            });
+        };
+    }
+    function viewSameFriend(nom, a) {
+        var body = openOv('Une personne de vos amis porte ce nom');
+        body.innerHTML = '<div class="ptn-warn">Un(e) ami(e) FaceNet s\'appelle déjà <strong>' + esc(a.nom_complet) + '</strong>. Est-ce la personne dont vous parlez ?</div><button type="button" class="ptn-item" style="border:1px solid #e4e6eb;"><img src="/static/uploads/' + esc(a.avatar || 'default_avatar.png') + '" alt=""><span>' + esc(a.nom_complet) + '</span></button><div class="ptn-row"><button type="button" class="ptn-btn ptn-other">Non, c\'est une autre personne</button><button type="button" class="ptn-btn ptn-back">Retour</button></div>';
+        body.querySelector('.ptn-item').onclick = function () { pick(String(a.id), a.nom_complet, a.avatar); };
+        body.querySelector('.ptn-other').onclick = function () { viewConfirm(nom); };
+        body.querySelector('.ptn-back').onclick = function () { viewManual(nom); };
+    }
+    function viewConfirm(nom) {
+        var body = openOv('Confirmation nécessaire');
+        body.innerHTML = '<div class="ptn-warn"><strong>Êtes-vous sûr(e) que « ' + esc(nom) + ' » est bien la personne dont vous parlez&nbsp;?</strong><br>Cette personne n\'est pas dans vos amis FaceNet : elle ne sera pas liée à un profil et son nom s\'affichera tel quel sur votre profil.</div><label class="ptn-check"><input type="checkbox" class="ptn-ok"><span>Je confirme que « ' + esc(nom) + ' » est bien mon/ma partenaire (et non un homonyme), et j\'accepte que ce nom soit affiché sur mon profil.</span></label><div class="ptn-row"><button type="button" class="ptn-btn primary ptn-yes" disabled>Oui, j\'en suis sûr(e)</button><button type="button" class="ptn-btn ptn-edit">Modifier le nom</button></div>';
+        var ok = body.querySelector('.ptn-ok'), yes = body.querySelector('.ptn-yes');
+        ok.onchange = function () { yes.disabled = !ok.checked; };
+        yes.onclick = function () { if (ok.checked) pickManual(nom); };
+        body.querySelector('.ptn-edit').onclick = function () { viewManual(nom); };
+    }
+
+    box.querySelector('.ptn-open-friends').onclick = viewFriends;
+    box.querySelector('.ptn-open-manual').onclick = function () { viewManual(''); };
+    sel.addEventListener('change', refresh);
+    refresh();
+})();
+</script>
+        <div style="margin-bottom: 20px;">
+            <div class="ep-lbl-row"><label style="font-weight: bold;">Langues parlées</label>{{ vis_toggle(vis, 'langues') }}</div>
+            <input type="text" name="langues" value="{{ current_user.langues if current_user.langues else '' }}" placeholder="Ex: Français, Anglais" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+
+        <h3 style="color:#1877f2; border-top:1px solid #eee; padding-top:15px; margin-bottom:12px; font-size:16px;">Coordonnées</h3>
+        <div style="margin-bottom: 15px;">
+            <div class="ep-lbl-row"><label style="font-weight: bold;">Email</label>{{ vis_toggle(vis, 'email') }}</div>
+            <input type="email" name="email" value="{{ current_user.email if current_user.email else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <div class="ep-lbl-row"><label style="font-weight: bold;">Téléphone</label>{{ vis_toggle(vis, 'phone') }}</div>
+            <input type="text" name="phone" value="{{ current_user.phone if current_user.phone else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+        <div style="margin-bottom: 20px;">
+            <div class="ep-lbl-row"><label style="font-weight: bold;">Site web</label>{{ vis_toggle(vis, 'site_web') }}</div>
+            <input type="url" name="site_web" value="{{ current_user.site_web if current_user.site_web else '' }}" placeholder="https://..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <div class="ep-lbl-row"><label style="font-weight: bold;">Liens</label></div>
+            <p class="lien-aide">Donnez un nom à votre lien : c'est ce nom qui s'affichera sur votre profil, avec un aperçu du site. Même visibilité que « Site web ».</p>
+            <input type="hidden" name="liens_present" value="1">
+            <div id="lien-rows-container">
+                {% for l in (liens_perso|default([])) %}
+                <div class="lien-row">
+                    <span class="lien-ico">🔗</span>
+                    <input type="text" name="lien_nom[]" maxlength="60" autocomplete="off" value="{{ l.nom }}" placeholder="Nom du lien (ex : Mon portfolio)">
+                    <button type="button" onclick="this.parentElement.remove()" aria-label="Retirer ce lien">×</button>
+                    <input type="text" inputmode="url" name="lien_url[]" value="{{ l.url }}" placeholder="https://...">
+                </div>
+                {% endfor %}
+            </div>
+            <template id="fn-lien-tpl-row">
+                <div class="lien-row">
+                    <span class="lien-ico">🔗</span>
+                    <input type="text" name="lien_nom[]" maxlength="60" autocomplete="off" placeholder="Nom du lien (ex : Mon portfolio)">
+                    <button type="button" onclick="this.parentElement.remove()" aria-label="Retirer ce lien">×</button>
+                    <input type="text" inputmode="url" name="lien_url[]" placeholder="https://...">
+                </div>
+            </template>
+            <button type="button" class="btn-add-social" onclick="addLienRow()">➕ Ajouter un lien</button>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <div class="ep-lbl-row"><label style="font-weight: bold;">Réseaux sociaux</label>{{ vis_toggle(vis, 'reseaux_sociaux') }}</div>
+            <div id="social-rows-container">
+                {% for plat, url in (social_links|default({})).items() %}
+                <div class="social-row">
+                    <span class="fn-res-prev">{{ fn_logo_reseau(plat) }}</span>
+                    <select name="social_platform[]" onchange="fnMajLogoReseau(this)">{{ fn_options_reseaux(plat) }}</select>
+                    <input type="text" name="social_autre[]" class="fn-res-autre" value="" maxlength="40" autocomplete="off" placeholder="Nom du réseau (ex : Xing, Steam, Yelp)" oninput="fnDetecteAutre(this)" onblur="fnVerifAutre(this)" style="{{ '' if plat == 'Autre' else 'display:none;' }}">
+                    <input type="url" name="social_url[]" value="{{ url }}" placeholder="https://...">
+                    <div class="fn-res-err" role="alert" style="display:none;"></div>
+                    <button type="button" onclick="this.parentElement.remove()" aria-label="Retirer ce réseau">×</button>
+                </div>
+                {% endfor %}
+            </div>
+            <template id="fn-res-tpl-row">
+                <div class="social-row">
+                    <span class="fn-res-prev">{{ fn_logo_reseau('Facebook') }}</span>
+                    <select name="social_platform[]" onchange="fnMajLogoReseau(this)">{{ fn_options_reseaux('Facebook') }}</select>
+                    <input type="text" name="social_autre[]" class="fn-res-autre" maxlength="40" autocomplete="off" placeholder="Nom du réseau (ex : Xing, Steam, Yelp)" oninput="fnDetecteAutre(this)" onblur="fnVerifAutre(this)" style="display:none;">
+                    <input type="url" name="social_url[]" placeholder="https://...">
+                    <div class="fn-res-err" role="alert" style="display:none;"></div>
+                    <button type="button" onclick="this.parentElement.remove()" aria-label="Retirer ce réseau">×</button>
+                </div>
+            </template>
+            <button type="button" class="btn-add-social" onclick="addSocialRow()">➕ Ajouter un réseau social</button>
+        </div>
+
+        <h3 style="color:#1877f2; border-top:1px solid #eee; padding-top:15px; margin-bottom:12px; font-size:16px;">Lieux de résidence</h3>
+        <div style="margin-bottom: 15px;">
+            <div class="ep-lbl-row"><label style="font-weight: bold;">Habite à</label>{{ vis_toggle(vis, 'ville') }}</div>
+            <input type="text" name="ville" value="{{ current_user.ville if current_user.ville else '' }}" placeholder="Ex: Bafoussam" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+        <div style="margin-bottom: 20px;">
+            <div class="ep-lbl-row"><label style="font-weight: bold;">Originaire de</label>{{ vis_toggle(vis, 'localisation') }}</div>
+            <input type="text" name="localisation" value="{{ current_user.localisation if current_user.localisation else '' }}" placeholder="Ex: Cameroun" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+
+        <h3 style="color:#1877f2; border-top:1px solid #eee; padding-top:15px; margin-bottom:12px; font-size:16px;">Travail et études</h3>
+        <div style="margin-bottom: 15px;">
+            <div class="ep-lbl-row"><label style="font-weight: bold;">Profession</label>{{ vis_toggle(vis, 'emploi_actuel') }}</div>
+            <input type="text" name="emploi_actuel" value="{{ current_user.emploi_actuel if current_user.emploi_actuel else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <div class="ep-lbl-row"><label style="font-weight: bold;">Entreprise</label>{{ vis_toggle(vis, 'entreprise') }}</div>
+            <input type="text" name="entreprise" value="{{ current_user.entreprise if current_user.entreprise else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+            {{ dates_parcours(parcours, 'entreprise', "Laissez « Fin » vide si vous y travaillez toujours. Les dates suivent la visibilité de l'entreprise.") }}
+        </div>
+        <div style="margin-bottom: 15px;">
+            <div class="ep-lbl-row"><label style="font-weight: bold;">École</label>{{ vis_toggle(vis, 'ecole') }}</div>
+            <input type="text" name="ecole" value="{{ current_user.ecole if current_user.ecole else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+            {{ dates_parcours(parcours, 'ecole', "Période pendant laquelle vous avez fréquenté cet établissement. Les dates suivent la visibilité de l'établissement.") }}
+        </div>
+        <div style="margin-bottom: 20px;">
+            <div class="ep-lbl-row"><label style="font-weight: bold;">Université</label>{{ vis_toggle(vis, 'universite') }}</div>
+            <input type="text" name="universite" value="{{ current_user.universite if current_user.universite else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+            {{ dates_parcours(parcours, 'universite', "Période pendant laquelle vous avez fréquenté cette université. Les dates suivent la visibilité de l'université.") }}
+        </div>
+
+        <h3 style="color:#1877f2; border-top:1px solid #eee; padding-top:15px; margin-bottom:12px; font-size:16px;">Centres d'intérêt</h3>
+        <div style="margin-bottom: 15px;">
+            <div class="ep-lbl-row"><label style="font-weight: bold;">Groupes musicaux préférés</label>{{ vis_toggle(vis, 'groupes_musicaux_preferes') }}</div>
+            <input type="text" name="groupes_musicaux_preferes" value="{{ current_user.groupes_musicaux_preferes if current_user.groupes_musicaux_preferes else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <div class="ep-lbl-row"><label style="font-weight: bold;">Films préférés</label>{{ vis_toggle(vis, 'films_preferes') }}</div>
+            <input type="text" name="films_preferes" value="{{ current_user.films_preferes if current_user.films_preferes else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <div class="ep-lbl-row"><label style="font-weight: bold;">Jeux vidéo préférés</label>{{ vis_toggle(vis, 'jeux_video_preferes') }}</div>
+            <input type="text" name="jeux_video_preferes" value="{{ current_user.jeux_video_preferes if current_user.jeux_video_preferes else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+        <div style="margin-bottom: 25px;">
+            <div class="ep-lbl-row"><label style="font-weight: bold;">Émissions TV préférées</label>{{ vis_toggle(vis, 'emissions_tv_preferees') }}</div>
+            <input type="text" name="emissions_tv_preferees" value="{{ current_user.emissions_tv_preferees if current_user.emissions_tv_preferees else '' }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        </div>
+
+        {# AJOUT ADDITIF : informations supplémentaires #}
+        {% set _isup = infos_sup if infos_sup is defined else {} %}
+        <h3 style="margin: 10px 0 12px; color: #65676b; font-size: 15px;">✨ Plus sur vous</h3>
+        {% for _cle, _icone, _lib, _ph in [('loisirs','🎯','Loisirs et passe-temps','Ex. lecture, dessin, randonnée'), ('sports_preferes','⚽','Équipes sportives et athlètes','Ex. Real Madrid C.F., Samuel Eto’o'), ('livres_preferes','📚','Livres préférés','Ex. titres ou auteurs que vous aimez'), ('plat_prefere','🍽️','Plat préféré','Ex. ndolé, poulet DG, pizza'), ('animaux_preferes','🐾','Animaux préférés','Ex. chiens, chats'), ('chaines_podcasts','🎧','Chaînes et podcasts préférés','Ex. vos chaînes YouTube ou podcasts favoris'), ('citation_preferee','💬','Citation ou devise préférée','Ex. votre phrase fétiche'), ('competences','🛠️','Compétences','Ex. design, cuisine, programmation'), ('pays_visites','✈️','Pays visités','Ex. Cameroun, France, Maroc'), ('destination_reve','🏝️','Destination de rêve','Ex. Japon, Dubaï')] %}
+        <div style="margin-bottom: 15px;">
+            <div class="ep-lbl-row"><label style="font-weight: bold;">{{ _icone }} {{ _lib }}</label>{{ vis_toggle(vis, _cle) }}</div>
+            <input type="text" name="{{ _cle }}" value="{{ _isup.get(_cle, '') }}" maxlength="{{ 100 if _cle in ('plat_prefere','animaux_preferes','destination_reve') else (150 if _cle in ('loisirs','sports_preferes') else 200) }}" placeholder="{{ _ph }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-family: inherit;">
+        </div>
+        {% endfor %}
+
+        {# AJOUT ADDITIF : informations affichées sur le profil mais absentes de ce formulaire #}
+        <h3 id="ep-coordonnees-plus" style="margin: 10px 0 12px; color: #65676b; font-size: 15px;">📇 Page ou marque</h3>
+        <div style="margin-bottom: 20px;">
+            <label for="ep-page_marque" style="display: block; margin-bottom: 5px; font-weight: bold;">🏷️ Page ou marque</label>
+            <input type="text" id="ep-page_marque" name="page_marque" value="{{ _isup.get('page_marque', '') }}" maxlength="100" placeholder="Ex. FaceNet Inc" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+            <p class="ep-hint">Affichée dans « Coordonnées » de votre profil (onglet « À propos »).</p>
+        </div>
+
+        {% set _comm = communautes if communautes is defined else [] %}
+        <h3 id="ep-communautes" style="margin: 10px 0 12px; color: #65676b; font-size: 15px;">👥 Communautés</h3>
+        <p class="ep-hint" style="margin-top:0;">Les groupes dont vous êtes membre sont affichés sur votre profil (onglet « À propos »). Vous pouvez en quitter un ici.</p>
+        <div id="ep-communautes-liste" style="margin-bottom: 22px;">
+            {% for g in _comm %}
+            <div class="ep-comm-row" style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #eee;">
+                {% if g.cover %}<img src="{{ g.cover }}" alt="" style="width:38px; height:38px; border-radius:6px; object-fit:cover; background:#e4e6eb;">{% else %}<span style="width:38px; height:38px; border-radius:6px; background:#e4e6eb; display:inline-flex; align-items:center; justify-content:center; font-weight:700; color:#65676b;">{{ (g.name or '?')[:1]|upper }}</span>{% endif %}
+                <a href="{{ url_for('groupe.groupe_accueil', group_id=g.id) }}" style="flex:1; min-width:0; overflow-wrap:anywhere; font-weight:600; color:#050505; text-decoration:none;">{{ g.name }}</a>
+                <button type="button" data-quitter="{{ url_for('groupe.groupe_quitter', group_id=g.id) }}" onclick="epQuitterGroupe(this)" style="border:none; background:#e4e6eb; border-radius:6px; padding:7px 12px; font-weight:700; cursor:pointer; font-family:inherit;">Quitter</button>
+            </div>
+            {% else %}
+            <p style="color:#65676b; font-size:14px; margin:0;">Vous n'êtes membre d'aucun groupe pour le moment.</p>
+            {% endfor %}
+        </div>
+        <script>
+        function epQuitterGroupe(btn) {
+            if (!confirm('Quitter ce groupe ?')) return;
+            btn.disabled = true;
+            fetch(btn.getAttribute('data-quitter'), { method: 'POST', credentials: 'same-origin' })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (d && d.success) { var row = btn.closest('.ep-comm-row'); if (row) row.remove(); }
+                    else { btn.disabled = false; alert((d && d.message) || 'Impossible de quitter ce groupe pour le moment.'); }
+                })
+                .catch(function () { btn.disabled = false; alert('Impossible de quitter ce groupe pour le moment.'); });
+        }
+        </script>
+
+        <button type="submit" style="width: 100%; background: #1877f2; color: white; padding: 12px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 16px;">Enregistrer les modifications</button>
+    </form>
+</div>
+<script>
+(function(){
+    ['ecole','universite','entreprise'].forEach(function(p){
+        var d=document.querySelector('[name="'+p+'_debut"]'), f=document.querySelector('[name="'+p+'_fin"]');
+        if(!d||!f) return;
+        function s(){ f.min = d.value || ''; }
+        d.addEventListener('change', s); s();
+    });
+})();
+</script>
+<script>
+var FN_RES_ICONES = {"Facebook": "fa-brands fa-facebook", "Instagram": "fa-brands fa-instagram", "Twitter / X": "fa-brands fa-x-twitter", "TikTok": "fa-brands fa-tiktok", "LinkedIn": "fa-brands fa-linkedin", "YouTube": "fa-brands fa-youtube", "Snapchat": "fa-brands fa-snapchat", "Threads": "fa-brands fa-threads", "Bluesky": "fa-brands fa-bluesky", "Pinterest": "fa-brands fa-pinterest", "Reddit": "fa-brands fa-reddit", "Tumblr": "fa-brands fa-tumblr", "Mastodon": "fa-brands fa-mastodon", "Quora": "fa-brands fa-quora", "VK": "fa-brands fa-vk", "Weibo": "fa-brands fa-weibo", "WhatsApp": "fa-brands fa-whatsapp", "Telegram": "fa-brands fa-telegram", "Messenger": "fa-brands fa-facebook-messenger", "Discord": "fa-brands fa-discord", "Skype": "fa-brands fa-skype", "Viber": "fa-brands fa-viber", "Line": "fa-brands fa-line", "WeChat": "fa-brands fa-weixin", "Slack": "fa-brands fa-slack", "Spotify": "fa-brands fa-spotify", "SoundCloud": "fa-brands fa-soundcloud", "Apple Music": "fa-brands fa-itunes-note", "Deezer": "fa-brands fa-deezer", "Bandcamp": "fa-brands fa-bandcamp", "Mixcloud": "fa-brands fa-mixcloud", "Twitch": "fa-brands fa-twitch", "Vimeo": "fa-brands fa-vimeo-v", "GitHub": "fa-brands fa-github", "GitLab": "fa-brands fa-gitlab", "Behance": "fa-brands fa-behance", "Dribbble": "fa-brands fa-dribbble", "ArtStation": "fa-brands fa-artstation", "DeviantArt": "fa-brands fa-deviantart", "Figma": "fa-brands fa-figma", "CodePen": "fa-brands fa-codepen", "Stack Overflow": "fa-brands fa-stack-overflow", "Medium": "fa-brands fa-medium", "Flickr": "fa-brands fa-flickr", "Patreon": "fa-brands fa-patreon", "Etsy": "fa-brands fa-etsy", "Goodreads": "fa-brands fa-goodreads", "IMDb": "fa-brands fa-imdb", "Strava": "fa-brands fa-strava", "Autre": "fa-solid fa-link"};
+var FN_RESEAUX_CONNUS = {{ (reseaux_connus|default({}))|tojson }};
+function fnSetLogo(row, cls) {
+    var prev = row ? row.querySelector('.fn-res-prev') : null;
+    if (!prev) return;
+    prev.textContent = '';
+    var i = document.createElement('i');
+    i.className = (cls || 'fa-solid fa-link') + ' fn-logo-res';
+    i.setAttribute('aria-hidden', 'true');
+    prev.appendChild(i);
+}
+function fnCleReseau(txt) {
+    var s = String(txt || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    s = s.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/^@+/, '');
+    s = s.replace(/\.(com|net|org|fr|io|tv|me|co|app|social|ru|cn)(\/.*)?$/, '');
+    return s.replace(/[^a-z0-9]/g, '');
+}
+function fnDetecterReseau(txt) {
+    var k = fnCleReseau(txt);
+    return k && Object.prototype.hasOwnProperty.call(FN_RESEAUX_CONNUS, k) ? FN_RESEAUX_CONNUS[k] : null;
+}
+function fnErreurReseau(row, msg) {
+    var e = row ? row.querySelector('.fn-res-err') : null;
+    if (!e) return;
+    e.textContent = msg || '';
+    e.style.display = msg ? 'block' : 'none';
+}
+function fnMsgReseauInconnu(nom) {
+    return '\u00ab ' + String(nom).slice(0, 40) + ' \u00bb n\'existe pas comme r\u00e9seau social. Saisissez le vrai nom d\'un r\u00e9seau social, ou retirez cette ligne.';
+}
+function fnMajLogoReseau(sel) {
+    var row = sel.parentElement;
+    if (!row) return;
+    var autre = row.querySelector('.fn-res-autre');
+    if (sel.value === 'Autre') {
+        if (autre) { autre.style.display = 'block'; fnDetecteAutre(autre); autre.focus(); }
+        else fnSetLogo(row, 'fa-solid fa-link');
+    } else {
+        if (autre) { autre.style.display = 'none'; autre.value = ''; }
+        fnErreurReseau(row, '');
+        fnSetLogo(row, FN_RES_ICONES[sel.value]);
+    }
+}
+function fnDetecteAutre(inp) {
+    var row = inp.parentElement, r = inp.value.trim() ? fnDetecterReseau(inp.value) : null;
+    fnErreurReseau(row, '');
+    fnSetLogo(row, r ? r[1] : 'fa-solid fa-link');
+}
+function fnVerifAutre(inp) {
+    var v = inp.value.trim();
+    if (v && Object.keys(FN_RESEAUX_CONNUS).length && !fnDetecterReseau(v)) fnErreurReseau(inp.parentElement, fnMsgReseauInconnu(v));
+}
+(function () {
+    var cont = document.getElementById('social-rows-container');
+    var form = cont ? cont.closest('form') : null;
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+        if (!Object.keys(FN_RESEAUX_CONNUS).length) return;   /* liste indisponible : le serveur vérifie */
+        var rows = cont.querySelectorAll('.social-row');
+        for (var k = 0; k < rows.length; k++) {
+            var row = rows[k], sel = row.querySelector('select'), inp = row.querySelector('.fn-res-autre'), url = row.querySelector('input[type="url"]');
+            if (!sel || sel.value !== 'Autre' || !inp) continue;
+            var v = inp.value.trim();
+            if (!v && !(url && url.value.trim())) continue;
+            var msg = !v ? 'Indiquez le nom du r\u00e9seau social.' : (fnDetecterReseau(v) ? '' : fnMsgReseauInconnu(v));
+            if (msg) {
+                e.preventDefault();
+                fnErreurReseau(row, msg);
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                try { inp.focus({ preventScroll: true }); } catch (x) { inp.focus(); }
+                return;
+            }
+        }
+    });
+})();
+function addLienRow() {
+    var container = document.getElementById('lien-rows-container');
+    var tpl = document.getElementById('fn-lien-tpl-row');
+    if (!container || !tpl) return null;
+    container.appendChild(tpl.content.cloneNode(true));
+    return container.lastElementChild;
+}
+function addSocialRow() {
+    var container = document.getElementById('social-rows-container');
+    var tpl = document.getElementById('fn-res-tpl-row');
+    if (!container || !tpl) return null;
+    container.appendChild(tpl.content.cloneNode(true));
+    return container.lastElementChild;
+}
+/* Arrivée depuis le crayon du profil : /edit_profile#ep-<champ> → on va directement sur ce champ */
+(function () {
+    var h = location.hash || '';
+    if (h.indexOf('#ep-') !== 0) return;
+    var champ = decodeURIComponent(h.slice(4));
+    function aller() {
+        var el = null;
+        if (champ === 'birth_date') el = document.getElementById('ep-birth-day');
+        else if (champ === 'liens') {
+            el = document.querySelector('#lien-rows-container input[name="lien_nom[]"]');
+            if (!el) { var lg = addLienRow(); el = lg ? lg.querySelector('input[name="lien_nom[]"]') : null; }
+        } else if (champ === 'reseaux') {
+            el = document.querySelector('#social-rows-container input[type="url"]');
+            if (!el) { var ligne = addSocialRow(); el = ligne ? ligne.querySelector('input[type="url"]') : null; }
+        } else if (/^[a-z_]+$/.test(champ)) el = document.querySelector('[name="' + champ + '"]');
+        if (!el) return;
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); }
+        var bloc = el.closest('div[style*="margin-bottom"]') || el.parentElement;
+        if (bloc) bloc.classList.add('ep-focus');
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(aller, 120); });
+    else setTimeout(aller, 120);
+})();
+</script>
+<style>
+/* ── Choix d'un lieu ou d'un établissement réel : page plein écran (villes, villages, écoles, universités) ── */
+.fn-lieu-wrap { position: relative; }
+.fn-lieu-wrap .fn-lieu-in { padding-right: 42px !important; cursor: pointer; text-overflow: ellipsis; }
+.fn-lieu-loupe, .fn-lieu-vider { position: absolute; right: 6px; top: 50%; margin-top: -16px; width: 32px; height: 32px; border: none; background: transparent; color: #65676b; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; padding: 0; }
+.fn-lieu-loupe { pointer-events: none; }
+.fn-lieu-vider { cursor: pointer; }
+.fn-lieu-vider:hover, .fn-lieu-vider:focus-visible { background: #e4e6eb; color: #1c1e21; }
+.fn-lieu-loupe svg, .fn-lieu-vider svg { width: 18px; height: 18px; display: block; }
+.fn-lieu-wrap.fn-lieu-plein .fn-lieu-loupe { display: none; }
+.fn-lieu-wrap:not(.fn-lieu-plein) .fn-lieu-vider { display: none; }
+
+.fn-lieu-page { position: fixed; inset: 0; z-index: 100000; background: #fff; display: flex; flex-direction: column; color: #1c1e21; font-family: inherit; }
+.fn-lieu-page[hidden] { display: none; }
+.fn-lieu-head { flex: none; display: flex; align-items: center; gap: 6px; padding: calc(8px + env(safe-area-inset-top, 0px)) 10px 8px; border-bottom: 1px solid #e4e6eb; background: #fff; }
+.fn-lieu-retour { flex: none; width: 42px; height: 42px; border: none; border-radius: 50%; background: transparent; color: #1c1e21; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+.fn-lieu-retour:hover, .fn-lieu-retour:focus-visible { background: #f0f2f5; }
+.fn-lieu-retour svg { width: 22px; height: 22px; display: block; }
+.fn-lieu-titre { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -.2px; line-height: 1.25; }
+.fn-lieu-champ { flex: none; position: relative; margin: 12px 14px 6px; }
+.fn-lieu-champ > svg { position: absolute; left: 14px; top: 50%; margin-top: -9px; width: 18px; height: 18px; color: #65676b; pointer-events: none; }
+.fn-lieu-champ input { width: 100%; box-sizing: border-box; border: 1.5px solid transparent; background: #f0f2f5; border-radius: 999px; padding: 13px 44px 13px 42px; font-size: 16px; font-family: inherit; color: #1c1e21; outline: none; -webkit-appearance: none; appearance: none; }
+.fn-lieu-champ input:focus { border-color: #1877f2; background: #fff; }
+.fn-lieu-champ input::-webkit-search-cancel-button { display: none; }
+.fn-lieu-champ .fn-lieu-efface { position: absolute; right: 8px; top: 50%; margin-top: -15px; width: 30px; height: 30px; border: none; border-radius: 50%; background: #d8dadf; color: #4b4c4f; cursor: pointer; display: none; align-items: center; justify-content: center; padding: 0; }
+.fn-lieu-champ .fn-lieu-efface.fn-visible { display: inline-flex; }
+.fn-lieu-champ .fn-lieu-efface svg { width: 14px; height: 14px; position: static; margin: 0; color: inherit; }
+.fn-lieu-corps { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 0 6px; }
+.fn-lieu-res { list-style: none; margin: 0; padding: 0; }
+.fn-lieu-item { display: flex; align-items: center; gap: 14px; padding: 11px 10px; border-radius: 12px; cursor: pointer; }
+.fn-lieu-item + .fn-lieu-item { margin-top: 1px; }
+.fn-lieu-item:hover, .fn-lieu-item.fn-actif { background: #f0f2f5; }
+.fn-lieu-ico { flex: none; width: 46px; height: 46px; border-radius: 50%; background: #f0f2f5; color: #65676b; display: inline-flex; align-items: center; justify-content: center; filter: grayscale(1); }
+.fn-lieu-item:hover .fn-lieu-ico, .fn-lieu-item.fn-actif .fn-lieu-ico { background: #e4e6eb; }
+.fn-lieu-ico svg { width: 26px; height: 26px; display: block; }
+.fn-lieu-txt { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.fn-lieu-nom { font-size: 16px; font-weight: 700; color: #1c1e21; line-height: 1.3; overflow-wrap: anywhere; }
+.fn-lieu-det { font-size: 13.5px; color: #65676b; line-height: 1.35; overflow-wrap: anywhere; }
+.fn-lieu-det b { font-weight: 600; color: #4b4c4f; }
+.fn-lieu-vide { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 48px 24px; color: #65676b; font-size: 14.5px; line-height: 1.5; }
+.fn-lieu-vide .fn-lieu-ico { width: 64px; height: 64px; }
+.fn-lieu-vide .fn-lieu-ico svg { width: 34px; height: 34px; }
+.fn-lieu-vide strong { color: #1c1e21; font-size: 16px; }
+.fn-lieu-actuel { margin: 4px 4px 8px; padding: 10px 12px; border-radius: 12px; background: #f0f2f5; font-size: 13.5px; color: #4b4c4f; overflow-wrap: anywhere; }
+.fn-lieu-squel { display: flex; align-items: center; gap: 14px; padding: 11px 10px; }
+.fn-lieu-squel i { display: block; border-radius: 8px; background: linear-gradient(90deg, #eceef1 25%, #f6f7f9 50%, #eceef1 75%); background-size: 200% 100%; animation: fnLieuBrille 1.2s linear infinite; }
+.fn-lieu-squel i:first-child { width: 46px; height: 46px; border-radius: 50%; flex: none; }
+.fn-lieu-squel span { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.fn-lieu-squel span i:first-child { width: 55%; height: 13px; border-radius: 6px; }
+.fn-lieu-squel span i:last-child { width: 35%; height: 11px; border-radius: 6px; }
+@keyframes fnLieuBrille { to { background-position: -200% 0; } }
+.fn-lieu-pied { flex: none; padding: 8px 14px calc(8px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid #e4e6eb; font-size: 11.5px; color: #8a8d91; text-align: center; background: #fff; }
+html[data-theme="dark"] .fn-lieu-vider:hover, html[data-theme="dark"] .fn-lieu-vider:focus-visible { background: #3a3b3c; color: #e4e6eb; }
+html[data-theme="dark"] .fn-lieu-page, html[data-theme="dark"] .fn-lieu-head, html[data-theme="dark"] .fn-lieu-pied { background: #18191a; color: #e4e6eb; border-color: #3e4042; }
+html[data-theme="dark"] .fn-lieu-retour { color: #e4e6eb; }
+html[data-theme="dark"] .fn-lieu-retour:hover, html[data-theme="dark"] .fn-lieu-retour:focus-visible { background: #3a3b3c; }
+html[data-theme="dark"] .fn-lieu-champ input { background: #3a3b3c; color: #e4e6eb; }
+html[data-theme="dark"] .fn-lieu-champ input:focus { background: #242526; }
+html[data-theme="dark"] .fn-lieu-champ .fn-lieu-efface { background: #4e4f50; color: #e4e6eb; }
+html[data-theme="dark"] .fn-lieu-item:hover, html[data-theme="dark"] .fn-lieu-item.fn-actif { background: #3a3b3c; }
+html[data-theme="dark"] .fn-lieu-ico { background: #3a3b3c; color: #b0b3b8; }
+html[data-theme="dark"] .fn-lieu-item:hover .fn-lieu-ico, html[data-theme="dark"] .fn-lieu-item.fn-actif .fn-lieu-ico { background: #4e4f50; }
+html[data-theme="dark"] .fn-lieu-nom, html[data-theme="dark"] .fn-lieu-vide strong { color: #e4e6eb; }
+html[data-theme="dark"] .fn-lieu-det, html[data-theme="dark"] .fn-lieu-vide, html[data-theme="dark"] .fn-lieu-actuel { color: #b0b3b8; }
+html[data-theme="dark"] .fn-lieu-det b { color: #d0d2d6; }
+html[data-theme="dark"] .fn-lieu-actuel { background: #3a3b3c; }
+html[data-theme="dark"] .fn-lieu-squel i { background: linear-gradient(90deg, #3a3b3c 25%, #4a4b4d 50%, #3a3b3c 75%); background-size: 200% 100%; }
+@media (prefers-reduced-motion: reduce) { .fn-lieu-squel i { animation: none; } }
+</style>
+<script>
+/* Villes, villages, écoles et universités : on ne peut enregistrer que ce qui existe réellement.
+   Un appui sur le champ ouvre une page plein écran de recherche (base mondiale OpenStreetMap, service Photon) ;
+   l'utilisateur choisit son lieu dans la liste. Les valeurs déjà enregistrées restent valables tant qu'on ne les change pas. */
+(function () {
+    'use strict';
+    var URL_API = 'https://photon.komoot.io/api/';
+    var MIN = 2, DELAI = 350, MAX_AFFICHES = 20;
+
+    /* Icônes en contour, sans couleur : immeubles en perspective (ville), repère de localisation, toque de diplômé */
+    var SVG_VILLE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9h7v12H2z"/><path d="M9 9l3-2v12l-3 2"/><path d="M2 9l3-2h7"/><path d="M13 15h6v6h-6z"/><path d="M19 15l3-2v6l-3 2"/><path d="M13 15l3-2h6"/><path d="M4.5 12.5h2M4.5 15.5h2M4.5 18.5h2M15 18h2"/><path d="M1 21h22"/></svg>';
+    var SVG_PIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21.5s7-6.2 7-11.8a7 7 0 0 0-14 0c0 5.6 7 11.8 7 11.8z"/><circle cx="12" cy="9.7" r="2.6"/></svg>';
+    var SVG_ECOLE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9.5L12 4.5l10 5-10 5z"/><path d="M6 12v4.6c0 1.5 2.7 3 6 3s6-1.5 6-3V12"/><path d="M22 9.5v6"/></svg>';
+    var SVG_RETOUR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="M11 5l-7 7 7 7"/></svg>';
+    var SVG_LOUPE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5L16 16"/></svg>';
+    var SVG_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+    var ICONES = { ville: SVG_VILLE, pin: SVG_PIN, ecole: SVG_ECOLE };
+
+    var LIEUX_VILLE = ['city', 'town', 'village', 'hamlet', 'suburb', 'municipality', 'borough', 'quarter', 'neighbourhood'];
+    var LIEUX_PAYS = LIEUX_VILLE.concat(['country', 'state', 'region', 'province', 'county']);
+    var GENRE_VILLE = ['city', 'town', 'municipality', 'borough'];
+    var TYPES_LIBELLES = { city: 'Ville', town: 'Ville', municipality: 'Commune', borough: 'Arrondissement', village: 'Village', hamlet: 'Hameau', suburb: 'Quartier', quarter: 'Quartier', neighbourhood: 'Quartier',
+                           country: 'Pays', state: 'Région', region: 'Région', province: 'Province', county: 'Département', school: 'École', college: 'Collège', university: 'Université' };
+
+    var CHAMPS = {
+        ville:        { genre: 'lieu',  cles: 'place', valeurs: LIEUX_VILLE, types: ['city'],
+                        titre: 'Où habitez-vous ?', recherche: 'Rechercher une ville ou un village', defaut: 'Ex: Bafoussam',
+                        indice: 'Tapez le nom de votre ville ou de votre village pour le retrouver.' },
+        localisation: { genre: 'lieu',  cles: 'place', valeurs: LIEUX_PAYS,  types: ['city', 'county', 'state', 'country'],
+                        titre: 'D\u2019où êtes-vous originaire ?', recherche: 'Rechercher un pays, une ville ou un village', defaut: 'Ex: Cameroun',
+                        indice: 'Tapez le nom de votre pays, de votre ville ou de votre village.' },
+        ecole:        { genre: 'ecole', cles: 'amenity', valeurs: ['school', 'college'],
+                        titre: 'Votre école', recherche: 'Rechercher une école', defaut: 'Ex: Lycée Joss, Douala',
+                        indice: 'Tapez le nom de votre école. Seuls les établissements existants sont proposés.' },
+        universite:   { genre: 'ecole', cles: 'amenity', valeurs: ['university', 'college'],
+                        titre: 'Votre université', recherche: 'Rechercher une université', defaut: 'Ex: Université de Douala',
+                        indice: 'Tapez le nom de votre université. Seules les universités existantes sont proposées.' }
+    };
+
+    var cache = {}, page = null, courant = null;
+
+    function normaliser(t) { return String(t || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
+    function unique(tab) {
+        var vus = {}, res = [];
+        tab.forEach(function (x) {
+            if (!x) return;
+            var k = normaliser(x);
+            if (!k || vus[k]) return;
+            vus[k] = 1; res.push(x);
+        });
+        return res;
+    }
+
+    /* Le résultat est-il du bon genre (vraie ville/village/pays, vraie école/université) ? */
+    function convient(p, cfg) {
+        if (!p || !p.name) return false;
+        if (cfg.genre === 'ecole') return p.osm_key === 'amenity' && cfg.valeurs.indexOf(p.osm_value) >= 0;
+        if (p.osm_key === 'place' && cfg.valeurs.indexOf(p.osm_value) >= 0) return true;
+        return p.osm_key === 'boundary' && p.osm_value === 'administrative' && cfg.types.indexOf(p.type) >= 0;
+    }
+    /* Texte enregistré dans le champ, détail affiché, type et icône (immeubles = ville, repère = village/pays/région, toque = école) */
+    function fabriquer(p, cfg) {
+        var pays = p.country || '', ville = p.city || p.locality || p.district || '', region = p.state || p.county || '';
+        var v = p.osm_value, estPays = v === 'country' || p.type === 'country';
+        var enreg, detail;
+        if (cfg.genre === 'ecole') {
+            enreg = unique([p.name, ville || region, pays]);
+            detail = unique([ville, region, pays].filter(function (x) { return normaliser(x) !== normaliser(p.name); }));
+        } else if (estPays) {
+            enreg = [p.name];
+            detail = [];
+        } else {
+            enreg = unique([p.name, pays]);
+            detail = unique([p.county, p.state, pays].filter(function (x) { return normaliser(x) !== normaliser(p.name); }));
+        }
+        var typeCle = v === 'administrative' ? (p.type === 'city' ? 'city' : p.type) : v;
+        var icone = cfg.genre === 'ecole' ? 'ecole' : (GENRE_VILLE.indexOf(typeCle) >= 0 ? 'ville' : 'pin');
+        return { valeur: enreg.join(', '), nom: p.name, detail: detail.join(', '), type: TYPES_LIBELLES[typeCle] || '', icone: icone };
+    }
+
+    function chercher(texte, cfg, signal) {
+        var cle = cfg.genre + '|' + cfg.valeurs.join(',') + '|' + normaliser(texte);
+        if (cache[cle]) return Promise.resolve(cache[cle]);
+        function appel(avecFiltre) {
+            var u = URL_API + '?q=' + encodeURIComponent(texte) + '&lang=fr&limit=' + (avecFiltre ? 20 : 40);
+            if (avecFiltre) cfg.valeurs.forEach(function (v) { u += '&osm_tag=' + encodeURIComponent(cfg.cles + ':' + v); });
+            /* Écoles et universités : recherche mondiale faite par le serveur (route /api/etablissements dans routes.py) */
+            if (cfg.genre === 'ecole') u = '/api/etablissements?q=' + encodeURIComponent(texte) + '&type=' + (cfg.valeurs.indexOf('university') >= 0 ? 'universite' : 'ecole');
+            return fetch(u, { signal: signal, headers: { 'Accept': 'application/json' } }).then(function (r) {
+                if (!r.ok) throw new Error('http ' + r.status);
+                return r.json();
+            }).then(function (j) {
+                var vus = {}, res = [];
+                (j.features || []).forEach(function (f) {
+                    var p = f && f.properties;
+                    if (!convient(p, cfg)) return;
+                    var e = fabriquer(p, cfg);
+                    var k = normaliser(e.valeur + '|' + e.detail + '|' + e.type);
+                    if (vus[k]) return;
+                    vus[k] = 1; res.push(e);
+                });
+                return res;
+            });
+        }
+        /* d'abord avec filtre précis ; si rien (ou filtre non pris en charge), recherche large filtrée ici */
+        return appel(true).then(function (res) { return (res.length || cfg.genre === 'ecole') ? res : appel(false); }).then(function (res) {
+            cache[cle] = res; return res;
+        });
+    }
+
+    function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html) e.innerHTML = html; return e; }
+
+    /* ── Page plein écran (créée une seule fois, partagée par les quatre champs) ── */
+    function construirePage() {
+        var p = el('div', 'fn-lieu-page'); p.hidden = true;
+        p.setAttribute('role', 'dialog'); p.setAttribute('aria-modal', 'true'); p.setAttribute('aria-labelledby', 'fn-lieu-titre');
+        var head = el('div', 'fn-lieu-head');
+        var retour = el('button', 'fn-lieu-retour', SVG_RETOUR); retour.type = 'button'; retour.setAttribute('aria-label', 'Fermer et revenir au formulaire'); retour.title = 'Retour';
+        var titre = el('h2', 'fn-lieu-titre'); titre.id = 'fn-lieu-titre';
+        head.appendChild(retour); head.appendChild(titre);
+        var champ = el('div', 'fn-lieu-champ', SVG_LOUPE);
+        var inp = el('input'); inp.type = 'search'; inp.setAttribute('autocomplete', 'off'); inp.setAttribute('autocapitalize', 'words'); inp.setAttribute('spellcheck', 'false'); inp.setAttribute('enterkeyhint', 'search');
+        inp.setAttribute('role', 'combobox'); inp.setAttribute('aria-autocomplete', 'list'); inp.setAttribute('aria-controls', 'fn-lieu-res'); inp.setAttribute('aria-expanded', 'false');
+        var efface = el('button', 'fn-lieu-efface', SVG_X); efface.type = 'button'; efface.setAttribute('aria-label', 'Effacer la recherche');
+        champ.appendChild(inp); champ.appendChild(efface);
+        var corps = el('div', 'fn-lieu-corps');
+        var liste = el('ul', 'fn-lieu-res'); liste.id = 'fn-lieu-res'; liste.setAttribute('role', 'listbox'); corps.appendChild(liste);
+        var pied = el('div', 'fn-lieu-pied'); pied.textContent = 'Données © contributeurs OpenStreetMap';
+        p.appendChild(head); p.appendChild(champ); p.appendChild(corps); p.appendChild(pied);
+        document.body.appendChild(p);
+
+        page = { racine: p, titre: titre, inp: inp, efface: efface, liste: liste, corps: corps, retour: retour,
+                 timer: null, ctrl: null, num: 0, items: [], actif: -1, ancienScroll: '' };
+
+        retour.addEventListener('click', fermerPage);
+        efface.addEventListener('click', function () { inp.value = ''; majEfface(); annuler(); montrerIndice(); inp.focus(); });
+        inp.addEventListener('input', function () {
+            majEfface(); clearTimeout(page.timer);
+            if (inp.value.trim().length < MIN) { annuler(); montrerIndice(); return; }
+            page.timer = setTimeout(lancer, DELAI);
+        });
+        inp.addEventListener('keydown', function (e) {
+            if (e.key === 'ArrowDown') { e.preventDefault(); activer(page.actif + 1); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); activer(page.actif - 1); }
+            else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (page.actif >= 0 && page.items[page.actif]) choisir(page.items[page.actif]);
+                else if (page.items.length === 1) choisir(page.items[0]);
+                else { clearTimeout(page.timer); if (inp.value.trim().length >= MIN) lancer(); }
+            }
+        });
+        p.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { e.preventDefault(); fermerPage(); return; }
+            if (e.key === 'Tab') {                               /* le focus reste dans la page */
+                var f = [retour, inp].concat(efface.classList.contains('fn-visible') ? [efface] : []);
+                var i = f.indexOf(document.activeElement);
+                if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); }
+                else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+            }
+        });
+    }
+    function majEfface() { page.efface.classList.toggle('fn-visible', page.inp.value.length > 0); }
+    function annuler() { page.num++; if (page.ctrl) { try { page.ctrl.abort(); } catch (x) {} } page.items = []; page.actif = -1; page.inp.setAttribute('aria-expanded', 'false'); }
+    function vider() { page.liste.innerHTML = ''; page.items = []; page.actif = -1; }
+    function blocVide(icone, titre, texte) {
+        var li = el('li', 'fn-lieu-vide'); li.setAttribute('role', 'presentation');
+        li.appendChild(el('span', 'fn-lieu-ico', ICONES[icone]));
+        var s = el('strong'); s.textContent = titre; li.appendChild(s);
+        if (texte) { var t = el('span'); t.textContent = texte; li.appendChild(t); }
+        page.liste.appendChild(li);
+    }
+    function montrerIndice() {
+        vider();
+        var cfg = courant.cfg, actuel = courant.input.value.trim();
+        if (actuel) { var a = el('li', 'fn-lieu-actuel'); a.setAttribute('role', 'presentation'); a.textContent = 'Actuellement : ' + actuel; page.liste.appendChild(a); }
+        blocVide(cfg.genre === 'ecole' ? 'ecole' : 'ville', cfg.recherche, cfg.indice);
+    }
+    function montrerChargement() {
+        vider();
+        for (var i = 0; i < 6; i++) {
+            var li = el('li', 'fn-lieu-squel', '<i></i><span><i></i><i></i></span>'); li.setAttribute('role', 'presentation'); page.liste.appendChild(li);
+        }
+    }
+    function activer(i) {
+        var els = page.liste.querySelectorAll('.fn-lieu-item');
+        if (!els.length) return;
+        page.actif = (i + els.length) % els.length;
+        for (var k = 0; k < els.length; k++) els[k].classList.toggle('fn-actif', k === page.actif);
+        page.inp.setAttribute('aria-activedescendant', els[page.actif].id);
+        els[page.actif].scrollIntoView({ block: 'nearest' });
+    }
+    function afficher(res) {
+        vider(); page.items = res.slice(0, MAX_AFFICHES);
+        if (!page.items.length) {
+            blocVide(courant.cfg.genre === 'ecole' ? 'ecole' : 'pin', 'Aucun résultat', 'Vérifiez l\u2019orthographe, ou précisez avec le nom de la ville ou du pays. Seuls les lieux existants peuvent être choisis.');
+            return;
+        }
+        page.inp.setAttribute('aria-expanded', 'true');
+        page.items.forEach(function (e, i) {
+            var li = el('li', 'fn-lieu-item'); li.id = 'fn-lieu-res-' + i; li.setAttribute('role', 'option');
+            li.appendChild(el('span', 'fn-lieu-ico', ICONES[e.icone]));
+            var tx = el('span', 'fn-lieu-txt');
+            var n = el('span', 'fn-lieu-nom'); n.textContent = e.nom; tx.appendChild(n);
+            if (e.type || e.detail) {
+                var d = el('span', 'fn-lieu-det');
+                if (e.type) { var b = el('b'); b.textContent = e.type; d.appendChild(b); }
+                if (e.type && e.detail) d.appendChild(document.createTextNode(' · '));
+                if (e.detail) d.appendChild(document.createTextNode(e.detail));
+                tx.appendChild(d);
+            }
+            li.appendChild(tx);
+            li.addEventListener('click', function () { choisir(e); });
+            page.liste.appendChild(li);
+        });
+        page.corps.scrollTop = 0;
+    }
+    function lancer() {
+        var t = page.inp.value.trim();
+        if (t.length < MIN) { montrerIndice(); return; }
+        annuler();
+        var ctrl = ('AbortController' in window) ? new AbortController() : null; page.ctrl = ctrl;
+        var num = page.num;
+        montrerChargement();
+        chercher(t, courant.cfg, ctrl ? ctrl.signal : undefined).then(function (res) {
+            if (num !== page.num) return;
+            afficher(res);
+        }).catch(function (err) {
+            if (num !== page.num || (err && err.name === 'AbortError')) return;
+            vider(); blocVide('pin', 'Recherche indisponible', 'Vérifiez votre connexion puis réessayez en modifiant votre saisie.');
+        });
+    }
+    function choisir(e) {
+        var c = courant; if (!c) return;
+        c.input.value = e.valeur;
+        c.maj();
+        try { c.input.dispatchEvent(new Event('change', { bubbles: true })); } catch (x) {}
+        fermerPage();
+    }
+    function ouvrirPage(c) {
+        if (!page) construirePage();
+        courant = c;
+        page.titre.textContent = c.cfg.titre;
+        page.inp.setAttribute('placeholder', c.cfg.recherche);
+        page.inp.value = ''; majEfface();
+        page.ancienScroll = document.body.style.overflow; document.body.style.overflow = 'hidden';
+        page.racine.hidden = false;
+        montrerIndice();
+        setTimeout(function () { try { page.inp.focus(); } catch (x) {} }, 30);
+    }
+    function fermerPage() {
+        if (!page || page.racine.hidden) return;
+        clearTimeout(page.timer); annuler();
+        page.racine.hidden = true;
+        document.body.style.overflow = page.ancienScroll || '';
+        var c = courant; courant = null;
+        if (c) { try { c.input.focus({ preventScroll: true }); } catch (x) { c.input.focus(); } }
+    }
+
+    /* ── Les quatre champs du formulaire : lecture seule, un appui ouvre la page de recherche ── */
+    function creer(nom) {
+        var input = document.querySelector('input[name="' + nom + '"]');
+        if (!input) return;
+        var cfg = CHAMPS[nom];
+        var wrap = el('div', 'fn-lieu-wrap');
+        input.parentNode.insertBefore(wrap, input); wrap.appendChild(input);
+        var loupe = el('span', 'fn-lieu-loupe', SVG_LOUPE);
+        var vider = el('button', 'fn-lieu-vider', SVG_X); vider.type = 'button'; vider.setAttribute('aria-label', 'Effacer ce champ'); vider.title = 'Effacer';
+        wrap.appendChild(loupe); wrap.appendChild(vider);
+
+        input.classList.add('fn-lieu-in');
+        input.readOnly = true;                                  /* la valeur ne change que par un choix dans la liste (elle reste envoyée avec le formulaire) */
+        input.setAttribute('autocomplete', 'off'); input.setAttribute('aria-haspopup', 'dialog');
+        if (!input.getAttribute('placeholder')) input.setAttribute('placeholder', cfg.defaut);
+
+        var c = { input: input, cfg: cfg, maj: function () { wrap.classList.toggle('fn-lieu-plein', !!input.value.trim()); } };
+        c.maj();
+        input.addEventListener('click', function () { ouvrirPage(c); });
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); ouvrirPage(c); }
+        });
+        vider.addEventListener('click', function () { input.value = ''; c.maj(); input.focus(); });
+    }
+
+    function init() { Object.keys(CHAMPS).forEach(creer); }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+</script>
+{% if current_user.badge_expire %}{% include '_assistant_support.html' %}{% endif %}
+{% endblock %}

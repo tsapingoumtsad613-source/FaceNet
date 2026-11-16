@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+    :root, [data-theme="light"] { --fn-blue:#0866FF; --fn-bg:#F0F2F5; --fn-gray:#65676B; --fn-border:#e4e6eb; --white:#fff; --text-dark:#1c1e21; --card-shadow:rgba(0,0,0,.1); }
+    [data-theme="dark"] { --fn-bg:#18191A; --white:#242526; --text-dark:#E4E6EB; --fn-border:#3E4042; --fn-gray:#B0B3B8; --card-shadow:rgba(0,0,0,.3); }
+    body { background: var(--fn-bg); margin:0; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; color: var(--text-dark); }
+    .ec-page { min-height:100vh; background: var(--white); max-width:720px; margin:0 auto; padding-bottom:32px; box-sizing:border-box; }
+    .ec-top { display:flex; align-items:center; gap:12px; padding:14px 16px 0; }
+    .ec-back { display:inline-flex; align-items:center; gap:8px; padding:9px 16px 9px 12px; border-radius:20px; background: var(--fn-bg); color: var(--text-dark); text-decoration:none; font-weight:700; font-size:15px; min-height:40px; box-sizing:border-box; transition: background .2s, transform .15s; }
+    .ec-back:hover { background: var(--fn-border); }
+    .ec-back:active { transform: scale(.97); }
+    .ec-back:focus-visible { outline:2px solid var(--fn-blue); outline-offset:2px; }
+    .ec-title { font-size:28px; font-weight:800; margin:0; padding:16px 16px 4px; letter-spacing:-.3px; }
+    .ec-sub { margin:0 16px 8px; color: var(--fn-gray); font-size:14px; }
+    .ec-menu { padding:0 8px; }
+    .nav-group-label { font-size:18px; color: var(--text-dark); font-weight:800; margin:24px 12px 8px; line-height:1.25; }
+    .nav-item { display:flex; align-items:center; gap:12px; padding:13px 12px; min-height:44px; box-sizing:border-box; border-radius:8px; cursor:pointer; font-weight:500; font-size:16px; color: var(--text-dark); text-decoration:none; transition:.2s; }
+    .nav-item:hover { background: rgba(127,127,127,.12); }
+    .nav-item i { width:24px; text-align:center; font-size:19px; }
+</style>
+
+<div class="ec-page">
+    <div class="ec-top">
+        <a href="{{ retour }}" class="ec-back" aria-label="Retour aux paramètres"><i class="fas fa-arrow-left" aria-hidden="true"></i> Retour</a>
+    </div>
+    <h1 class="ec-title">Espace Comptes</h1>
+    <p class="ec-sub">Gère tes détails personnels et ta sécurité.</p>
+    <div class="ec-menu">
+            <div class="nav-group-label">Détails personnels &amp; sécurité</div>
+            <a href="{{ url_for('main.edit_profile') }}" class="nav-item">
+                <i class="fas fa-user-edit"></i> Modifier le Profil
+            </a>
+            <a href="{{ url_for('main.securite_mot_de_passe') }}" class="nav-item">
+                <i class="fas fa-key"></i> Sécurité & Mot de passe
+            </a>
+            <a href="{{ url_for('main.alertes_securite_page') }}" class="nav-item">
+                <i class="fas fa-shield-halved"></i> Alertes & historique de connexion
+            </a>
+
+            <div class="nav-group-label">Vérification du compte</div>
+            <a href="{{ url_for('main.verification_telephone') }}" class="nav-item">
+                <i class="fas fa-id-card"></i> Vérifiez votre numéro de mobile
+            </a>
+            <a href="{{ url_for('main.verification_email') }}" class="nav-item">
+                <i class="fas fa-id-card"></i> Vérifiez votre adresse e-mail
+            </a>
+
+            <div class="nav-group-label">Données &amp; contrôle du compte</div>
+            <a href="{{ url_for('main.telecharger_donnees') }}" class="nav-item">
+                <i class="fas fa-download"></i> Télécharger mes données
+            </a>
+            <a href="{{ url_for('main.compte_desactivation') }}" class="nav-item">
+                <i class="fas fa-user-shield"></i> Désactivation, Suppression & Décès
+            </a>
+    </div>
+</div>
+{% endblock %}

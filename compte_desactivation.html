@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include 'compte_style.html' %}
+<div class="cc-page">
+    <div class="cc-top">
+        <a href="{{ url_for('main.settings') }}" class="cc-back" aria-label="Retour aux paramètres"><i class="fas fa-arrow-left"></i></a>
+        <h1>Désactivation, Suppression &amp; Décès</h1>
+    </div>
+    <div class="cc-wrap">
+
+        <div class="cc-card">
+            <h2><span class="cc-ico blue"><i class="fas fa-moon"></i></span> Désactiver mon compte</h2>
+            <p class="cc-desc">Une pause, sans rien perdre. Tu peux revenir quand tu veux.</p>
+            <ul class="cc-list">
+                <li><i class="fas fa-eye-slash"></i><span>Ton profil, tes publications et ta présence sont masqués aux autres, y compris dans la recherche.</span></li>
+                <li><i class="fas fa-sign-out-alt"></i><span>Tu es déconnecté(e) immédiatement.</span></li>
+                <li><i class="fas fa-bed"></i><span>Ton profil apparaît « en veille » (logo lune) dans la liste des comptes enregistrés sur l'appareil.</span></li>
+                <li><i class="fas fa-shield-alt"></i><span>Pour revenir : vérification renforcée (mot de passe, nom d'utilisateur, date de naissance et e-mail ou téléphone).</span></li>
+            </ul>
+            <a class="cc-btn ghost block" href="{{ url_for('main.compte_desactiver_page') }}"><i class="fas fa-moon"></i> Désactiver mon compte</a>
+        </div>
+
+        <div class="cc-card">
+            <h2><span class="cc-ico red"><i class="fas fa-trash-alt"></i></span> Supprimer mon compte</h2>
+            <p class="cc-desc">Suppression définitive de ton profil et de tes données, après un délai de <strong>7 jours</strong>.</p>
+            <ul class="cc-list">
+                <li><i class="fas fa-list-check"></i><span>Un parcours en 3 étapes : tes raisons (3 minimum), des questions importantes, puis la confirmation avec ton mot de passe.</span></li>
+                <li><i class="fas fa-sign-out-alt"></i><span>Tu es déconnecté(e) tout de suite et ton profil est masqué.</span></li>
+                <li><i class="fas fa-hourglass-half"></i><span>Pendant 7 jours, il suffit de te reconnecter pour annuler la suppression, sans aucune question. Le temps restant s'affiche devant ton nom sur la page de connexion.</span></li>
+                <li><i class="fas fa-ban"></i><span>Pendant ce délai, ton profil n'apparaît plus dans aucune recherche. Après 7 jours, la suppression est définitive et irréversible.</span></li>
+            </ul>
+            <a class="cc-btn danger block" href="{{ url_for('main.compte_supprimer_page') }}"><i class="fas fa-trash-alt"></i> Supprimer mon compte</a>
+        </div>
+
+        <div class="cc-card">
+            <h2><span class="cc-ico gray"><i class="fas fa-ribbon"></i></span> Signaler le décès d'un membre</h2>
+            <p class="cc-desc">Un proche peut transmettre une preuve du décès (acte, avis de deuil, photo ou vidéo) et choisir ce que devient le profil : commémoratif ou suppression. Notre équipe vérifie chaque demande avant toute action, et le proche suit l'état de sa demande.</p>
+            <a class="cc-btn dark block" href="{{ url_for('main.compte_deces_page') }}"><i class="fas fa-ribbon"></i> Ouvrir le formulaire de signalement</a>
+        </div>
+
+    </div>
+</div>
+<script>
+    (function () {
+        var t = 'system';
+        try { t = localStorage.getItem('facenet_theme') || 'system'; } catch (e) {}
+        if (t === 'light' || t === 'dark') { document.documentElement.setAttribute('data-theme', t); }
+    })();
+</script>
+{% endblock %}

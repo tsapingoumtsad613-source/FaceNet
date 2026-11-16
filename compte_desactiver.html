@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include 'compte_style.html' %}
+<div class="cc-page">
+    <div class="cc-top">
+        <a href="{{ url_for('main.compte_desactivation') }}" class="cc-back" aria-label="Retour"><i class="fas fa-arrow-left"></i></a>
+        <h1>Désactiver mon compte</h1>
+    </div>
+    <div class="cc-wrap">
+        <div class="cc-progress">
+            <div class="cc-progress-top"><span id="ccStepLabel"></span><span id="ccStepName"></span></div>
+            <div class="cc-bar"><i id="ccBar"></i></div>
+        </div>
+
+        <div class="cc-card">
+            <div class="cc-step" data-step="1">
+                <h2><span class="cc-ico blue"><i class="fas fa-moon"></i></span> Pourquoi une pause ?</h2>
+                <p class="cc-desc">Choisis au moins une raison. Cela nous aide à améliorer FaceNet.</p>
+                <div id="listeMotifs">
+                    {% for code, libelle in motifs %}
+                    <label class="cc-choice"><input type="checkbox" name="motif" value="{{ code }}"><span>{{ libelle }}</span></label>
+                    {% endfor %}
+                </div>
+                <label class="cc-label" for="commentaire">Un commentaire ? <span class="cc-hint">(facultatif)</span></label>
+                <textarea class="cc-textarea" id="commentaire" maxlength="1000"></textarea>
+            </div>
+
+            <div class="cc-step" data-step="2" hidden>
+                <h2><span class="cc-ico blue"><i class="fas fa-shield-alt"></i></span> Confirmer la désactivation</h2>
+                <div class="cc-alert info"><i class="fas fa-info-circle"></i><span>Ton profil sera masqué et tu seras déconnecté(e). Rien n'est supprimé : tu retrouveras tout à ton retour.</span></div>
+                <ul class="cc-list">
+                    <li><i class="fas fa-check"></i><span>Pour te reconnecter, une vérification renforcée sera demandée (mot de passe, nom d'utilisateur, date de naissance et e-mail ou téléphone).</span></li>
+                </ul>
+                <label class="cc-label" for="mdp">Mot de passe</label>
+                <input class="cc-input" type="password" id="mdp" autocomplete="current-password" placeholder="Ton mot de passe">
+            </div>
+
+            <div class="cc-alert err" id="ccErr" hidden role="alert"><i class="fas fa-exclamation-circle"></i><span></span></div>
+            <div class="cc-nav">
+                <button type="button" class="cc-btn ghost" id="ccBack"><i class="fas fa-arrow-left"></i> Retour</button>
+                <button type="button" class="cc-btn primary" id="ccNext">Continuer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% include 'compte_js.html' %}
+<script>
+    ccWizard({
+        labels: ['Tes raisons', 'Confirmation'],
+        submitLabel: '<i class="fas fa-moon"></i> Désactiver maintenant',
+        validate: function (i) {
+            if (i === 0 && !document.querySelector('input[name=motif]:checked')) { return 'Choisis au moins une raison pour continuer.'; }
+            if (i === 1 && !document.getElementById('mdp').value) { return 'Saisis ton mot de passe.'; }
+            return null;
+        },
+        submit: function (btn, say) {
+            btn.disabled = true;
+            var motifs = [].map.call(document.querySelectorAll('input[name=motif]:checked'), function (x) { return x.value; });
+            ccGarderProfilAppareil().then(function () { return ccPost('/api/compte/desactiver', { motifs: motifs, commentaire: document.getElementById('commentaire').value, password: document.getElementById('mdp').value }); })
+                .then(function (r) {
+                    if (r.ok) { location.href = r.data.redirect; return; }
+                    btn.disabled = false; say(r.data.error || 'Erreur.');
+                });
+        }
+    });
+</script>
+{% endblock %}

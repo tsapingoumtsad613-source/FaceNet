@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contacts masqués | FaceNet</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root { --fn-blue: #0866FF; --fn-bg: #F0F2F5; --fn-gray: #65676B; --fn-border: #e4e6eb; --white: #ffffff; --text-dark: #1c1e21; }
+        body { background: var(--fn-bg); margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: var(--text-dark); }
+        .fn-page { max-width: 640px; margin: 0 auto; padding: 16px; }
+        .fn-topbar { display: flex; align-items: center; gap: 14px; padding: 8px 0 18px; }
+        .fn-topbar a { color: var(--text-dark); font-size: 20px; text-decoration: none; }
+        .fn-topbar h1 { font-size: 20px; margin: 0; }
+        .fn-search { display: flex; align-items: center; gap: 10px; background: var(--white); border-radius: 20px; padding: 8px 16px; margin-bottom: 16px; }
+        .fn-search input { border: none; outline: none; flex: 1; font-size: 0.95rem; background: transparent; }
+        .fn-card { background: var(--white); border-radius: 12px; padding: 6px 0; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+        .fn-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--fn-border); gap: 12px; }
+        .fn-row:last-child { border-bottom: none; }
+        .fn-user { display: flex; align-items: center; gap: 12px; }
+        .fn-avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; background: #ddd; }
+        .fn-btn { border: none; border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+        .fn-btn-muted { background: #eef0f2; color: #65676B; }
+        .fn-btn-primary { background: var(--fn-blue); color: #fff; }
+        .fn-empty { text-align: center; color: var(--fn-gray); padding: 30px 10px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+<div class="fn-page">
+    <div class="fn-topbar">
+        <a href="{{ url_for('main.confidentialite_securite_page') }}"><i class="fas fa-arrow-left"></i></a>
+        <h1>Contacts masqués</h1>
+    </div>
+
+    <div class="fn-search">
+        <i class="fas fa-search" style="color:var(--fn-gray);"></i>
+        <input type="text" id="fn-recherche" placeholder="Rechercher un contact à masquer" oninput="rechercher(this.value)">
+    </div>
+    <div class="fn-card" id="fn-resultats" style="display:none;"></div>
+
+    <div class="fn-card" id="fn-liste-masques">
+        {% for u in masques %}
+        <div class="fn-row" data-user-id="{{ u.id }}">
+            <div class="fn-user">
+                <img class="fn-avatar" src="/static/uploads/{{ u.avatar }}" alt="">
+                <span>{{ u.nom }}</span>
+            </div>
+            <button class="fn-btn fn-btn-primary" onclick="afficher({{ u.id }}, this)">Réafficher</button>
+        </div>
+        {% else %}
+        <div class="fn-empty">Tu n'as masqué aucun contact pour le moment.</div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+function afficher(userId, btn) {
+    fetch(`/parametres/contacts-masques/${userId}/afficher`, { method: 'POST' })
+        .then(r => r.json())
+        .then(data => { if (data.success) btn.closest('.fn-row').remove(); });
+}
+
+function masquer(userId, btn) {
+    fetch(`/parametres/contacts-masques/${userId}/masquer`, { method: 'POST' })
+        .then(r => r.json())
+        .then(data => { if (data.success) { btn.textContent = 'Masqué'; btn.disabled = true; } });
+}
+
+let timer;
+function rechercher(q) {
+    clearTimeout(timer);
+    const zone = document.getElementById('fn-resultats');
+    if (!q.trim()) { zone.style.display = 'none'; zone.innerHTML = ''; return; }
+    timer = setTimeout(() => {
+        fetch(`/parametres/contacts-masques/rechercher?q=${encodeURIComponent(q)}`)
+            .then(r => r.json())
+            .then(data => {
+                zone.style.display = 'block';
+                if (!data.resultats || !data.resultats.length) {
+                    zone.innerHTML = '<div class="fn-empty">Aucun résultat</div>';
+                    return;
+                }
+                zone.innerHTML = data.resultats.map(u => `
+                    <div class="fn-row">
+                        <div class="fn-user">
+                            <img class="fn-avatar" src="/static/uploads/${u.avatar}" alt="">
+                            <span>${u.nom}</span>
+                        </div>
+                        ${u.deja_masque
+                            ? '<button class="fn-btn fn-btn-muted" disabled>Déjà masqué</button>'
+                            : `<button class="fn-btn fn-btn-muted" onclick="masquer(${u.id}, this)">Masquer</button>`}
+                    </div>
+                `).join('');
+            });
+    }, 300);
+}
+</script>
+</body>
+</html>
+{% endblock %}

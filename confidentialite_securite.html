@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confidentialité & Sécurité | FaceNet</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root { --fn-blue: #0866FF; --fn-bg: #F0F2F5; --fn-gray: #65676B; --fn-border: #e4e6eb; --white: #ffffff; --text-dark: #1c1e21; }
+        body { background: var(--fn-bg); margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: var(--text-dark); }
+        .fn-page { max-width: 640px; margin: 0 auto; padding: 16px; }
+        .fn-topbar { display: flex; align-items: center; gap: 14px; padding: 8px 0 18px; }
+        .fn-topbar a { color: var(--text-dark); font-size: 20px; text-decoration: none; }
+        .fn-topbar h1 { font-size: 20px; margin: 0; }
+        .fn-card { background: var(--white); border-radius: 12px; padding: 6px 0; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+        .fn-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--fn-border); gap: 12px; }
+        .fn-row:last-child { border-bottom: none; }
+        .fn-row-label { font-weight: 600; font-size: 0.95rem; }
+        .fn-row-desc { font-size: 0.8rem; color: var(--fn-gray); margin-top: 3px; }
+        .fn-link-row { text-decoration: none; color: var(--text-dark); cursor: pointer; }
+        .fn-badge { background: var(--fn-blue); color: #fff; border-radius: 10px; padding: 1px 8px; font-size: 0.75rem; margin-right: 8px; }
+        .fn-chevron { color: #b0b3b8; }
+        select.fn-select { border: 1px solid var(--fn-border); border-radius: 8px; padding: 6px 10px; font-size: 0.9rem; }
+        .fn-switch { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
+        .fn-switch input { opacity: 0; width: 0; height: 0; }
+        .fn-slider { position: absolute; cursor: pointer; inset: 0; background-color: #ccc; transition: .2s; border-radius: 24px; }
+        .fn-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .2s; border-radius: 50%; }
+        input:checked + .fn-slider { background-color: var(--fn-blue); }
+        input:checked + .fn-slider:before { transform: translateX(18px); }
+        .fn-group-title { font-size: 0.8rem; text-transform: uppercase; color: var(--fn-gray); font-weight: 700; margin: 18px 4px 8px; }
+    </style>
+</head>
+<body>
+<div class="fn-page">
+    <div class="fn-topbar">
+        <a href="{{ url_for('main.settings') }}"><i class="fas fa-arrow-left"></i></a>
+        <h1>Confidentialité & Sécurité</h1>
+    </div>
+
+    <div class="fn-group-title">Messages & interactions</div>
+    <div class="fn-card">
+        <div class="fn-row">
+            <div>
+                <div class="fn-row-label">Qui peut m'envoyer un message</div>
+                <div class="fn-row-desc">Contrôle qui peut t'écrire directement</div>
+            </div>
+            <select id="fn-message-permission" class="fn-select">
+                <option value="tout_le_monde" {% if message_permission == 'tout_le_monde' %}selected{% endif %}>Tout le monde</option>
+                <option value="amis" {% if message_permission == 'amis' %}selected{% endif %}>Amis uniquement</option>
+            </select>
+        </div>
+        <div class="fn-row">
+            <div>
+                <div class="fn-row-label">Confirmations de lecture</div>
+                <div class="fn-row-desc">Montre quand tu as lu un message</div>
+            </div>
+            <label class="fn-switch">
+                <input type="checkbox" id="fn-confirmations-lecture" {% if confirmations_lecture_actif %}checked{% endif %}>
+                <span class="fn-slider"></span>
+            </label>
+        </div>
+        <div class="fn-row">
+            <div>
+                <div class="fn-row-label">Aperçus de liens</div>
+                <div class="fn-row-desc">Génère un aperçu pour les liens partagés</div>
+            </div>
+            <label class="fn-switch">
+                <input type="checkbox" id="fn-apercus-liens" {% if apercus_liens_actif %}checked{% endif %}>
+                <span class="fn-slider"></span>
+            </label>
+        </div>
+        <div class="fn-row">
+            <div>
+                <div class="fn-row-label">Notifier mes changements de photo</div>
+                <div class="fn-row-desc">Préviens tes amis quand tu changes de photo</div>
+            </div>
+            <label class="fn-switch">
+                <input type="checkbox" id="fn-notif-photo" {% if notifier_changement_photo %}checked{% endif %}>
+                <span class="fn-slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <div class="fn-group-title">Gestion des comptes</div>
+    <div class="fn-card">
+        <a class="fn-row fn-link-row" href="{{ url_for('main.comptes_bloques_page') }}">
+            <div class="fn-row-label"><i class="fas fa-user-slash" style="color:#d92d20; margin-right:10px;"></i>Comptes bloqués</div>
+            <div><span class="fn-badge">{{ nb_bloques }}</span><i class="fas fa-chevron-right fn-chevron"></i></div>
+        </a>
+        <a class="fn-row fn-link-row" href="{{ url_for('main.contacts_masques_page') }}">
+            <div class="fn-row-label"><i class="fas fa-eye-slash" style="color:#65676B; margin-right:10px;"></i>Contacts masqués</div>
+            <div><span class="fn-badge">{{ nb_masques }}</span><i class="fas fa-chevron-right fn-chevron"></i></div>
+        </a>
+        <a class="fn-row fn-link-row" href="{{ url_for('main.alertes_securite_page') }}">
+            <div class="fn-row-label"><i class="fas fa-shield-halved" style="color:var(--fn-blue); margin-right:10px;"></i>Alertes & historique de connexion</div>
+            <div>{% if nb_alertes_non_lues %}<span class="fn-badge" style="background:#d92d20;">{{ nb_alertes_non_lues }}</span>{% endif %}<i class="fas fa-chevron-right fn-chevron"></i></div>
+        </a>
+    </div>
+</div>
+
+<script>
+function poster(url) {
+    return fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(r => r.json());
+}
+
+document.getElementById('fn-message-permission').addEventListener('change', function () {
+    const params = new URLSearchParams();
+    params.append('permission', this.value);
+    fetch("{{ url_for('main.set_diffusion_messages') }}", { method: 'POST', body: params });
+});
+
+document.getElementById('fn-confirmations-lecture').addEventListener('change', function () {
+    poster("{{ url_for('main.toggle_confirmations_lecture') }}");
+});
+
+document.getElementById('fn-apercus-liens').addEventListener('change', function () {
+    poster("{{ url_for('main.toggle_apercus_liens') }}");
+});
+
+document.getElementById('fn-notif-photo').addEventListener('change', function () {
+    poster("{{ url_for('main.toggle_notif_changement_photo') }}");
+});
+</script>
+</body>
+</html>
+{% endblock %}

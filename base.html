@@ -1,0 +1,3082 @@
+<!DOCTYPE html>
+<html lang="{{ (langue_ui|default('fr', true))[:2] }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="{% block meta_description %}FaceNet — le réseau social qui vous rapproche.{% endblock %}">
+    <meta name="theme-color" id="fn-theme-color" content="#ffffff">
+    {% if csrf_token is defined %}<meta name="csrf-token" content="{{ csrf_token() if csrf_token is callable else csrf_token }}">{% endif %}
+    <title>{% block title %}FaceNet{% endblock %}</title>
+
+    <!-- ══ Démarrage précoce : journal d'erreurs + thème + réglages de confort (évite le flash au chargement) ══ -->
+    <script>
+    (function () {
+        var d = document.documentElement;
+        window.__fnErreurs = [];
+        function noter(msg) {
+            try {
+                window.__fnErreurs.push(new Date().toISOString().slice(11, 19) + ' ' + String(msg).slice(0, 300));
+                if (window.__fnErreurs.length > 20) window.__fnErreurs.shift();
+            } catch (e) {}
+        }
+        window.addEventListener('error', function (ev) {
+            if (!ev || !ev.message || /ResizeObserver loop/.test(ev.message)) return;
+            noter(ev.message + (ev.filename ? ' @' + String(ev.filename).split('/').pop() + ':' + ev.lineno : ''));
+        });
+        window.addEventListener('unhandledrejection', function (ev) {
+            var r = ev && ev.reason;
+            noter('Promesse rejetée : ' + (r && r.message ? r.message : r));
+        });
+
+        try {
+            var t = localStorage.getItem('facenet_theme');
+            if (!t) {
+                var m = document.cookie.match(/facenet_theme=([^;]+)/);
+                t = m ? m[1] : 'system';
+            }
+            if (t === 'system') {
+                t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+            }
+            d.setAttribute('data-theme', t);
+            var tc = document.getElementById('fn-theme-color');
+            if (tc) tc.setAttribute('content', t === 'dark' ? '#18191a' : '#ffffff');
+
+            if (localStorage.getItem('fn_contraste') === '1') d.setAttribute('data-contraste', 'eleve');
+            if (localStorage.getItem('fn_mouvement') === '1') d.setAttribute('data-mouvement', 'reduit');
+            if (localStorage.getItem('fn_econo') === '1') d.setAttribute('data-econo', '1');
+            var z = parseFloat(localStorage.getItem('fn_zoom'));
+            if (z >= 0.8 && z <= 1.5) d.style.setProperty('--fn-zoom', z);
+        } catch (e) {}
+    })();
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ config.get('ASSET_VERSION', '1') }}">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        [hidden] { display: none !important; }
+
+        :root {
+            --fn-blue:  #1877f2;
+            --bg:       #f0f2f5;
+            --surface:  #ffffff;
+            --border:   #e4e6eb;
+            --text:     #050505;
+            --grey:     #65676b;
+            --shadow:     0 2px 8px rgba(0,0,0,.10);
+            --shadow-nav: 0 -2px 12px rgba(0,0,0,.08);
+            --nav-h:    72px;
+            --header-h: 76px;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Focus clavier visible (accessibilité) */
+        :focus-visible { outline: 3px solid var(--fn-blue); outline-offset: 2px; }
+        .fn-nav-link:focus-visible { outline-offset: -3px; }
+
+        /* Lien d'évitement */
+        .fn-skip {
+            position: absolute;
+            left: -9999px;
+            top: 8px;
+            z-index: 100001;
+            background: var(--fn-blue);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 700;
+        }
+        .fn-skip:focus { left: 8px; }
+
+        /* ══════════════════════════════
+           HEADER
+        ══════════════════════════════ */
+        .fn-header {
+            position: sticky;
+            top: 0;
+            z-index: 300;
+            height: var(--header-h);
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 14px;
+        }
+
+        /* Bloc gauche : logo + avatar */
+        .fn-header-left {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 4px;
+            line-height: 1;
+        }
+
+        .fn-header-left-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .fn-logo {
+            font-size: 30px;
+            font-weight: 800;
+            letter-spacing: -0.8px;
+            color: var(--fn-blue);
+            text-decoration: none;
+            user-select: none;
+            display: block;
+        }
+
+        /* Petit rond photo profil sous le logo */
+        .fn-avatar-mini {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #c9d6e3;
+            border: 2px solid var(--fn-blue);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            text-decoration: none;
+        }
+
+        .fn-avatar-mini img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .fn-avatar-mini svg {
+            width: 20px;
+            height: 20px;
+            fill: #8a9bb0;
+        }
+
+        /* Petit bouton « Boîte à outils » à côté de l'avatar */
+        .fn-tools-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            background: var(--surface);
+            color: var(--grey);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 0;
+            flex-shrink: 0;
+            transition: border-color .16s, color .16s;
+        }
+        .fn-tools-btn:hover { border-color: var(--fn-blue); color: var(--fn-blue); }
+        .fn-tools-btn svg { width: 18px; height: 18px; fill: currentColor; }
+        /* Pastille verte quand l'économie de données est active */
+        html[data-econo="1"] .fn-tools-btn { border-color: #42b72a; color: #42b72a; }
+
+        /* Boutons droite du header */
+        .fn-header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .fn-icon-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            text-decoration: none;
+            color: var(--text);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: background .16s;
+        }
+        .fn-icon-btn:hover { background: var(--border); }
+        .fn-icon-btn svg { width: 26px; height: 26px; }
+
+        /* Icône de recherche en gris */
+        .fn-icon-btn[aria-label="Explorer"] { color: var(--grey); }
+
+        /* Bouton "+" encadré en forme carrée */
+        #fn-plus-btn {
+            width: 46px;
+            height: 46px;
+            border: 2px solid var(--fn-blue);
+            border-radius: 10px;
+            color: var(--fn-blue);
+            background: var(--surface);
+        }
+        #fn-plus-btn:hover { background: var(--bg); }
+        #fn-plus-btn svg { width: 26px; height: 26px; }
+
+        /* Menu déroulant du bouton "+" (Publier / Story / Reel / En direct / Note) */
+        .fn-plus-wrap { position: relative; }
+
+        .fn-plus-menu {
+            position: fixed;
+            top: calc(var(--header-h) + 6px);
+            right: 10px;
+            min-width: min(260px, calc(100vw - 20px));
+            max-width: calc(100vw - 20px);
+            max-height: calc(100vh - var(--header-h) - var(--nav-h) - 24px);
+            overflow-y: auto;
+            background: var(--surface);
+            border-radius: 12px;
+            box-shadow: 0 6px 24px rgba(0,0,0,.20);
+            padding: 6px 0;
+            display: none;
+            z-index: 400;
+        }
+
+        .fn-plus-menu.show { display: block; }
+
+        .fn-plus-menu a {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px 20px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 17px;
+            font-weight: 600;
+        }
+
+        .fn-plus-menu a:hover { background: var(--bg); }
+
+        .fn-plus-menu .fn-plus-icon {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .fn-plus-menu .fn-plus-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--fn-blue);
+        }
+
+        /* ── FN-PLUS-3D (ajout additif) : menu « + » compact façon Facebook, entrée 3D très rebondissante.
+              Les variables --sx / --sy / --rz / --dl / --du sont tirées au hasard à chaque ouverture (voir script plus bas). ── */
+        #fn-plus-btn svg { transition: transform .4s cubic-bezier(.34,1.8,.64,1); }
+        #fn-plus-btn[aria-expanded="true"] svg { transform: rotate(135deg); }
+
+        .fn-plus-menu {
+            min-width: min(200px, calc(100vw - 20px));
+            width: max-content;
+            padding: 5px;
+            border-radius: 10px;
+            box-shadow: 0 2px 12px rgba(0,0,0,.18), 0 0 0 1px rgba(0,0,0,.04);
+            transform-origin: calc(100% - 26px) 0;
+            overflow-x: hidden;
+        }
+        .fn-plus-menu.show { animation: fnPlusPop .7s cubic-bezier(.3,1.7,.5,1) both; }
+        @keyframes fnPlusPop {
+            0%   { opacity: 0; transform: perspective(600px) rotateX(-80deg) scale(.4) translateY(-20px); }
+            35%  { opacity: 1; transform: perspective(600px) rotateX(18deg) scale(1.08) translateY(0); }
+            55%  { transform: perspective(600px) rotateX(-9deg) scale(.97); }
+            75%  { transform: perspective(600px) rotateX(4deg) scale(1.01); }
+            100% { opacity: 1; transform: perspective(600px) rotateX(0) scale(1); }
+        }
+        .fn-plus-menu a { gap: 10px; padding: 7px 10px; font-size: 15px; font-weight: 600; border-radius: 8px; }
+        .fn-plus-menu .fn-plus-icon { width: 34px; height: 34px; border-radius: 50%; background: var(--border); }
+        .fn-plus-menu .fn-plus-icon svg { width: 18px; height: 18px; }
+
+        /* Chaque ligne arrive d'un côté, tombe, rebondit plusieurs fois en s'écrasant, puis se pose */
+        .fn-plus-menu.show a {
+            animation: fnPlusItem var(--du, .8s) linear var(--dl, .05s) both;
+            transform-origin: 50% 100%;
+        }
+        @keyframes fnPlusItem {
+            0%   { opacity: 0; transform: translate3d(var(--sx, 0px), var(--sy, -40px), 0) rotate(var(--rz, 0deg)) scale(.7); animation-timing-function: cubic-bezier(.5,0,1,.6); }
+            34%  { opacity: 1; transform: translate3d(calc(var(--sx, 0px) * .08), 0, 0) rotate(calc(var(--rz, 0deg) * -.2)) scale(1.1,.82); animation-timing-function: cubic-bezier(0,.5,.5,1); }
+            50%  { transform: translate3d(calc(var(--sx, 0px) * -.05), -16px, 0) rotate(calc(var(--rz, 0deg) * .1)) scale(.96,1.07); animation-timing-function: cubic-bezier(.5,0,1,.5); }
+            62%  { transform: translate3d(0, 0, 0) rotate(0) scale(1.05,.93); animation-timing-function: cubic-bezier(0,.5,.5,1); }
+            74%  { transform: translate3d(0, -7px, 0) scale(.99,1.03); animation-timing-function: cubic-bezier(.5,0,1,.5); }
+            84%  { transform: translate3d(0, 0, 0) scale(1.02,.98); animation-timing-function: cubic-bezier(0,.5,.5,1); }
+            92%  { transform: translate3d(0, -2px, 0) scale(1); animation-timing-function: ease-in; }
+            100% { opacity: 1; transform: translate3d(0, 0, 0) rotate(0) scale(1); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .fn-plus-menu.show, .fn-plus-menu.show a { animation: none; }
+            #fn-plus-btn svg { transition: none; }
+        }
+
+        /* ══════════════════════════════
+           MAIN
+        ══════════════════════════════ */
+        .facenet-container {
+            max-width: 680px;
+            margin: 0 auto;
+            padding-bottom: calc(var(--nav-h) + 24px + env(safe-area-inset-bottom, 0px));
+            zoom: var(--fn-zoom, 1);
+        }
+        .facenet-container:focus { outline: none; }
+
+        /* Création de Page : aucun menu de base.html (réapparaissent sur le fil d'actualité) */
+        body.fn-sans-menu .fn-header,
+        body.fn-sans-menu .facenet-nav-bottom,
+        body.fn-sans-menu .fn-tools-backdrop,
+        body.fn-sans-menu .fn-tools-panel { display: none !important; }
+        body.fn-sans-menu .facenet-container { padding-bottom: 0; }
+        /* Explorer : plein écran, sans header ni barre du bas, et le conteneur n'est plus limité à 680px */
+        body.fn-sans-menu { --header-h: 0px; --nav-h: 0px; }
+
+        /* Profil : on retire seulement les menus du haut (header) ; la barre du bas reste visible */
+        body.fn-sans-header .fn-header,
+        body.fn-sans-header .fn-tools-backdrop,
+        body.fn-sans-header .fn-tools-panel { display: none !important; }
+        body.fn-sans-header { --header-h: 0px; }
+        body.fn-plein-ecran .facenet-container { max-width: none; }
+        body.fn-plein-ecran .fn-offline-bar { top: 0; }
+
+
+        /* ══════════════════════════════
+           BOTTOM NAV
+        ══════════════════════════════ */
+        .facenet-nav-bottom {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            height: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            box-shadow: var(--shadow-nav);
+            display: flex;
+            align-items: stretch;
+            z-index: 300;
+        }
+
+        .fn-nav-link {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: var(--grey);
+            gap: 3px;
+            position: relative;
+            border-top: 3px solid transparent;
+            transition: background .15s, border-color .15s;
+        }
+
+        .fn-nav-link:hover,
+        .fn-nav-link[aria-current="page"] {
+            background: var(--bg);
+            border-top-color: var(--fn-blue);
+        }
+
+        .fn-nav-link:hover .fn-nav-icon svg,
+        .fn-nav-link:hover .fn-nav-icon-svg,
+        .fn-nav-link[aria-current="page"] .fn-nav-icon svg {
+            fill: var(--fn-blue);
+        }
+
+        .fn-nav-link:hover .fn-nav-label,
+        .fn-nav-link[aria-current="page"] .fn-nav-label {
+            color: var(--fn-blue);
+        }
+
+        .fn-nav-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fn-nav-icon svg {
+            width: 32px;
+            height: 32px;
+            fill: var(--grey);
+            transition: fill .15s;
+        }
+
+        .fn-nav-label {
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.1px;
+            max-width: 100%;
+            padding: 0 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--grey);
+            transition: color .15s;
+        }
+
+        /* Badge */
+        .fn-badge {
+            position: absolute;
+            top: 4px;
+            right: calc(50% - 26px);
+            min-width: 20px;
+            height: 20px;
+            background: #e41e3f;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            border-radius: 9px;
+            padding: 0 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--surface);
+        }
+
+        /* ══════════════════════════════
+           TOASTS + BANDEAU HORS LIGNE
+        ══════════════════════════════ */
+        .fn-toasts {
+            position: fixed;
+            top: calc(var(--header-h) + 10px + env(safe-area-inset-top, 0px));
+            right: 12px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            max-width: calc(100vw - 24px);
+            pointer-events: none;
+        }
+
+        .fn-toast {
+            pointer-events: auto;
+            background: #ffffff;
+            color: #050505;
+            border-left: 4px solid var(--fn-blue);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 14px;
+            animation: slideIn 0.3s ease-out;
+            max-width: 350px;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .fn-offline-bar {
+            position: fixed;
+            top: var(--header-h);
+            left: 0;
+            right: 0;
+            z-index: 250;
+            background: #b3261e;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+            padding: 6px 10px;
+        }
+
+        /* FN-HORS-LIGNE : un seul message, en bas de la page, texte noir bien lisible */
+        .fn-offline-bar,
+        body.fn-plein-ecran .fn-offline-bar {
+            top: auto;
+            bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+            z-index: 600;
+            background: #ffffff;
+            color: #000000;
+            font-size: 15px;
+            font-weight: 700;
+            padding: 10px 12px;
+            border-top: 2px solid #000000;
+            box-shadow: 0 -2px 10px rgba(0,0,0,.18);
+        }
+        .fn-offline-bar[hidden] { display: none; }
+
+        /* ══════════════════════════════
+           BOÎTE À OUTILS
+        ══════════════════════════════ */
+        .fn-tools-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.45);
+            z-index: 450;
+        }
+
+        .fn-tools-panel {
+            position: fixed;
+            left: 0; right: 0; bottom: 0;
+            max-width: 680px;
+            margin: 0 auto;
+            max-height: 88vh;
+            overflow-y: auto;
+            background: var(--surface);
+            color: var(--text);
+            border-radius: 18px 18px 0 0;
+            box-shadow: 0 -8px 30px rgba(0,0,0,.28);
+            z-index: 500;
+            padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+            animation: fnMonter .22s ease-out;
+        }
+        .fn-tools-panel:focus { outline: none; }
+        @keyframes fnMonter {
+            from { transform: translateY(40px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .fn-tools-head {
+            position: sticky;
+            top: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 18px 12px;
+            background: inherit;
+            border-bottom: 1px solid var(--border);
+            z-index: 1;
+        }
+        .fn-tools-head h2 { font-size: 18px; font-weight: 800; }
+        .fn-tools-x {
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            border: none;
+            background: var(--bg);
+            color: inherit;
+            font-size: 24px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .fn-tools-sec { padding: 14px 18px 4px; }
+        .fn-tools-sec h3 {
+            font-size: 13px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: var(--grey);
+            margin-bottom: 6px;
+        }
+
+        .fn-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .fn-row:last-child { border-bottom: none; }
+        .fn-row-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .fn-row-txt strong { font-size: 15px; font-weight: 600; }
+        .fn-row-txt small { font-size: 12.5px; color: var(--grey); line-height: 1.35; }
+
+        .fn-switch {
+            appearance: none; -webkit-appearance: none;
+            flex-shrink: 0;
+            width: 46px; height: 28px;
+            border-radius: 14px;
+            background: #bcc0c4;
+            position: relative;
+            cursor: pointer;
+            border: none;
+            transition: background .15s;
+        }
+        .fn-switch::before {
+            content: '';
+            position: absolute;
+            top: 3px; left: 3px;
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,.3);
+            transition: transform .15s;
+        }
+        .fn-switch:checked { background: var(--fn-blue); }
+        .fn-switch:checked::before { transform: translateX(18px); }
+        .fn-switch:disabled { opacity: .45; cursor: not-allowed; }
+
+        .fn-select {
+            flex-shrink: 0;
+            font: inherit;
+            font-size: 14px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: inherit;
+            max-width: 160px;
+        }
+
+        .fn-btn {
+            font: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 9px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: inherit;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .fn-btn:hover { border-color: var(--fn-blue); }
+        .fn-btn-danger { color: #e41e3f; }
+        .fn-zoom-group { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .fn-zoom-val { min-width: 44px; text-align: center; font-weight: 700; font-size: 14px; }
+
+        .fn-tools-foot { padding: 12px 18px 0; text-align: center; }
+        .fn-tools-foot a { color: var(--fn-blue); font-weight: 600; text-decoration: none; font-size: 14px; }
+
+        html[data-theme="dark"] .fn-tools-panel,
+        body.dark-mode .fn-tools-panel { background: #242526; color: #e4e6eb; --border: #3e4042; --bg: #18191a; --grey: #b0b3b8; }
+        html[data-theme="dark"] .fn-tools-btn { background: #242526; }
+
+        /* ══════════════════════════════
+           ÉCRAN DE CONFIDENTIALITÉ + CONSENTEMENT
+        ══════════════════════════════ */
+        .fn-privacy-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 100000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: rgba(240,242,245,.88);
+            -webkit-backdrop-filter: blur(26px);
+            backdrop-filter: blur(26px);
+            color: #050505;
+            cursor: pointer;
+            padding: 24px;
+        }
+        .fn-privacy-overlay strong { display: block; font-size: 20px; margin-bottom: 6px; }
+        .fn-privacy-overlay span { font-size: 14px; color: #3a3b3c; }
+        html[data-theme="dark"] .fn-privacy-overlay { background: rgba(24,25,26,.9); color: #e4e6eb; }
+        html[data-theme="dark"] .fn-privacy-overlay span { color: #b0b3b8; }
+
+        .fn-consent {
+            position: fixed;
+            bottom: calc(var(--nav-h) + 12px + env(safe-area-inset-bottom, 0px));
+            left: 12px; right: 12px;
+            max-width: 420px;
+            margin: 0 auto;
+            background: var(--surface);
+            color: var(--text);
+            border-radius: 14px;
+            box-shadow: 0 6px 24px rgba(0,0,0,.25);
+            padding: 14px 16px;
+            z-index: 350;
+            font-size: 13.5px;
+            line-height: 1.4;
+        }
+        .fn-consent p { margin: 6px 0 12px; color: var(--grey); }
+        .fn-consent-actions { display: flex; gap: 8px; justify-content: flex-end; }
+        html[data-theme="dark"] .fn-consent { background: #242526; color: #e4e6eb; }
+
+        /* ══════════════════════════════
+           CONFORT : contraste élevé, animations réduites
+        ══════════════════════════════ */
+        html[data-contraste="eleve"]:not([data-theme="dark"]) {
+            --text: #000000; --grey: #2b2c2e; --border: #8a8d91;
+        }
+        html[data-contraste="eleve"][data-theme="dark"] {
+            --text: #ffffff; --grey: #d8dadd; --border: #6a6d70;
+        }
+        html[data-mouvement="reduit"],
+        html[data-mouvement="reduit"] * {
+            animation-duration: 0.001ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.001ms !important;
+            scroll-behavior: auto !important;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            html { scroll-behavior: auto; }
+            *, *::before, *::after {
+                animation-duration: 0.001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.001ms !important;
+            }
+        }
+
+        /* ══════════════════════════════
+           PASTILLES, ÉTOILES ET POINT BLEU « NOUVEAU »
+        ══════════════════════════════ */
+        .fn-icon-btn { position: relative; }
+        .fn-badge-haut { top: 2px; right: 0; }
+
+        .fn-etoiles {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            overflow: visible;
+        }
+        .fn-etoiles i {
+            position: absolute;
+            font-style: normal;
+            line-height: 1;
+            color: #f5b301;
+            text-shadow: 0 0 6px rgba(245, 179, 1, .85);
+            animation: fn-etoile-brille 2.6s ease-in-out infinite;
+        }
+        .fn-etoiles i:nth-child(1) { top: 6px;  left: 62%; font-size: 12px; animation-delay: 0s; }
+        .fn-etoiles i:nth-child(2) { top: 22px; left: 74%; font-size: 9px;  animation-delay: .9s; }
+        .fn-etoiles i:nth-child(3) { top: 30px; left: 18%; font-size: 10px; animation-delay: 1.6s; }
+        .fn-etoiles i:nth-child(4) { top: 4px;  left: 22%; font-size: 8px;  animation-delay: 2.1s; }
+        .fn-icon-btn > .fn-etoiles i:nth-child(1) { top: 3px;  left: 66%; }
+        .fn-icon-btn > .fn-etoiles i:nth-child(2) { top: 20px; left: 80%; }
+        .fn-icon-btn > .fn-etoiles i:nth-child(3) { top: 34px; left: 14%; }
+        .fn-icon-btn > .fn-etoiles i:nth-child(4) { top: 4px;  left: 14%; }
+        @keyframes fn-etoile-brille {
+            0%, 100% { opacity: 0; transform: scale(.3) rotate(0deg); }
+            45%, 55% { opacity: 1; transform: scale(1)  rotate(25deg); }
+        }
+
+        .fn-point-bleu {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            margin-left: 8px;
+            vertical-align: middle;
+            border-radius: 50%;
+            background: var(--fn-blue, #1877f2);
+            box-shadow: 0 0 0 3px rgba(24, 119, 242, .25);
+            flex-shrink: 0;
+        }
+
+        /* ══════════════════════════════
+           BASCULE PROFIL ↔ PAGE
+        ══════════════════════════════ */
+        .fn-acct-wrap { position: relative; }
+        .fn-acct-menu {
+            position: fixed;
+            top: calc(var(--header-h) - 6px);
+            left: 10px;
+            min-width: min(280px, calc(100vw - 20px));
+            max-width: calc(100vw - 20px);
+            max-height: 60vh;
+            overflow-y: auto;
+            background: var(--surface);
+            border-radius: 12px;
+            box-shadow: 0 6px 24px rgba(0,0,0,.20);
+            padding: 6px;
+            z-index: 400;
+        }
+        .fn-acct-menu h4 { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--grey); padding: 8px 10px 4px; }
+        .fn-acct-menu a { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 8px; color: var(--text); text-decoration: none; font-size: 15px; font-weight: 600; }
+        .fn-acct-menu a:hover { background: var(--bg); }
+        .fn-acct-menu a img, .fn-acct-menu a .fn-acct-ph { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: #c9d6e3; flex-shrink: 0; }
+        .fn-acct-menu a .fn-acct-nom { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .fn-acct-menu a .fn-acct-ok { color: var(--fn-blue); font-weight: 800; }
+        .fn-avatar-mini.fn-avatar-page { border-radius: 10px; }
+        .fn-avatar-mini.fn-avatar-page img { border-radius: 8px; }
+
+        /* Menu du bas : pastilles sur les icônes */
+        .facenet-nav-bottom .fn-badge {
+            top: 12px; right: calc(50% - 24px); min-width: 19px; height: 19px;
+            font-size: 11px; line-height: 1; border-radius: 10px; z-index: 2;
+        }
+        /* Pastille sur les boutons du haut (ex. Messages) */
+        .fn-icon-btn > .fn-badge { top: 0; right: -2px; min-width: 19px; height: 19px; font-size: 11px; line-height: 1; border-radius: 10px; z-index: 2; }
+
+        /* Paramètres : nombre de nouveautés dans un groupe replié */
+        .fn-nouveau-compte {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 20px; height: 20px; padding: 0 6px; margin-left: 8px; border-radius: 10px;
+            background: var(--fn-blue); color: #fff; font-size: 12px; font-weight: 700; vertical-align: middle;
+        }
+
+        /* ══════════════════════════════
+           MENUS MASQUÉS AU SCROLL (fil d'actualité) + MENU BAS SANS LIBELLÉS
+        ══════════════════════════════ */
+        .fn-header, .facenet-nav-bottom { transition: transform .25s ease; will-change: transform; }
+        body.fn-menus-caches .fn-header { transform: translateY(-100%); box-shadow: none; }
+        body.fn-menus-caches .facenet-nav-bottom { transform: translateY(100%); box-shadow: none; }
+        @media (prefers-reduced-motion: reduce) { .fn-header, .facenet-nav-bottom { transition: none; } }
+
+        /* Libellés retirés (restent lisibles par les lecteurs d'écran) */
+        .fn-nav-label {
+            position: absolute !important;
+            width: 1px; height: 1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            clip-path: inset(50%);
+            white-space: nowrap;
+            padding: 0 !important;
+        }
+
+        /* Photo de profil ronde dans le menu du bas */
+        .fn-nav-photo {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            object-fit: cover;
+            display: block;
+            background: #c9d6e3;
+            border: 2px solid transparent;
+            transition: border-color .15s;
+        }
+        .fn-nav-link:hover .fn-nav-photo,
+        .fn-nav-link[aria-current="page"] .fn-nav-photo,
+        .fn-nav-link.fn-pressing .fn-nav-photo { border-color: var(--fn-blue); }
+    </style>
+    {% block head %}{% endblock %}
+
+    <!-- Force le rechargement quand on revient avec le bouton retour du navigateur/téléphone -->
+    <script>
+        (function () {
+            var quitteA = 0;
+            window.addEventListener('pagehide', function () { quitteA = Date.now(); });
+            window.addEventListener('pageshow', function (event) {
+                // Retour rapide (< 30 s) : affichage instantané depuis le cache du navigateur.
+                // Plus longtemps : on recharge pour retrouver des données à jour.
+                if (event.persisted && (!quitteA || Date.now() - quitteA > 30000)) {
+                    window.location.reload();
+                }
+            });
+        })();
+    </script>
+</head>
+{% if request.path.startswith('/pages/creer') %}
+    {% set fn_body_cls = 'fn-sans-menu' %}
+{% elif request.endpoint == 'main.explore' %}
+    {% set fn_body_cls = 'fn-sans-menu fn-plein-ecran' %}
+{% elif request.endpoint == 'main.feed' %}
+    {% set fn_body_cls = '' %}
+{% else %}
+    {# Toutes les autres pages : menus du haut retirés (seul le fil d'actualité les garde) #}
+    {% set fn_body_cls = 'fn-sans-header' %}
+{% endif %}
+<body class="{{ fn_body_cls }}{% block body_class %}{% endblock %}">
+
+{% set ep = request.endpoint or '' %}
+
+<a href="#contenu-principal" class="fn-skip">Aller au contenu</a>
+
+<noscript>
+    <div style="background:#fff3cd;color:#664d03;padding:10px 14px;text-align:center;font-size:14px;">
+        FaceNet a besoin de JavaScript pour fonctionner correctement. Activez-le dans votre navigateur.
+    </div>
+</noscript>
+
+<!-- Conteneur global pour les notifications toast -->
+<div id="notification-container" class="fn-toasts" aria-live="polite"></div>
+
+<!-- Bandeau permanent affiché quand la connexion est perdue -->
+<div id="fn-offline-bar" class="fn-offline-bar" role="status" hidden>Vous êtes hors ligne</div>
+
+<!-- ══ HEADER ══════════════════════════════════════════════ -->
+<header class="fn-header">
+
+    <div class="fn-header-left">
+        <!-- Nom de l'application -->
+        <a href="{{ url_for('main.feed') }}" class="fn-logo">FaceNet</a>
+
+        <div class="fn-header-left-row">
+            <!-- Photo de profil miniature sous le logo -->
+            {% if current_user.is_authenticated %}
+                {% if page_active %}
+                <!-- Vous utilisez FaceNet en tant que la Page -->
+                <a href="{{ url_for('main.fnpage_profil', page_id=page_active.id) }}" class="fn-avatar-mini fn-avatar-page" title="Page : {{ page_active.nom }}">
+                    <img src="{{ url_for('static', filename='uploads/' ~ (page_active.avatar or 'default_avatar.png')) }}" alt="{{ page_active.nom }}">
+                </a>
+                {% else %}
+                <a href="{{ url_for('main.profile', username=current_user.username) }}" class="fn-avatar-mini" title="Mon Profil">
+                    {% if current_user.profile_pic %}
+                        <img src="{{ url_for('static', filename='uploads/profiles/' ~ current_user.profile_pic) }}" alt="Profil">
+                    {% else %}
+                        <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    {% endif %}
+                </a>
+                {% endif %}
+
+                {% if mes_pages_switch %}
+                <!-- Bascule profil ↔ Page : visible seulement si l'utilisateur possède au moins une Page -->
+                <div class="fn-acct-wrap">
+                    <button type="button" class="fn-tools-btn" id="fn-acct-btn" title="Changer de profil" aria-label="Changer de profil" aria-haspopup="true" aria-expanded="false" aria-controls="fn-acct-menu">
+                        <svg viewBox="0 0 24 24"><path d="M6.99 11 3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg>
+                    </button>
+                    <div class="fn-acct-menu" id="fn-acct-menu" hidden>
+                        <h4>Utiliser FaceNet en tant que</h4>
+                        <a href="{{ url_for('main.fnpage_quitter') }}">
+                            <span class="fn-acct-ph"></span>
+                            <span class="fn-acct-nom">Mon profil</span>
+                            {% if not page_active %}<span class="fn-acct-ok">✔</span>{% endif %}
+                        </a>
+                        {% for p in mes_pages_switch %}
+                        <a href="{{ url_for('main.fnpage_basculer', page_id=p.id) }}">
+                            <img src="{{ url_for('static', filename='uploads/' ~ (p.avatar or 'default_avatar.png')) }}" alt="">
+                            <span class="fn-acct-nom">{{ p.nom }}</span>
+                            {% if page_active and page_active.id == p.id %}<span class="fn-acct-ok">✔</span>{% endif %}
+                        </a>
+                        {% endfor %}
+                        <a href="{{ url_for('main.fnpage_mes_pages') }}"><span class="fn-acct-ph"></span><span class="fn-acct-nom">Gérer mes Pages</span></a>
+                    </div>
+                </div>
+                <script>
+                (function () {
+                    var b = document.getElementById('fn-acct-btn'), m = document.getElementById('fn-acct-menu');
+                    if (!b || !m) return;
+                    function fermer() { m.hidden = true; b.setAttribute('aria-expanded', 'false'); }
+                    b.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        m.hidden = !m.hidden;
+                        b.setAttribute('aria-expanded', m.hidden ? 'false' : 'true');
+                    });
+                    document.addEventListener('click', function (e) { if (!m.contains(e.target)) fermer(); });
+                    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') fermer(); });
+                })();
+                </script>
+                {% endif %}
+            {% endif %}
+
+            <!-- Bouton « Boîte à outils » -->
+            <button type="button" class="fn-tools-btn" id="fn-tools-btn" title="Boîte à outils" aria-label="Boîte à outils" aria-haspopup="dialog" aria-expanded="false" aria-controls="fn-tools-panel">
+                <svg viewBox="0 0 24 24"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="fn-header-right">
+
+        <!-- Bouton "+" : ouvre le menu Publier / Story / Reel / En direct / Note -->
+        <div class="fn-plus-wrap">
+            <button type="button" class="fn-icon-btn" id="fn-plus-btn" title="Créer" aria-label="Créer" aria-haspopup="true" aria-expanded="false" aria-controls="fn-plus-menu">
+                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg>
+            </button>
+            <div class="fn-plus-menu" id="fn-plus-menu">
+                <a href="{{ url_for('main.creer_publication') }}">
+                    <span class="fn-plus-icon"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+                    Publier
+                </a>
+                <a href="{{ url_for('main.ajouter_story') }}">
+                    <span class="fn-plus-icon"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 11h4v2h-4v4h-2v-4H7v-2h4V7h2v6z"/></svg></span>
+                    Story
+                </a>
+                <a href="{{ url_for('main.creer_reel_ecran') }}">
+                    <span class="fn-plus-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm5.5 4.5v7l6-3.5-6-3.5z"/></svg></span>
+                    Reel
+                </a>
+                <a href="{{ url_for('main.lancer_direct') }}">
+                    <span class="fn-plus-icon"><svg viewBox="0 0 24 24"><path d="M17 10.5V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-3.5l4 4v-11l-4 4z"/></svg></span>
+                    En direct
+                </a>
+                <a href="/note/creer">
+                    <span class="fn-plus-icon"><svg viewBox="0 0 24 24"><path d="M4 3h16v2H4V3zm0 4h16v2H4V7zm0 4h10v2H4v-2zm0 4h10v2H4v-2z"/></svg></span>
+                    Note
+                </a>
+                <a href="/pages/creer">
+                    <span class="fn-plus-icon"><svg viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg></span>
+                    Page
+                </a>
+            </div>
+        </div>
+
+        <a href="{{ url_for('main.explore') }}" class="fn-icon-btn" title="Explorer" aria-label="Explorer">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        </a>
+
+        <!-- Messages : déplacé ici depuis la nav du bas -->
+        <a href="{{ url_for('main.messagerie') }}" class="fn-icon-btn" title="Messages" aria-label="Messages">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 2C6.477 2 2 6.145 2 11.243c0 2.914 1.318 5.52 3.396 7.272V22l3.109-1.708C9.459 20.514 10.705 20.7 12 20.7c5.523 0 10-4.144 10-9.243S17.523 2 12 2zm1.009 12.445-2.549-2.72-4.976 2.72 5.474-5.808 2.61 2.72 4.915-2.72-5.474 5.808z"/></svg>
+        </a>
+
+        <a href="{{ url_for('main.settings') }}" class="fn-icon-btn" title="Paramètres" aria-label="Paramètres">☰</a>
+    </div>
+
+</header>
+
+<!-- ══ CONTENU ═════════════════════════════════════════════ -->
+<main class="facenet-container" id="contenu-principal" tabindex="-1">
+    {% block content %}{% endblock %}
+</main>
+
+<!-- ══ NAVIGATION BAS ══════════════════════════════════════ -->
+<nav class="facenet-nav-bottom" aria-label="Navigation principale">
+
+    <!-- Accueil -->
+    <a href="{{ url_for('main.feed') }}" class="fn-nav-link" title="Accueil"{% if ep == 'main.feed' %} aria-current="page"{% endif %}>
+        <span class="fn-nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+        </span>
+        <span class="fn-nav-label">Accueil</span>
+    </a>
+
+    <!-- Amis -->
+    <a href="{{ url_for('main.afficher_suggesstions') }}" class="fn-nav-link" title="Amis"{% if ep == 'main.afficher_suggesstions' %} aria-current="page"{% endif %}>
+        <span class="fn-nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        </span>
+        <span class="fn-nav-label">Amis</span>
+    </a>
+
+    <!-- Reels -->
+    <a href="{{ url_for('main.reels') }}" class="fn-nav-link" title="Reels"{% if ep == 'main.reels' %} aria-current="page"{% endif %}>
+        <span class="fn-nav-icon">
+            <svg viewBox="0 0 24 24">
+                <path d="M4 4h16a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm5.5 4.5v7l6-3.5-6-3.5z"/>
+            </svg>
+        </span>
+        <span class="fn-nav-label">Reels</span>
+    </a>
+
+    <!-- Marketplace -->
+    <a href="{{ url_for('main.marketplace', tab='marketplace') }}" class="fn-nav-link" title="Marketplace"{% if ep == 'main.marketplace' %} aria-current="page"{% endif %}>
+        <span class="fn-nav-icon">
+            <svg viewBox="0 0 24 24">
+                <path d="M19.5 3h-15A1.5 1.5 0 003 4.5v1.59a3 3 0 001.5 2.598V19.5A1.5 1.5 0 006 21h12a1.5 1.5 0 001.5-1.5V8.688A3 3 0 0021 6.09V4.5A1.5 1.5 0 0019.5 3zM13.5 19.5h-3v-6h3v6zm-7.5 0V8.83A3.018 3.018 0 007.5 9a2.994 2.994 0 002.25-1.02A2.994 2.994 0 0012 9a2.994 2.994 0 002.25-1.02A2.994 2.994 0 0016.5 9a3.018 3.018 0 001.5-.17V19.5h-3v-6A1.5 1.5 0 0013.5 12h-3A1.5 1.5 0 009 13.5v6H6zm13.5-13.41a1.5 1.5 0 01-3 0V4.5h3v1.59zm-4.5 0a1.5 1.5 0 01-3 0V4.5h3v1.59zm-4.5 0a1.5 1.5 0 01-3 0V4.5h3v1.59zm-4.5 0a1.5 1.5 0 01-3 0V4.5h3v1.59z"/>
+            </svg>
+        </span>
+        <span class="fn-nav-label">Marché</span>
+    </a>
+
+    <!-- Notifications -->
+    <a href="{{ url_for('main.notifications') }}" class="fn-nav-link" id="fn-nav-notifications" title="Notifications"{% if ep == 'main.notifications' %} aria-current="page"{% endif %}>
+        <span class="fn-nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+            <span class="fn-badge" id="fn-notif-badge" style="display:none;" aria-label="Notifications non lues">0</span>
+        </span>
+        <span class="fn-nav-label">Notifs</span>
+    </a>
+
+    <!-- Profil -->
+    {% if current_user.is_authenticated %}
+    {% if page_active %}
+    <a href="{{ url_for('main.fnpage_profil', page_id=page_active.id) }}" class="fn-nav-link" title="Ma Page"{% if ep == 'main.fnpage_profil' %} aria-current="page"{% endif %}>
+        <span class="fn-nav-icon">
+            <img class="fn-nav-photo" src="{{ url_for('static', filename='uploads/' ~ (page_active.avatar or 'default_avatar.png')) }}" alt="">
+        </span>
+        <span class="fn-nav-label">Page</span>
+    </a>
+    {% else %}
+    <a href="{{ url_for('main.profile', username=current_user.username) }}" class="fn-nav-link" title="Profil" aria-label="Profil"{% if ep == 'main.profile' %} aria-current="page"{% endif %}>
+        <span class="fn-nav-icon">
+            {% if current_user.profile_pic %}
+                <img class="fn-nav-photo" src="{{ url_for('static', filename='uploads/profiles/' ~ current_user.profile_pic) }}" alt="">
+            {% else %}
+                <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            {% endif %}
+        </span>
+        <span class="fn-nav-label">Profil</span>
+    </a>
+    {% endif %}
+    {% endif %}
+
+    <!-- Modération (visible seulement pour is_pdg) -->
+    {% if current_user.is_authenticated and current_user.is_pdg %}
+    <a href="{{ url_for('main.moderation_signalements') }}" class="fn-nav-link" id="fn-nav-moderation" title="Modération"{% if ep == 'main.moderation_signalements' %} aria-current="page"{% endif %}>
+        <span class="fn-nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+            <span class="fn-badge" id="fn-mod-badge" style="display:none;" aria-label="Signalements en attente">0</span>
+        </span>
+        <span class="fn-nav-label">Signalements</span>
+    </a>
+    {% endif %}
+
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════════
+     BOÎTE À OUTILS FACENET (panneau, écran de confidentialité, consentement)
+     ══════════════════════════════════════════════════════════════ -->
+<div class="fn-tools-backdrop" id="fn-tools-backdrop" hidden></div>
+
+<section class="fn-tools-panel" id="fn-tools-panel" role="dialog" aria-modal="true" aria-labelledby="fn-tools-titre" tabindex="-1" hidden>
+    <div class="fn-tools-head">
+        <h2 id="fn-tools-titre">Boîte à outils FaceNet</h2>
+        <button type="button" class="fn-tools-x" id="fn-tools-close" aria-label="Fermer">&times;</button>
+    </div>
+
+    <div class="fn-tools-sec">
+        <h3>📶 Connexion et données</h3>
+        <label class="fn-row">
+            <span class="fn-row-txt">
+                <strong>Économie de données</strong>
+                <small>Charge les images à la demande, ne précharge pas les vidéos et ralentit les mises à jour automatiques. S'active toute seule sur réseau lent.</small>
+            </span>
+            <input type="checkbox" role="switch" class="fn-switch" id="fn-opt-econo">
+        </label>
+        <div class="fn-row">
+            <span class="fn-row-txt">
+                <strong>État du réseau</strong>
+                <small id="fn-reseau-etat">…</small>
+            </span>
+        </div>
+    </div>
+
+    <div class="fn-tools-sec">
+        <h3>🔕 Calme</h3>
+        <div class="fn-row">
+            <span class="fn-row-txt">
+                <strong>Ne pas déranger</strong>
+                <small id="fn-dnd-info">Coupe le son des likes, l'accueil vocal et les rappels.</small>
+            </span>
+            <select class="fn-select" id="fn-opt-dnd" aria-label="Ne pas déranger">
+                <option value="off">Désactivé</option>
+                <option value="1h">1 heure</option>
+                <option value="8h">8 heures</option>
+                <option value="demain">Jusqu'à demain 7 h</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="fn-tools-sec">
+        <h3>⏱️ Temps d'écran</h3>
+        <div class="fn-row">
+            <span class="fn-row-txt">
+                <strong>Aujourd'hui sur FaceNet</strong>
+                <small id="fn-temps-aujourdhui">0 min</small>
+            </span>
+        </div>
+        <div class="fn-row">
+            <span class="fn-row-txt">
+                <strong>Rappel de pause</strong>
+                <small>Un message discret quand vous atteignez votre limite du jour. Les données restent sur votre appareil.</small>
+            </span>
+            <select class="fn-select" id="fn-opt-limite" aria-label="Limite quotidienne">
+                <option value="0">Désactivé</option>
+                <option value="30">30 min</option>
+                <option value="60">1 h</option>
+                <option value="120">2 h</option>
+                <option value="180">3 h</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="fn-tools-sec">
+        <h3>🔒 Confidentialité</h3>
+        <label class="fn-row">
+            <span class="fn-row-txt">
+                <strong>Écran de confidentialité</strong>
+                <small>Floute FaceNet dès que vous changez d'application ; touchez l'écran pour reprendre. Protège des regards, ce n'est pas un verrou par code.</small>
+            </span>
+            <input type="checkbox" role="switch" class="fn-switch" id="fn-opt-confid">
+        </label>
+        <div class="fn-row">
+            <span class="fn-row-txt">
+                <strong>Flouter maintenant</strong>
+                <small>Masque l'écran en un geste si quelqu'un regarde par-dessus votre épaule.</small>
+            </span>
+            <button type="button" class="fn-btn" id="fn-btn-flou">Flouter</button>
+        </div>
+    </div>
+
+    <div class="fn-tools-sec">
+        <h3>👁️ Confort de lecture</h3>
+        <div class="fn-row">
+            <span class="fn-row-txt">
+                <strong>Taille du contenu</strong>
+                <small>Agrandit ou réduit les publications (pas les menus).</small>
+            </span>
+            <span class="fn-zoom-group">
+                <button type="button" class="fn-btn" id="fn-zoom-moins" aria-label="Réduire la taille">A−</button>
+                <span class="fn-zoom-val" id="fn-zoom-val">100 %</span>
+                <button type="button" class="fn-btn" id="fn-zoom-plus" aria-label="Agrandir la taille">A+</button>
+            </span>
+        </div>
+        <label class="fn-row">
+            <span class="fn-row-txt">
+                <strong>Contraste élevé</strong>
+                <small>Textes plus foncés et bordures plus marquées.</small>
+            </span>
+            <input type="checkbox" role="switch" class="fn-switch" id="fn-opt-contraste">
+        </label>
+        <label class="fn-row">
+            <span class="fn-row-txt">
+                <strong>Réduire les animations</strong>
+                <small>Supprime les transitions et les effets de défilement.</small>
+            </span>
+            <input type="checkbox" role="switch" class="fn-switch" id="fn-opt-mouvement">
+        </label>
+        <label class="fn-row">
+            <span class="fn-row-txt">
+                <strong>Brouillons automatiques</strong>
+                <small>Garde le texte en cours de rédaction si la page se ferme ou si le réseau coupe (24 h, sur cet appareil).</small>
+            </span>
+            <input type="checkbox" role="switch" class="fn-switch" id="fn-opt-brouillons">
+        </label>
+    </div>
+
+    {% if current_user.is_authenticated %}
+    <div class="fn-tools-sec">
+        <h3>🛡️ Données et vie privée</h3>
+        <label class="fn-row">
+            <span class="fn-row-txt">
+                <strong>Statistiques techniques</strong>
+                <small>Taille d'écran, langue et navigateur, envoyés une fois par session. Désactivé tant que vous ne l'autorisez pas.</small>
+            </span>
+            <input type="checkbox" role="switch" class="fn-switch" id="fn-opt-telem">
+        </label>
+        <label class="fn-row">
+            <span class="fn-row-txt">
+                <strong>Partager ma position</strong>
+                <small>Position approximative, uniquement si les statistiques sont activées et si votre navigateur l'autorise.</small>
+            </span>
+            <input type="checkbox" role="switch" class="fn-switch" id="fn-opt-position">
+        </label>
+    </div>
+    {% endif %}
+
+    <div class="fn-tools-sec">
+        <h3>🧰 Dépannage</h3>
+        <div class="fn-row">
+            <span class="fn-row-txt">
+                <strong>Copier le diagnostic</strong>
+                <small>Copie un rapport technique (navigateur, réseau, dernières erreurs) à envoyer au support. Rien n'est envoyé automatiquement.</small>
+            </span>
+            <button type="button" class="fn-btn" id="fn-btn-diag">Copier</button>
+        </div>
+        <div class="fn-row">
+            <span class="fn-row-txt">
+                <strong>Réinitialiser ces réglages</strong>
+                <small>Efface les réglages de cette boîte à outils sur cet appareil (thème et langue conservés).</small>
+            </span>
+            <button type="button" class="fn-btn fn-btn-danger" id="fn-btn-reset">Effacer</button>
+        </div>
+    </div>
+
+    <div class="fn-tools-foot">
+        <a href="{{ url_for('main.settings') }}">Tous les paramètres</a>
+    </div>
+</section>
+
+<!-- Écran de confidentialité (flou plein écran) -->
+<div class="fn-privacy-overlay" id="fn-privacy-overlay" role="button" tabindex="0" aria-label="Toucher pour reprendre" hidden>
+    <div>
+        <strong>🔒 FaceNet est masqué</strong>
+        <span>Touchez l'écran pour reprendre</span>
+    </div>
+</div>
+
+{% if current_user.is_authenticated %}
+<!-- Demande de consentement (affichée une seule fois) -->
+<div class="fn-consent" id="fn-consent" role="dialog" aria-labelledby="fn-consent-titre" hidden>
+    <strong id="fn-consent-titre">Statistiques techniques</strong>
+    <p>Autoriser FaceNet à collecter des statistiques techniques (taille d'écran, langue, navigateur) pour améliorer l'application ? La position n'est jamais demandée ici. Vous pouvez changer d'avis à tout moment dans la Boîte à outils.</p>
+    <div class="fn-consent-actions">
+        <button type="button" class="fn-btn" id="fn-consent-non">Refuser</button>
+        <button type="button" class="fn-btn" id="fn-consent-oui" style="background:var(--fn-blue);color:#fff;border-color:var(--fn-blue);">Autoriser</button>
+    </div>
+</div>
+{% endif %}
+
+<!-- ══════════════════════════════════════════════════════════════
+     NOYAU GLOBAL : stockage sûr, CSRF automatique, toasts, sondage intelligent
+     (chargé AVANT les scripts des pages)
+     ══════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+    'use strict';
+
+    /* ---------- Stockage local sans exception ---------- */
+    var S = {
+        lire: function (k, def) { try { var v = localStorage.getItem(k); return v === null ? def : v; } catch (e) { return def; } },
+        ecrire: function (k, v) { try { localStorage.setItem(k, String(v)); } catch (e) {} },
+        suppr: function (k) { try { localStorage.removeItem(k); } catch (e) {} }
+    };
+    window.fnStockage = S;
+
+    /* ---------- Ne pas déranger ---------- */
+    window.fnNePasDeranger = function () {
+        var t = parseInt(S.lire('fn_dnd', ''), 10);
+        return !!t && Date.now() < t;
+    };
+
+    /* ---------- CSRF : ajoute X-CSRFToken aux requêtes POST/PUT/PATCH/DELETE de même origine ---------- */
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    var csrf = meta ? meta.getAttribute('content') : '';
+    if (csrf && window.fetch && window.Headers) {
+        var fetchOrigine = window.fetch.bind(window);
+        window.fetch = function (input, init) {
+            try {
+                var urlStr = (typeof input === 'string') ? input : String((input && (input.url || input.href)) || '');
+                var methode = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+                var sure = (methode === 'GET' || methode === 'HEAD' || methode === 'OPTIONS');
+                if (!sure && new URL(urlStr, location.href).origin === location.origin) {
+                    init = Object.assign({}, init || {});
+                    var base = init.headers || ((typeof Request !== 'undefined' && input instanceof Request) ? input.headers : undefined);
+                    var h = new Headers(base);
+                    if (!h.has('X-CSRFToken')) h.set('X-CSRFToken', csrf);
+                    init.headers = h;
+                }
+            } catch (e) {}
+            return fetchOrigine(input, init);
+        };
+    }
+
+    /* ---------- Toasts (avec bouton d'action optionnel) ---------- */
+    function afficherToast(message, type, action) {
+        var container = document.getElementById('notification-container');
+        if (!container) return;
+        type = type || 'info';
+        if (type === 'info' && window.fnNePasDeranger()) return;
+
+        while (container.children.length >= 4) container.removeChild(container.firstChild);
+
+        var toast = document.createElement('div');
+        toast.className = 'fn-toast';
+        if (type === 'success') toast.style.borderLeftColor = '#42b72a';
+        if (type === 'error') toast.style.borderLeftColor = '#e41e3f';
+
+        var texte = document.createElement('span');
+        texte.textContent = message;
+        toast.appendChild(texte);
+
+        if (action && action.label && typeof action.fn === 'function') {
+            var act = document.createElement('button');
+            act.type = 'button';
+            act.textContent = action.label;
+            act.style.cssText = 'background:none;border:none;color:#1877f2;font-weight:700;cursor:pointer;margin-left:10px;font-size:14px;';
+            act.addEventListener('click', function () { try { action.fn(); } finally { toast.remove(); } });
+            toast.appendChild(act);
+        }
+
+        var fermer = document.createElement('button');
+        fermer.type = 'button';
+        fermer.setAttribute('aria-label', 'Fermer');
+        fermer.style.cssText = 'background:none; border:none; font-size:1.4rem; cursor:pointer; margin-left:10px; color:#65676b;';
+        fermer.innerHTML = '&times;';
+        fermer.addEventListener('click', function () { toast.remove(); });
+        toast.setAttribute('role', 'status');
+        toast.appendChild(fermer);
+        container.appendChild(toast);
+
+        setTimeout(function () {
+            if (toast && toast.parentNode) {
+                toast.style.transition = 'opacity 0.4s ease';
+                toast.style.opacity = '0';
+                setTimeout(function () { toast.remove(); }, 400);
+            }
+        }, action ? 9000 : 5000);
+    }
+    window.fnToast = function (message, type, action) {
+        // Hors ligne : la barre du bas suffit, on n'empile pas d'autres messages de connexion
+        if (!navigator.onLine && /hors ligne|connexion|réseau|reseau|internet/i.test(String(message))) return;
+        return afficherToast(message, type, action);
+    };
+    window.afficherToastGlobal = window.fnToast;
+
+    /* ---------- Sondage intelligent : pause si onglet caché / hors ligne, ralentit sur erreurs et en économie de données ---------- */
+    window.fnPolling = function (tache, intervalleMs) {
+        var echecs = 0, timer = null, arrete = false;
+
+        function facteur() {
+            return document.documentElement.getAttribute('data-econo') === '1' ? 4 : 1;
+        }
+        function planifier() {
+            if (arrete) return;
+            clearTimeout(timer);
+            timer = setTimeout(executer, intervalleMs * facteur() * (1 + Math.min(echecs, 4)));
+        }
+        function executer() {
+            clearTimeout(timer);
+            if (arrete) return;
+            if (document.hidden || !navigator.onLine) { planifier(); return; }
+            var p;
+            try { p = Promise.resolve(tache()); } catch (e) { p = Promise.reject(e); }
+            p.then(function (r) {
+                if (r === 'stop') { arrete = true; return; }
+                echecs = 0;
+                planifier();
+            }).catch(function () {
+                echecs++;
+                planifier();
+            });
+        }
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden && !arrete) executer();
+        });
+        window.addEventListener('online', function () { if (!arrete) executer(); });
+        executer();
+    };
+})();
+</script>
+
+{% block scripts %}{% endblock %}
+{# ══ APPELS : sonnerie d'appel entrant + notifications « appel manqué » (toutes les pages) ══
+   Ajout additif. Interroge /api/appel/entrant (léger, sans écriture en base la plupart du temps).
+   Désactivé sur la page d'appel elle-même. #}
+{% if current_user.is_authenticated and ep != 'main.appel' %}
+<style>
+    #fn-call-ring { position: fixed; inset: 0; z-index: 100003; display: none; flex-direction: column; align-items: center; justify-content: space-between;
+        padding: calc(64px + env(safe-area-inset-top, 0px)) 24px calc(48px + env(safe-area-inset-bottom, 0px));
+        background: radial-gradient(120% 90% at 50% 0%, #243b63 0%, #121826 60%, #0a0d14 100%); color: #fff; text-align: center; }
+    #fn-call-ring.on { display: flex; animation: fnRingIn .22s ease-out; }
+    @keyframes fnRingIn { from { opacity: 0; transform: scale(1.03); } to { opacity: 1; transform: none; } }
+    .fn-ring-who { display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 8vh; }
+    .fn-ring-avatar { position: relative; width: 132px; height: 132px; border-radius: 50%; }
+    .fn-ring-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: #2b3a57; position: relative; z-index: 1; }
+    .fn-ring-avatar::before, .fn-ring-avatar::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(255,255,255,.45); animation: fnRingPulse 2s ease-out infinite; }
+    .fn-ring-avatar::after { animation-delay: 1s; }
+    @keyframes fnRingPulse { from { transform: scale(1); opacity: .8; } to { transform: scale(1.9); opacity: 0; } }
+    .fn-ring-name { font-size: 28px; font-weight: 700; line-height: 1.2; max-width: 86vw; overflow-wrap: anywhere; }
+    .fn-ring-sub { font-size: 15px; opacity: .8; }
+    .fn-ring-actions { display: flex; gap: 64px; align-items: flex-start; }
+    .fn-ring-act { display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 14px; background: none; border: 0; color: #fff; cursor: pointer; font-family: inherit; }
+    .fn-ring-act span { width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 8px 22px rgba(0,0,0,.35); transition: transform .12s; }
+    .fn-ring-act:active span { transform: scale(.92); }
+    .fn-ring-act.no span { background: #ff3b30; }
+    .fn-ring-act.yes span { background: #1fbf5b; animation: fnRingShake 1.3s ease-in-out infinite; }
+    @keyframes fnRingShake { 0%, 100% { transform: rotate(0); } 10%, 30% { transform: rotate(-12deg); } 20%, 40% { transform: rotate(12deg); } 50% { transform: rotate(0); } }
+    #fn-miss-stack { position: fixed; left: 0; right: 0; top: calc(10px + env(safe-area-inset-top, 0px)); z-index: 100002; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; padding: 0 10px; }
+    .fn-miss { pointer-events: auto; width: 100%; max-width: 440px; display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; border-radius: 16px;
+        background: var(--surface, #fff); color: var(--text, #050505); border: 1px solid var(--border, #e4e6eb); box-shadow: 0 10px 30px rgba(0,0,0,.18); animation: fnMissIn .28s cubic-bezier(.2,.9,.3,1.2); }
+    @keyframes fnMissIn { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: none; } }
+    .fn-miss img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: #e4e6eb; }
+    .fn-miss-txt { flex: 1; min-width: 0; font-size: 14px; line-height: 1.3; }
+    .fn-miss-txt b { display: block; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fn-miss-txt small { color: var(--grey, #65676b); font-size: 12.5px; }
+    .fn-miss-call { border: 0; background: #1877f2; color: #fff; font-weight: 700; font-size: 13.5px; padding: 9px 14px; border-radius: 999px; cursor: pointer; white-space: nowrap; font-family: inherit; }
+    .fn-miss-call:disabled { opacity: .6; }
+    .fn-miss-x { border: 0; background: transparent; color: var(--grey, #65676b); font-size: 20px; line-height: 1; padding: 6px 8px; cursor: pointer; }
+    html[data-theme="dark"] .fn-miss { background: #242526; color: #e4e6eb; border-color: #3e4042; }
+    html[data-theme="dark"] .fn-miss-txt small, html[data-theme="dark"] .fn-miss-x { color: #b0b3b8; }
+    @media (prefers-reduced-motion: reduce) { .fn-ring-avatar::before, .fn-ring-avatar::after, .fn-ring-act.yes span { animation: none; } }
+</style>
+
+<div id="fn-call-ring" role="alertdialog" aria-modal="true" aria-label="Appel entrant">
+    <div class="fn-ring-who">
+        <div class="fn-ring-avatar"><img id="fn-ring-img" alt=""></div>
+        <div class="fn-ring-name" id="fn-ring-name"></div>
+        <div class="fn-ring-sub" id="fn-ring-sub"></div>
+    </div>
+    <div class="fn-ring-actions">
+        <button type="button" class="fn-ring-act no" id="fn-ring-no" aria-label="Refuser"><span><svg style="transform:rotate(135deg)" viewBox="0 0 24 24" width="30" height="30" fill="#fff" aria-hidden="true"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg></span>Refuser</button>
+        <button type="button" class="fn-ring-act yes" id="fn-ring-yes" aria-label="Répondre"><span><svg viewBox="0 0 24 24" width="30" height="30" fill="#fff" aria-hidden="true"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg></span>Répondre</button>
+    </div>
+</div>
+<div id="fn-miss-stack" aria-live="polite"></div>
+
+<script>
+(function () {
+    'use strict';
+    var URL_APPEL = {{ url_for('main.appel')|tojson }};
+    var ring = document.getElementById('fn-call-ring');
+    var stack = document.getElementById('fn-miss-stack');
+    if (!ring || !stack) return;
+
+    var arret = false, minuteur = null, courant = null, ctx = null, sonnerie = null, titreOrigine = document.title, clignote = null;
+
+    /* ── utilitaires ── */
+    function api(chemin, corps) {
+        var opts = { credentials: 'same-origin', cache: 'no-store', headers: { 'X-Requested-With': 'XMLHttpRequest' } };
+        if (corps !== undefined) { opts.method = 'POST'; opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(corps); }
+        return fetch(chemin, opts).then(function (r) { if (r.status === 401) { arret = true; throw new Error('401'); } return r.json(); });
+    }
+    function avertir(msg) { if (typeof window.fnToast === 'function') window.fnToast(msg, 'error'); else alert(msg); }
+    function avatarDe(p) { return (p && p.avatar) || ('https://ui-avatars.com/api/?name=' + encodeURIComponent((p && p.nom) || '?') + '&background=E7F3FF&color=0866FF&size=128'); }
+    function urlAppel(a, role) {
+        var p = a.pair || {};
+        return URL_APPEL + '?type=' + encodeURIComponent(a.type) + '&peer=' + p.id + '&name=' + encodeURIComponent(p.nom || 'Contact') +
+               (p.avatar ? '&avatar=' + encodeURIComponent(p.avatar) : '') + '&appel_id=' + a.id + '&role=' + role;
+    }
+    function ilYA(iso) {
+        var s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+        if (s < 60) return "à l'instant";
+        if (s < 3600) return 'il y a ' + Math.floor(s / 60) + ' min';
+        if (s < 86400) return 'il y a ' + Math.floor(s / 3600) + ' h';
+        return 'il y a ' + Math.floor(s / 86400) + ' j';
+    }
+    function nePasDeranger() { try { return typeof window.fnNePasDeranger === 'function' && window.fnNePasDeranger(); } catch (e) { return false; } }
+
+    /* ── lancer un appel (utilisé par la messagerie, le profil, « Rappeler »…) ── */
+    window.fnAppelDemarrer = function (peerId, type, nom, avatar) {
+        return api('/api/appel/lancer', { peer_id: peerId, type: type === 'video' ? 'video' : 'audio' }).then(function (d) {
+            if (!d || !d.success) { avertir((d && d.error) || "Impossible de lancer l'appel."); return false; }
+            window.location.href = urlAppel(d.appel, 'appelant') + (d.pair_en_ligne ? '' : '&hors_ligne=1');
+            return true;
+        }).catch(function () { avertir('Connexion impossible. Réessayez.'); return false; });
+    };
+
+    /* ── sonnerie (générée, aucun fichier audio à ajouter) ── */
+    function audio() {
+        try {
+            if (!ctx) { var C = window.AudioContext || window.webkitAudioContext; if (C) ctx = new C(); }
+            if (ctx && ctx.state === 'suspended') ctx.resume();
+        } catch (e) {}
+        return ctx;
+    }
+    ['pointerdown', 'touchstart', 'keydown'].forEach(function (ev) { document.addEventListener(ev, audio, { passive: true }); });  // déverrouillage son
+    function bip() {
+        var c = audio();
+        try { if (navigator.vibrate) navigator.vibrate([450, 200, 450]); } catch (e) {}
+        if (!c || c.state !== 'running') return;
+        var t = c.currentTime;
+        [0, 0.55].forEach(function (d) {
+            var g = c.createGain();
+            g.gain.setValueAtTime(0, t + d); g.gain.linearRampToValueAtTime(0.22, t + d + 0.03);
+            g.gain.setValueAtTime(0.22, t + d + 0.38); g.gain.linearRampToValueAtTime(0, t + d + 0.44);
+            g.connect(c.destination);
+            [440, 480].forEach(function (f) { var o = c.createOscillator(); o.type = 'sine'; o.frequency.value = f; o.connect(g); o.start(t + d); o.stop(t + d + 0.46); });
+        });
+    }
+    function lancerSonnerie() {
+        if (sonnerie || nePasDeranger()) return;
+        bip(); sonnerie = setInterval(bip, 2800);
+    }
+    function stopperSonnerie() {
+        if (sonnerie) { clearInterval(sonnerie); sonnerie = null; }
+        try { if (navigator.vibrate) navigator.vibrate(0); } catch (e) {}
+    }
+
+    /* ── appel entrant ── */
+    function montrerEntrant(a) {
+        courant = a.id;
+        var p = a.pair || {};
+        document.getElementById('fn-ring-img').src = avatarDe(p);
+        document.getElementById('fn-ring-name').textContent = p.nom || 'Contact';
+        document.getElementById('fn-ring-sub').textContent = a.type === 'video' ? 'Appel vidéo FaceNet…' : 'Appel audio FaceNet…';
+        ring.classList.add('on');
+        lancerSonnerie();
+        if (!clignote) {
+            var alt = false;
+            clignote = setInterval(function () { alt = !alt; document.title = alt ? ('📞 ' + (p.nom || 'Appel entrant')) : titreOrigine; }, 900);
+        }
+        try {
+            if (document.hidden && window.Notification && Notification.permission === 'granted') {
+                var n = new Notification((p.nom || 'Contact') + ' vous appelle', { body: a.type === 'video' ? 'Appel vidéo entrant' : 'Appel audio entrant', tag: 'fn-appel-' + a.id, requireInteraction: true });
+                n.onclick = function () { window.focus(); n.close(); };
+            }
+        } catch (e) {}
+    }
+    function cacherEntrant() {
+        courant = null; ring.classList.remove('on'); stopperSonnerie();
+        if (clignote) { clearInterval(clignote); clignote = null; document.title = titreOrigine; }
+    }
+    var dernierEntrant = null;
+    document.getElementById('fn-ring-yes').addEventListener('click', function () {
+        if (!dernierEntrant) return;
+        var a = dernierEntrant; stopperSonnerie();
+        api('/api/appel/' + a.id + '/repondre', {}).then(function (d) {
+            if (d && d.success) { window.location.href = urlAppel(d.appel || a, 'appele'); }
+            else { cacherEntrant(); avertir('Cet appel est déjà terminé.'); }
+        }).catch(function () { cacherEntrant(); avertir('Connexion impossible.'); });
+    });
+    document.getElementById('fn-ring-no').addEventListener('click', function () {
+        if (!dernierEntrant) return;
+        var a = dernierEntrant; cacherEntrant();
+        api('/api/appel/' + a.id + '/refuser', {}).catch(function () {});
+    });
+
+    /* ── appels manqués : « X a essayé de vous joindre » + bouton Rappeler ── */
+    var signatureManques = '';
+    function marquerVus(ids) { if (ids && ids.length) api('/api/appel/manques/vu', { ids: ids }).catch(function () {}); }
+    function montrerManques(liste) {
+        var sig = liste.map(function (m) { return m.id; }).join(',');
+        if (sig === signatureManques) return;
+        signatureManques = sig;
+        stack.innerHTML = '';
+        var groupes = {}, ordre = [];
+        liste.forEach(function (m) {
+            var k = m.pair && m.pair.id;
+            if (!groupes[k]) { groupes[k] = { dernier: m, ids: [], n: 0 }; ordre.push(k); }
+            groupes[k].ids.push(m.id); groupes[k].n++;
+        });
+        ordre.slice(0, 3).forEach(function (k) {
+            var g = groupes[k], p = g.dernier.pair || {};
+            var carte = document.createElement('div'); carte.className = 'fn-miss'; carte.setAttribute('role', 'status');
+            var img = document.createElement('img'); img.src = avatarDe(p); img.alt = '';
+            var txt = document.createElement('div'); txt.className = 'fn-miss-txt';
+            var nom = document.createElement('b'); nom.textContent = (p.nom || 'Un contact') + ' a essayé de vous joindre';
+            var sous = document.createElement('small');
+            sous.textContent = (g.dernier.type === 'video' ? 'Appel vidéo manqué' : 'Appel manqué') + (g.n > 1 ? ' · ' + g.n + ' appels' : '') + ' · ' + ilYA(g.dernier.date);
+            txt.appendChild(nom); txt.appendChild(sous);
+            var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'fn-miss-call'; btn.textContent = 'Rappeler';
+            var x = document.createElement('button'); x.type = 'button'; x.className = 'fn-miss-x'; x.setAttribute('aria-label', 'Fermer'); x.innerHTML = '&times;';
+            btn.addEventListener('click', function () {
+                btn.disabled = true; marquerVus(g.ids);
+                window.fnAppelDemarrer(p.id, g.dernier.type, p.nom, p.avatar).then(function (ok) { if (!ok) btn.disabled = false; });
+            });
+            x.addEventListener('click', function () { marquerVus(g.ids); carte.remove(); signatureManques = ''; });
+            carte.appendChild(img); carte.appendChild(txt); carte.appendChild(btn); carte.appendChild(x);
+            stack.appendChild(carte);
+        });
+    }
+
+    /* ── boucle d'interrogation ── */
+    function planifier() {
+        if (arret) return;
+        clearTimeout(minuteur);
+        minuteur = setTimeout(interroger, courant ? 1800 : (document.hidden ? 12000 : 4000));
+    }
+    function interroger() {
+        if (arret) return;
+        api('/api/appel/entrant').then(function (d) {
+            if (!d || !d.success) return;
+            if (d.entrant) {
+                dernierEntrant = d.entrant;
+                if (courant !== d.entrant.id) montrerEntrant(d.entrant);
+            } else if (courant) { cacherEntrant(); }
+            montrerManques(d.manques || []);
+        }).catch(function () {}).then(planifier);
+    }
+    document.addEventListener('visibilitychange', function () { if (!document.hidden && !arret) { clearTimeout(minuteur); interroger(); } });
+    window.addEventListener('online', function () { if (!arret) { clearTimeout(minuteur); interroger(); } });
+    interroger();
+})();
+</script>
+{% endif %}
+
+<!-- Vos scripts JS globaux -->
+<script src="{{ url_for('static', filename='js/app_core.js') }}?v={{ config.get('ASSET_VERSION', '1') }}"></script>
+
+<!-- Menu déroulant du bouton "+" (header) -->
+<script>
+(function () {
+    var btn = document.getElementById('fn-plus-btn');
+    var menu = document.getElementById('fn-plus-menu');
+    if (!btn || !menu) return;
+
+    btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var estOuvert = menu.classList.toggle('show');
+        btn.setAttribute('aria-expanded', estOuvert ? 'true' : 'false');
+    });
+
+    document.addEventListener('click', function (e) {
+        if (menu.classList.contains('show') && !menu.contains(e.target) && e.target !== btn) {
+            menu.classList.remove('show');
+            btn.setAttribute('aria-expanded', 'false');
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && menu.classList.contains('show')) {
+            menu.classList.remove('show');
+            btn.setAttribute('aria-expanded', 'false');
+            btn.focus();
+        }
+    });
+})();
+</script>
+
+<!-- FN-PLUS-3D : à chaque ouverture du menu « + », chaque ligne reçoit un côté, une hauteur, une rotation et un délai différents -->
+<script>
+(function () {
+    var btn = document.getElementById('fn-plus-btn');
+    var menu = document.getElementById('fn-plus-menu');
+    if (!btn || !menu) return;
+    function alea(a, b) { return a + Math.random() * (b - a); }
+    btn.addEventListener('click', function () {
+        if (!menu.classList.contains('show')) return;
+        var liens = menu.querySelectorAll('a'), cote = Math.random() < 0.5 ? -1 : 1;
+        for (var i = 0; i < liens.length; i++) {
+            var alterne = Math.random() < 0.65 ? -cote : cote;   // la plupart alternent, quelques-unes changent de côté
+            cote = alterne;
+            liens[i].style.setProperty('--sx', Math.round(alterne * alea(40, 110)) + 'px');
+            liens[i].style.setProperty('--sy', Math.round(-alea(25, 80)) + 'px');
+            liens[i].style.setProperty('--rz', (alterne * alea(4, 14)).toFixed(1) + 'deg');
+            liens[i].style.setProperty('--dl', Math.round(40 + i * 55 + alea(0, 35)) + 'ms');
+            liens[i].style.setProperty('--du', Math.round(alea(700, 900)) + 'ms');
+        }
+    });
+})();
+</script>
+
+<!-- Script global robuste : Gestion Connexion (Online/Offline) & Messages Flash Flask -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Même fonction globale qu'avant (définie aussi plus haut pour être disponible tôt)
+        window.afficherToastGlobal = window.fnToast;
+        var afficherToastGlobal = window.fnToast;
+
+        // 1. Gestionnaire d'état réseau (Online / Offline) + bandeau permanent
+        var barre = document.getElementById('fn-offline-bar');
+        function majBarre() { if (barre) barre.hidden = navigator.onLine; }
+        majBarre();
+
+        // Hors ligne : seule la barre du bas s'affiche (aucun toast en plus)
+        window.addEventListener('offline', majBarre);
+        window.addEventListener('online', majBarre);
+
+        
+</script>
+
+{% if current_user.is_authenticated %}
+<script>
+    // ── Badge de notifications non lues (sondage intelligent) ──
+    (function () {
+        const badge = document.getElementById('fn-notif-badge');
+        if (!badge) return;
+
+        function majBadgeNotifications() {
+            return fetch("{{ url_for('main.api_notifications_compteur') }}", {
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).then(function (r) {
+                if (r.status === 401 || r.status === 403) return 'stop';
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json().then(function (data) {
+                    if (!data || !data.success) return;
+                    if (data.count > 0) {
+                        badge.textContent = data.count > 99 ? '99+' : data.count;
+                        badge.style.display = 'flex';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        if (window.fnPolling) { window.fnPolling(majBadgeNotifications, 30000); }
+        else { majBadgeNotifications().catch(function () {}); }
+
+        // Quand on ouvre la page Notifications, on marque tout comme lu
+        const lienNotifs = document.getElementById('fn-nav-notifications');
+        if (lienNotifs) {
+            lienNotifs.addEventListener('click', function () {
+                fetch("{{ url_for('main.api_notifications_marquer_lues') }}", {
+                    method: 'POST',
+                    keepalive: true,
+                    credentials: 'same-origin',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                }).catch(() => {});
+            });
+        }
+    })();
+</script>
+{% endif %}
+
+{% if current_user.is_authenticated %}
+<script>
+    // ── Pastilles de notifications par menu + étoiles « nouveau » (Paramètres, Marché) + point bleu ──
+    (function () {
+        var EP  = {{ ep|tojson }};
+        var K   = 'fn_' + {{ current_user.username|tojson }} + '_';
+
+        // Identifiants des nouvelles fonctionnalités des paramètres.
+        // Pour en annoncer une : ajouter son id ici (ex. 'mode-sombre-auto')
+        // puis mettre data-fn-nouveau="mode-sombre-auto" sur son élément dans settings.html.
+        var NOUVEAUTES_PARAMETRES = ['notifs-direct'];
+
+        var URL_COMPTEURS = '/api/menu/compteurs';
+        var URL_VU        = '/api/menu/vu/';
+
+        function lire(c) { try { return JSON.parse(localStorage.getItem(K + c)); } catch (e) { return null; } }
+        function ecrire(c, v) { try { localStorage.setItem(K + c, JSON.stringify(v)); } catch (e) {} }
+
+        function marquerVu(menu) {
+            fetch(URL_VU + menu, {
+                method: 'POST', keepalive: true, credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).catch(function () {});
+        }
+
+        function creerEtoiles(parent) {
+            var c = document.createElement('span');
+            c.className = 'fn-etoiles';
+            c.setAttribute('aria-hidden', 'true');
+            c.style.display = 'none';
+            c.innerHTML = '<i>✦</i><i>✦</i><i>✦</i><i>✦</i>';
+            parent.appendChild(c);
+            return c;
+        }
+
+        /* ---------- 1. Pastilles avec le nombre de nouveautés ---------- */
+        var MENUS = {
+            accueil:  { el: document.querySelector('a.fn-nav-link[title="Accueil"]'),  ep: 'main.feed' },
+            amis:     { el: document.querySelector('a.fn-nav-link[title="Amis"]'),     ep: 'main.afficher_suggesstions' },
+            reels:    { el: document.querySelector('a.fn-nav-link[title="Reels"]'),    ep: 'main.reels' },
+            profil:   { el: document.querySelector('a.fn-nav-link[title="Profil"]'),   ep: 'main.profile' },
+            messages: { el: document.querySelector('a.fn-icon-btn[aria-label="Messages"]'), ep: 'main.messagerie', haut: true }
+        };
+        Object.keys(MENUS).forEach(function (cle) {
+            var m = MENUS[cle];
+            if (!m.el) return;
+            m.badge = document.createElement('span');
+            m.badge.className = 'fn-badge' + (m.haut ? ' fn-badge-haut' : '');
+            m.badge.style.display = 'none';
+            m.badge.setAttribute('aria-label', 'Nouveautés');
+            m.el.appendChild(m.badge);
+            m.el.addEventListener('click', function () {
+                m.badge.style.display = 'none';
+                marquerVu(cle);
+            });
+        });
+
+        /* ---------- 2. Étoiles sur « Marché » (nouvelles publications) ---------- */
+        var lienMarche = document.querySelector('a.fn-nav-link[title="Marketplace"]');
+        var etoilesMarche = lienMarche ? creerEtoiles(lienMarche) : null;
+        var dernierMarche = null;
+        if (lienMarche) {
+            lienMarche.addEventListener('click', function () {
+                if (dernierMarche !== null) ecrire('marche_vu', dernierMarche);
+                etoilesMarche.style.display = 'none';
+            });
+        }
+
+        /* ---------- 3. Étoiles sur les trois traits des Paramètres ---------- */
+        var lienParam = document.querySelector('a.fn-icon-btn[aria-label="Paramètres"]');
+        var etoilesParam = lienParam ? creerEtoiles(lienParam) : null;
+        function vusParam() { return lire('param_etoiles_vues') || []; }
+        function majEtoilesParam() {
+            if (!etoilesParam) return;
+            var vus = vusParam();
+            var neuf = NOUVEAUTES_PARAMETRES.some(function (id) { return vus.indexOf(id) < 0; });
+            etoilesParam.style.display = neuf ? '' : 'none';
+        }
+        function etoilesParamVues() {
+            ecrire('param_etoiles_vues', NOUVEAUTES_PARAMETRES.slice());
+            if (etoilesParam) etoilesParam.style.display = 'none';
+        }
+        if (lienParam) lienParam.addEventListener('click', etoilesParamVues);
+        if (EP === 'main.settings') etoilesParamVues(); else majEtoilesParam();
+
+        // Utilisé par settings.html pour afficher le point bleu et le nombre de nouveautés dans chaque menu
+        window.fnNouveautes = {
+            ids: NOUVEAUTES_PARAMETRES,
+            estNouveau: function (id) { return NOUVEAUTES_PARAMETRES.indexOf(id) >= 0 && (lire('param_vues') || []).indexOf(id) < 0; },
+            voir: function (id) { var v = lire('param_vues') || []; if (v.indexOf(id) < 0) { v.push(id); ecrire('param_vues', v); } }
+        };
+
+        /* ---------- 4. Point bleu sur chaque nouvelle fonctionnalité (dans les paramètres) ---------- */
+        (function () {
+            var vues = lire('param_vues') || [];
+            document.querySelectorAll('[data-fn-nouveau]').forEach(function (el) {
+                var id = el.getAttribute('data-fn-nouveau');
+                if (!id || vues.indexOf(id) >= 0 || el.querySelector('.fn-point-bleu')) return;
+                var point = document.createElement('span');
+                point.className = 'fn-point-bleu';
+                point.setAttribute('aria-label', 'Nouveau');
+                el.appendChild(point);
+                el.addEventListener('click', function () {
+                    var v = lire('param_vues') || [];
+                    if (v.indexOf(id) < 0) { v.push(id); ecrire('param_vues', v); }
+                    if (point.parentNode) point.parentNode.removeChild(point);
+                    setTimeout(marquerGroupes, 0);
+                });
+            });
+            // Un groupe replié (<details>) qui contient des nouveautés affiche leur nombre : 1 nouveauté → « 1 », 2 → « 2 »…
+            function marquerGroupes() {
+                document.querySelectorAll('details').forEach(function (d) {
+                    var sum = d.querySelector(':scope > summary');
+                    if (!sum) return;
+                    var n = d.querySelectorAll('.fn-point-bleu').length;
+                    var b = sum.querySelector('.fn-nouveau-compte');
+                    if (n > 0) {
+                        if (!b) { b = document.createElement('span'); b.className = 'fn-nouveau-compte'; sum.appendChild(b); }
+                        b.textContent = n;
+                    } else if (b) { b.parentNode.removeChild(b); }
+                });
+            }
+            marquerGroupes();
+        })();
+
+        /* ---------- 5. Récupération des compteurs (sondage intelligent) ---------- */
+        function majCompteurs() {
+            return fetch(URL_COMPTEURS, {
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).then(function (r) {
+                if (r.status === 401 || r.status === 403 || r.status === 404) return 'stop';
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json().then(function (data) {
+                    if (!data || data.success === false) return;
+
+                    Object.keys(MENUS).forEach(function (cle) {
+                        var m = MENUS[cle];
+                        if (!m.badge) return;
+                        var n = Number(data[cle]) || 0;
+                        if (n > 0 && EP === m.ep) { n = 0; marquerVu(cle); }
+                        if (n > 0) {
+                            m.badge.textContent = n > 9 ? '9+' : n;
+                            m.badge.style.display = 'flex';
+                        } else {
+                            m.badge.style.display = 'none';
+                        }
+                    });
+
+                    if (etoilesMarche && data.marche_dernier_id != null) {
+                        var id = Number(data.marche_dernier_id);
+                        if (!isNaN(id)) {
+                            dernierMarche = id;
+                            var vu = lire('marche_vu');
+                            if (vu === null || EP === 'main.marketplace') {
+                                ecrire('marche_vu', id);
+                                etoilesMarche.style.display = 'none';
+                            } else {
+                                etoilesMarche.style.display = id > vu ? '' : 'none';
+                            }
+                        }
+                    }
+                });
+            });
+        }
+        if (window.fnPolling) { window.fnPolling(majCompteurs, 30000); }
+        else { majCompteurs().catch(function () {}); }
+    })();
+</script>
+{% endif %}
+
+{% if current_user.is_authenticated and current_user.is_pdg %}
+<script>
+    // ── Badge du nombre de signalements en attente (visible seulement pour is_pdg) ──
+    (function () {
+        const badge = document.getElementById('fn-mod-badge');
+        if (!badge) return;
+
+        function majBadgeModeration() {
+            return fetch("{{ url_for('main.admin_signalements') }}", {
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).then(function (r) {
+                if (r.status === 401 || r.status === 403) return 'stop';
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json().then(function (data) {
+                    if (!data || !data.success) return;
+                    if (data.count > 0) {
+                        badge.textContent = data.count > 99 ? '99+' : data.count;
+                        badge.style.display = 'flex';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        if (window.fnPolling) { window.fnPolling(majBadgeModeration, 30000); }
+        else { majBadgeModeration().catch(function () {}); }
+    })();
+</script>
+{% endif %}
+
+{% if current_user.is_authenticated or session.get('user_name') %}
+<!-- Script d'accueil vocal et visuel pour le nouvel utilisateur -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        if (!sessionStorage.getItem('deja_accueilli_session')) {
+            sessionStorage.setItem('deja_accueilli_session', 'true');
+
+            const nomUser = {{ (current_user.username if current_user.is_authenticated else session.get('user_name', 'Cher utilisateur'))|tojson }};
+
+            setTimeout(() => {
+                if (window.fnNePasDeranger && window.fnNePasDeranger()) return;
+                if (typeof saluerNouvelUtilisateur === 'function') {
+                    saluerNouvelUtilisateur(nomUser);
+                }
+            }, 1000);
+        }
+    });
+</script>
+{% endif %}
+
+<!-- ══════════════════════════════════════════════════════════════
+     APPLICATION GLOBALE DU THÈME ET DE LA LANGUE
+     ══════════════════════════════════════════════════════════════ -->
+<style>
+    /* Google Translate : on garde la traduction, on cache son interface (bandeau, bulles, décalage de page) */
+    .goog-te-banner-frame, .goog-te-balloon-frame, #goog-gt-tt, .goog-te-gadget, .goog-te-gadget-icon,
+    iframe.skiptranslate { display: none !important; }
+    body { top: 0 !important; }
+    .goog-text-highlight { background: none !important; box-shadow: none !important; }
+</style>
+<script>
+(function () {
+    'use strict';
+
+    /* ---------- 1. THÈME : appliquer immédiatement ---------- */
+    function appliquerTheme() {
+        var theme;
+        try { theme = localStorage.getItem('facenet_theme'); } catch (e) {}
+        if (!theme) {
+            var match = document.cookie.match(/facenet_theme=([^;]+)/);
+            theme = match ? match[1] : 'system';
+        }
+        var themeApplique = theme;
+        if (theme === 'system') {
+            var isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            themeApplique = isDark ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', themeApplique);
+        var tc = document.getElementById('fn-theme-color');
+        if (tc) tc.setAttribute('content', themeApplique === 'dark' ? '#18191a' : '#ffffff');
+        if (document.body) {
+            document.body.classList.toggle('dark-mode', themeApplique === 'dark');
+        } else {
+            document.addEventListener('DOMContentLoaded', function () {
+                document.body.classList.toggle('dark-mode', themeApplique === 'dark');
+            });
+        }
+    }
+    appliquerTheme();
+
+    /* ---------- 2. LANGUE : préférence serveur + traduction des libellés statiques ---------- */
+    var LANGUE_SERVEUR = "{{ langue_ui|default('fr', true) }}";
+    var TRADUCTIONS_UI = {{ traductions_ui|default({}, true)|tojson }};
+    function appliquerLangueInterface() {
+        var langue = (LANGUE_SERVEUR || 'fr').split('-')[0].toLowerCase();
+        document.documentElement.setAttribute('lang', langue);
+        if (langue !== 'en' || !TRADUCTIONS_UI || !TRADUCTIONS_UI.navigation) return;
+        /* Traduction de textes statiques exacts seulement. Les zones de contenu utilisateur
+           (publications, commentaires, messages, profils) sont explicitement ignorées. */
+        var anglais = {
+          'Accueil':'Home','Fil d’actualité':'News feed','Profil':'Profile','Messages':'Messages','Notifications':'Notifications','Paramètres':'Settings','Groupes':'Groups','Amis':'Friends','Marketplace':'Marketplace','Déconnexion':'Log out','Rechercher':'Search',
+          'Enregistrer':'Save','Annuler':'Cancel','Supprimer':'Delete','Modifier':'Edit','Envoyer':'Send','Fermer':'Close','Chargement…':'Loading…','Retour':'Back','Suivant':'Next','Confirmer':'Confirm','Oui':'Yes','Non':'No','Langue':'Language','Succès':'Success','Erreur':'Error',
+          'Langue et région':'Language and region','Apparence':'Appearance','Confidentialité':'Privacy','Sécurité':'Security','Compte':'Account','Enregistrer les paramètres':'Save settings','Langue mise à jour':'Language updated',
+          'Que voulez-vous partager ?':'What would you like to share?','Publier':'Post','Commenter':'Comment','J’aime':'Like','Partager':'Share','Connexion':'Log in','Inscription':'Sign up','Adresse e-mail':'Email address','Mot de passe':'Password','Mot de passe oublié ?':'Forgot password?'
+        };
+        var exclusions = 'script,style,textarea,input,select,option,[contenteditable="true"],[data-user-content],.publication-content,.post-content,.comment-content,.message-content,.user-content,.user-generated,.fn-user-content,[data-post-body],[data-comment-body],[data-message-body]';
+        var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {acceptNode:function(node){
+          if (!node.nodeValue || !node.nodeValue.trim() || !node.parentElement || node.parentElement.closest(exclusions)) return NodeFilter.FILTER_REJECT;
+          return NodeFilter.FILTER_ACCEPT;
+        }});
+        var nodes=[]; while(walker.nextNode()) nodes.push(walker.currentNode);
+        nodes.forEach(function(node){ var original=node.nodeValue; var trimmed=original.trim(); if(anglais[trimmed]) node.nodeValue=original.replace(trimmed,anglais[trimmed]); });
+        document.querySelectorAll('[title],[aria-label],[placeholder]').forEach(function(el){ if(el.closest(exclusions)) return; ['title','aria-label','placeholder'].forEach(function(a){var v=el.getAttribute(a); if(v && anglais[v]) el.setAttribute(a,anglais[v]);}); });
+    }
+    /* Les panneaux dynamiques sont pris en charge, toujours avec les mêmes exclusions. */
+    var fnUiObserver = null;
+    function observerLangueInterface() {
+        if (!document.body || fnUiObserver || (LANGUE_SERVEUR || 'fr').split('-')[0].toLowerCase() !== 'en') return;
+        fnUiObserver = new MutationObserver(function(){ appliquerLangueInterface(); });
+        fnUiObserver.observe(document.body, { childList:true, subtree:true });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', observerLangueInterface);
+    else observerLangueInterface();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', appliquerLangueInterface);
+    else appliquerLangueInterface();
+    window.addEventListener('facenet:langue', function(ev){ if(ev && ev.detail) LANGUE_SERVEUR=ev.detail; appliquerLangueInterface(); });
+    window.addEventListener('facenet:theme', function () { appliquerTheme(); });
+
+    /* ---------- 4. Suivre le changement système si thème = system ---------- */
+    if (window.matchMedia) {
+        try {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+                var theme;
+                try { theme = localStorage.getItem('facenet_theme'); } catch (e) {}
+                if (!theme || theme === 'system') appliquerTheme();
+            });
+        } catch (e) {}
+    }
+})();
+</script>
+
+{% if current_user.is_authenticated %}
+<!-- ══════════════════════════════════════════════════════════════
+     STATISTIQUES TECHNIQUES FACENET — uniquement avec consentement
+     (écran, langue, navigateur ; position seulement si activée à part)
+     ══════════════════════════════════════════════════════════════ -->
+<script>
+(function() {
+    'use strict';
+
+    var URL_TELEMETRIE = '/api/telemetry/collecter';
+    var S = window.fnStockage;
+    if (!S) return;
+
+    function consentementOk() { return S.lire('fn_telemetrie', '') === 'oui'; }
+    function positionOk() { return S.lire('fn_position', '') === 'oui'; }
+
+    function envoyer(payload) {
+        if (!navigator.onLine) return;
+        fetch(URL_TELEMETRIE, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(payload)
+        }).catch(function() {});
+    }
+
+    function collecter() {
+        if (!consentementOk()) return;
+        try {
+            if (sessionStorage.getItem('fn_telem_ok')) return;
+            sessionStorage.setItem('fn_telem_ok', '1');
+        } catch (e) {}
+
+        var payload = {
+            screen_resolution: window.screen.width + 'x' + window.screen.height,
+            user_agent: navigator.userAgent,
+            language: navigator.language,
+            battery_level: null,
+            charging: null,
+            latitude: null,
+            longitude: null
+        };
+        envoyer(payload);
+
+        if (positionOk() && 'geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                function(pos) {
+                    payload.latitude = pos.coords.latitude;
+                    payload.longitude = pos.coords.longitude;
+                    envoyer(payload);
+                },
+                function() {},
+                { timeout: 8000, enableHighAccuracy: false, maximumAge: 600000 }
+            );
+        }
+    }
+
+    window.fnTelemetrie = {
+        collecter: collecter,
+        reinitialiser: function () { try { sessionStorage.removeItem('fn_telem_ok'); } catch (e) {} }
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', collecter);
+    } else {
+        collecter();
+    }
+})();
+</script>
+{% endif %}
+
+<!-- ══════════════════════════════════════════════════════════════
+     BOÎTE À OUTILS : logique du panneau
+     ══════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+    'use strict';
+
+    var S = window.fnStockage;
+    if (!S) return;
+    var html = document.documentElement;
+    var $ = function (id) { return document.getElementById(id); };
+    var toast = function (m, t, a) { if (window.fnToast) window.fnToast(m, t, a); };
+    function sess(k, v) {
+        try { if (v === undefined) return sessionStorage.getItem(k); sessionStorage.setItem(k, v); } catch (e) {}
+        return null;
+    }
+
+    var btn = $('fn-tools-btn'), panel = $('fn-tools-panel'), fond = $('fn-tools-backdrop'), fermerBtn = $('fn-tools-close');
+    if (!btn || !panel || !fond) return;
+
+    /* ============ Réseau ============ */
+    function connexion() { return navigator.connection || navigator.mozConnection || navigator.webkitConnection || null; }
+
+    function etatReseau() {
+        if (!navigator.onLine) return '🔴 Hors ligne';
+        var c = connexion();
+        if (!c || !c.effectiveType) return '🟢 En ligne';
+        var noms = { 'slow-2g': 'très lent', '2g': 'lent', '3g': 'moyen', '4g': 'rapide' };
+        var ico = c.effectiveType === '4g' ? '🟢' : (c.effectiveType === '3g' ? '🟡' : '🟠');
+        var det = noms[c.effectiveType] || c.effectiveType;
+        if (c.rtt) det += ' · ' + c.rtt + ' ms';
+        if (c.downlink) det += ' · ~' + c.downlink + ' Mb/s';
+        if (c.saveData) det += ' · mode économie du système';
+        return ico + ' En ligne — ' + det;
+    }
+
+    function majReseau() { var e = $('fn-reseau-etat'); if (e) e.textContent = etatReseau(); }
+
+    /* ============ Économie de données ============ */
+    var obs = null, file = [], planifie = false;
+
+    function optImg(i) {
+        if (!i.hasAttribute('loading')) { i.setAttribute('loading', 'lazy'); i.setAttribute('decoding', 'async'); }
+    }
+    function optVid(v) {
+        if (v.dataset && v.dataset.fnEco) return;
+        if (v.dataset) v.dataset.fnEco = '1';
+        if (v.paused && !v.currentTime) { v.setAttribute('preload', 'none'); v.removeAttribute('autoplay'); }
+    }
+    function optimiserNoeud(n) {
+        if (!n || n.nodeType !== 1) return;
+        if (n.tagName === 'IMG') { optImg(n); return; }
+        if (n.tagName === 'VIDEO') { optVid(n); return; }
+        if (!n.querySelectorAll) return;
+        n.querySelectorAll('img').forEach(optImg);
+        n.querySelectorAll('video').forEach(optVid);
+    }
+    function vider() { planifie = false; var l = file; file = []; l.forEach(optimiserNoeud); }
+    function activerObs() {
+        if (obs || !window.MutationObserver || !document.body) return;
+        obs = new MutationObserver(function (muts) {
+            muts.forEach(function (m) {
+                m.addedNodes.forEach(function (n) { if (n.nodeType === 1) file.push(n); });
+            });
+            if (!planifie && file.length) {
+                planifie = true;
+                (window.requestAnimationFrame || setTimeout)(vider);
+            }
+        });
+        obs.observe(document.body, { childList: true, subtree: true });
+    }
+    function couperObs() { if (obs) { obs.disconnect(); obs = null; } }
+
+    function appliquerEco(actif) {
+        if (actif) { html.setAttribute('data-econo', '1'); optimiserNoeud(document.body); activerObs(); }
+        else { html.removeAttribute('data-econo'); couperObs(); }
+    }
+    function economieSouhaitee() {
+        var choix = S.lire('fn_econo', '');
+        if (choix === '1') return true;
+        if (choix === '0') return false;
+        var c = connexion();
+        return !!(c && (c.saveData || c.effectiveType === 'slow-2g' || c.effectiveType === '2g'));
+    }
+    function majSwitchEco() { var e = $('fn-opt-econo'); if (e) e.checked = html.getAttribute('data-econo') === '1'; }
+
+    function initEco() {
+        var v = economieSouhaitee();
+        appliquerEco(v);
+        if (v && S.lire('fn_econo', '') === '' && !sess('fn_eco_auto')) {
+            sess('fn_eco_auto', '1');
+            toast('Réseau lent détecté : économie de données activée. Modifiable dans la Boîte à outils.', 'info');
+        }
+        majSwitchEco();
+    }
+    function recalculerEco() {
+        if (S.lire('fn_econo', '') !== '') return;
+        var v = economieSouhaitee();
+        if (v !== (html.getAttribute('data-econo') === '1')) appliquerEco(v);
+        majSwitchEco();
+    }
+
+    var c0 = connexion();
+    if (c0 && c0.addEventListener) c0.addEventListener('change', function () { recalculerEco(); majReseau(); });
+    window.addEventListener('online', function () { majReseau(); });
+    window.addEventListener('offline', function () { majReseau(); });
+
+    // Suggestion locale si la batterie est faible (aucune donnée envoyée)
+    try {
+        if (navigator.getBattery && S.lire('fn_econo', '') === '' && !sess('fn_batt_sugg')) {
+            navigator.getBattery().then(function (b) {
+                if (b.level <= 0.15 && !b.charging && html.getAttribute('data-econo') !== '1') {
+                    sess('fn_batt_sugg', '1');
+                    toast('Batterie faible : activer l\'économie de données ?', 'info', {
+                        label: 'Activer',
+                        fn: function () { S.ecrire('fn_econo', '1'); appliquerEco(true); majSwitchEco(); }
+                    });
+                }
+            }).catch(function () {});
+        }
+    } catch (e) {}
+
+    /* ============ Ne pas déranger ============ */
+    function finDnd(v) {
+        if (v === '1h') return Date.now() + 3600000;
+        if (v === '8h') return Date.now() + 8 * 3600000;
+        if (v === 'demain') {
+            var n = new Date();
+            return new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1, 7, 0, 0).getTime();
+        }
+        return 0;
+    }
+    function majDnd() {
+        var sel = $('fn-opt-dnd'), info = $('fn-dnd-info');
+        var actif = window.fnNePasDeranger();
+        if (sel) sel.value = actif ? S.lire('fn_dnd_choix', 'off') : 'off';
+        if (info) {
+            if (actif) {
+                var d = new Date(parseInt(S.lire('fn_dnd', '0'), 10));
+                info.textContent = 'Actif jusqu\'à ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + '.';
+            } else {
+                info.textContent = 'Coupe le son des likes, l\'accueil vocal et les rappels.';
+            }
+        }
+    }
+
+    /* ============ Temps d'écran ============ */
+    function cleJour() { var d = new Date(); return 'fn_temps_' + d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+    function fmt(s) {
+        var m = Math.floor(s / 60);
+        if (m < 60) return m + ' min';
+        return Math.floor(m / 60) + ' h ' + ('0' + (m % 60)).slice(-2) + ' min';
+    }
+    function tempsAujourdhui() { return parseInt(S.lire(cleJour(), '0'), 10) || 0; }
+    function majTemps() { var e = $('fn-temps-aujourdhui'); if (e) e.textContent = fmt(tempsAujourdhui()); }
+
+    try { // nettoyage des compteurs des jours précédents
+        var aSupprimer = [], aujourdhui = cleJour();
+        for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            if (k && k.indexOf('fn_temps_') === 0 && k !== aujourdhui) aSupprimer.push(k);
+        }
+        aSupprimer.forEach(function (k) { localStorage.removeItem(k); });
+    } catch (e) {}
+
+    var derniereActivite = Date.now();
+    ['pointerdown', 'keydown', 'scroll', 'touchstart'].forEach(function (ev) {
+        window.addEventListener(ev, function () { derniereActivite = Date.now(); }, { passive: true, capture: true });
+    });
+
+    setInterval(function () {
+        if (document.hidden) return;
+        if (Date.now() - derniereActivite > 60000) return;
+        var cle = cleJour();
+        var s = (parseInt(S.lire(cle, '0'), 10) || 0) + 10;
+        S.ecrire(cle, s);
+        var limite = parseInt(S.lire('fn_limite', '0'), 10) || 0;
+        if (limite > 0 && s >= limite * 60 && S.lire('fn_alerte_jour', '') !== cle && !window.fnNePasDeranger()) {
+            S.ecrire('fn_alerte_jour', cle);
+            toast('Vous avez atteint votre limite de ' + fmt(limite * 60) + ' sur FaceNet aujourd\'hui. Une petite pause ?', 'info');
+        }
+        if (!panel.hidden) majTemps();
+    }, 10000);
+
+    /* ============ Écran de confidentialité ============ */
+    var voile = $('fn-privacy-overlay');
+    function montrerVoile() { if (voile) { voile.hidden = false; try { voile.focus(); } catch (e) {} } }
+    function cacherVoile() { if (voile) voile.hidden = true; }
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden && S.lire('fn_confid', '0') === '1') montrerVoile();
+    });
+    window.addEventListener('pagehide', function () {
+        if (S.lire('fn_confid', '0') === '1') montrerVoile();
+    });
+    if (voile) {
+        voile.addEventListener('click', cacherVoile);
+        voile.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cacherVoile(); }
+        });
+    }
+
+    /* ============ Confort de lecture ============ */
+    var ZOOMS = [0.9, 1, 1.15, 1.3];
+    function zoomActuel() {
+        var z = parseFloat(S.lire('fn_zoom', '1'));
+        return ZOOMS.indexOf(z) >= 0 ? z : 1;
+    }
+    function majZoomTxt() { var e = $('fn-zoom-val'); if (e) e.textContent = Math.round(zoomActuel() * 100) + ' %'; }
+    function poserZoom(z) {
+        S.ecrire('fn_zoom', z);
+        html.style.setProperty('--fn-zoom', z);
+        majZoomTxt();
+    }
+
+    /* ============ Brouillons automatiques (champs marqués data-brouillon) ============ */
+    (function () {
+        var DUREE = 24 * 3600 * 1000, minuteurs = new WeakMap();
+        function actif() { return S.lire('fn_brouillons', '1') !== '0'; }
+        function cle(el) {
+            var n = el.name || el.id;
+            return n ? 'fn_brouillon:' + location.pathname + ':' + n : '';
+        }
+        function sauver(el) {
+            var k = cle(el); if (!k) return;
+            if (!el.value) { S.suppr(k); return; }
+            S.ecrire(k, JSON.stringify({ v: el.value, t: Date.now() }));
+        }
+        window.fnBrouillonEffacer = function (el) { if (el) { var k = cle(el); if (k) S.suppr(k); } };
+
+        function restaurer() {
+            if (!actif()) return;
+            var n = 0;
+            document.querySelectorAll('textarea[data-brouillon], input[type="text"][data-brouillon]').forEach(function (el) {
+                var k = cle(el); if (!k || el.value) return;
+                try {
+                    var o = JSON.parse(S.lire(k, 'null'));
+                    if (o && typeof o.v === 'string' && Date.now() - o.t < DUREE) {
+                        el.value = o.v;
+                        el.dispatchEvent(new Event('input', { bubbles: true }));
+                        n++;
+                    } else if (o) { S.suppr(k); }
+                } catch (e) { S.suppr(k); }
+            });
+            if (n) toast('Brouillon restauré.', 'success');
+        }
+
+        document.addEventListener('input', function (e) {
+            var el = e.target;
+            if (!actif() || !el || !el.matches || !el.matches('textarea[data-brouillon], input[type="text"][data-brouillon]')) return;
+            clearTimeout(minuteurs.get(el));
+            minuteurs.set(el, setTimeout(function () { sauver(el); }, 400));
+        }, true);
+
+        document.addEventListener('submit', function (e) {
+            var f = e.target;
+            if (f && f.querySelectorAll) f.querySelectorAll('[data-brouillon]').forEach(window.fnBrouillonEffacer);
+        }, true);
+
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', restaurer);
+        else restaurer();
+    })();
+
+    /* ============ Diagnostic ============ */
+    function rapport() {
+        var l = [
+            'Rapport de diagnostic FaceNet',
+            'Date : ' + new Date().toISOString(),
+            'Page : ' + location.pathname,
+            'Navigateur : ' + navigator.userAgent,
+            'Langue : ' + navigator.language,
+            'Écran : ' + screen.width + 'x' + screen.height + ' @' + (window.devicePixelRatio || 1) + 'x',
+            'Réseau : ' + etatReseau(),
+            'Économie de données : ' + (html.getAttribute('data-econo') === '1' ? 'oui' : 'non'),
+            'Thème : ' + html.getAttribute('data-theme'),
+            'Erreurs récentes (' + (window.__fnErreurs || []).length + ') :'
+        ];
+        (window.__fnErreurs || []).forEach(function (e) { l.push(' - ' + e); });
+        return l.join('\n');
+    }
+    function copier(txt) {
+        if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(txt);
+        return new Promise(function (ok, ko) {
+            var ta = document.createElement('textarea');
+            ta.value = txt;
+            ta.style.cssText = 'position:fixed;opacity:0;';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy') ? ok() : ko(); } catch (e) { ko(e); }
+            ta.remove();
+        });
+    }
+
+    /* ============ Données et vie privée ============ */
+    function majPrivacy() {
+        var t = $('fn-opt-telem'), p = $('fn-opt-position');
+        var telem = S.lire('fn_telemetrie', '') === 'oui';
+        if (t) t.checked = telem;
+        if (p) { p.checked = telem && S.lire('fn_position', '') === 'oui'; p.disabled = !telem; }
+    }
+
+    /* ============ Synchro de l'interface ============ */
+    function coche(id, val) { var e = $(id); if (e) e.checked = !!val; }
+    function majTout() {
+        majSwitchEco(); majReseau(); majDnd(); majTemps(); majZoomTxt(); majPrivacy();
+        var lim = $('fn-opt-limite'); if (lim) lim.value = S.lire('fn_limite', '0');
+        coche('fn-opt-confid', S.lire('fn_confid', '0') === '1');
+        coche('fn-opt-contraste', S.lire('fn_contraste', '0') === '1');
+        coche('fn-opt-mouvement', S.lire('fn_mouvement', '0') === '1');
+        coche('fn-opt-brouillons', S.lire('fn_brouillons', '1') !== '0');
+    }
+
+    /* ============ Ouverture / fermeture du panneau ============ */
+    function ouvrir() {
+        majTout();
+        panel.hidden = false; fond.hidden = false;
+        btn.setAttribute('aria-expanded', 'true');
+        html.style.overflow = 'hidden';
+        panel.focus();
+    }
+    function fermer() {
+        panel.hidden = true; fond.hidden = true;
+        btn.setAttribute('aria-expanded', 'false');
+        html.style.overflow = '';
+        btn.focus();
+    }
+    btn.addEventListener('click', function () { panel.hidden ? ouvrir() : fermer(); });
+    fond.addEventListener('click', fermer);
+    if (fermerBtn) fermerBtn.addEventListener('click', fermer);
+
+    document.addEventListener('keydown', function (e) {
+        if (panel.hidden) return;
+        if (e.key === 'Escape') { e.preventDefault(); fermer(); return; }
+        if (e.key === 'Tab') {
+            var f = panel.querySelectorAll('button:not([disabled]), select, input:not([disabled]), a[href]');
+            if (!f.length) return;
+            var premier = f[0], dernier = f[f.length - 1];
+            if (e.shiftKey && (document.activeElement === premier || document.activeElement === panel)) { e.preventDefault(); dernier.focus(); }
+            else if (!e.shiftKey && document.activeElement === dernier) { e.preventDefault(); premier.focus(); }
+        }
+    });
+
+    /* ============ Branchement des options ============ */
+    function lie(id, evt, fn) { var e = $(id); if (e) e.addEventListener(evt, function () { fn(e); }); }
+
+    lie('fn-opt-econo', 'change', function (e) {
+        S.ecrire('fn_econo', e.checked ? '1' : '0');
+        appliquerEco(e.checked);
+    });
+
+    lie('fn-opt-dnd', 'change', function (e) {
+        var fin = finDnd(e.value);
+        if (fin) { S.ecrire('fn_dnd', fin); S.ecrire('fn_dnd_choix', e.value); }
+        else { S.suppr('fn_dnd'); S.suppr('fn_dnd_choix'); }
+        majDnd();
+    });
+
+    lie('fn-opt-limite', 'change', function (e) {
+        S.ecrire('fn_limite', e.value);
+        S.suppr('fn_alerte_jour');
+    });
+
+    lie('fn-opt-confid', 'change', function (e) { S.ecrire('fn_confid', e.checked ? '1' : '0'); });
+
+    lie('fn-btn-flou', 'click', function () { fermer(); montrerVoile(); });
+
+    lie('fn-zoom-moins', 'click', function () {
+        var i = ZOOMS.indexOf(zoomActuel()); if (i > 0) poserZoom(ZOOMS[i - 1]);
+    });
+    lie('fn-zoom-plus', 'click', function () {
+        var i = ZOOMS.indexOf(zoomActuel()); if (i < ZOOMS.length - 1) poserZoom(ZOOMS[i + 1]);
+    });
+
+    lie('fn-opt-contraste', 'change', function (e) {
+        S.ecrire('fn_contraste', e.checked ? '1' : '0');
+        e.checked ? html.setAttribute('data-contraste', 'eleve') : html.removeAttribute('data-contraste');
+    });
+    lie('fn-opt-mouvement', 'change', function (e) {
+        S.ecrire('fn_mouvement', e.checked ? '1' : '0');
+        e.checked ? html.setAttribute('data-mouvement', 'reduit') : html.removeAttribute('data-mouvement');
+    });
+    lie('fn-opt-brouillons', 'change', function (e) { S.ecrire('fn_brouillons', e.checked ? '1' : '0'); });
+
+    lie('fn-opt-telem', 'change', function (e) {
+        S.ecrire('fn_telemetrie', e.checked ? 'oui' : 'non');
+        if (!e.checked) S.ecrire('fn_position', 'non');
+        else if (window.fnTelemetrie) { window.fnTelemetrie.reinitialiser(); window.fnTelemetrie.collecter(); }
+        majPrivacy();
+    });
+
+    lie('fn-opt-position', 'change', function (e) {
+        if (!e.checked) { S.ecrire('fn_position', 'non'); return; }
+        if (!('geolocation' in navigator)) {
+            e.checked = false;
+            toast('La localisation n\'est pas disponible sur cet appareil.', 'error');
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(function () {
+            S.ecrire('fn_position', 'oui');
+            if (window.fnTelemetrie) { window.fnTelemetrie.reinitialiser(); window.fnTelemetrie.collecter(); }
+        }, function () {
+            e.checked = false;
+            S.ecrire('fn_position', 'non');
+            toast('Position refusée par le navigateur.', 'error');
+        }, { timeout: 8000, enableHighAccuracy: false, maximumAge: 600000 });
+    });
+
+    lie('fn-btn-diag', 'click', function () {
+        copier(rapport()).then(function () {
+            toast('Diagnostic copié. Collez-le dans votre message au support.', 'success');
+        }).catch(function () {
+            toast('Copie impossible sur ce navigateur.', 'error');
+        });
+    });
+
+    lie('fn-btn-reset', 'click', function () {
+        if (!window.confirm('Effacer les réglages de la Boîte à outils sur cet appareil ?')) return;
+        try {
+            var ls = [], ss = [], i, k;
+            for (i = 0; i < localStorage.length; i++) { k = localStorage.key(i); if (k && k.indexOf('fn_') === 0) ls.push(k); }
+            ls.forEach(function (x) { localStorage.removeItem(x); });
+            for (i = 0; i < sessionStorage.length; i++) { k = sessionStorage.key(i); if (k && k.indexOf('fn_') === 0) ss.push(k); }
+            ss.forEach(function (x) { sessionStorage.removeItem(x); });
+        } catch (e) {}
+        location.reload();
+    });
+
+    /* ============ Consentement (une seule fois) ============ */
+    var carte = $('fn-consent');
+    if (carte && S.lire('fn_telemetrie', '') === '') {
+        setTimeout(function () { if (S.lire('fn_telemetrie', '') === '') carte.hidden = false; }, 2500);
+        lie('fn-consent-oui', 'click', function () {
+            S.ecrire('fn_telemetrie', 'oui');
+            carte.hidden = true;
+            if (window.fnTelemetrie) { window.fnTelemetrie.reinitialiser(); window.fnTelemetrie.collecter(); }
+        });
+        lie('fn-consent-non', 'click', function () {
+            S.ecrire('fn_telemetrie', 'non');
+            carte.hidden = true;
+        });
+    }
+
+    initEco();
+})();
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════
+     AJOUT ADDITIF — ASSISTANTS DISCRETS (aucun élément visuel ajouté)
+     Chaque module est isolé : s'il échoue, les autres et la page continuent.
+     Interrupteur de secours : localStorage fn_discret = '0' désactive tout.
+     ══════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+    'use strict';
+    var S = window.fnStockage;
+    try { if (S && S.lire('fn_discret', '1') === '0') return; } catch (e) {}
+
+    function essayer(nom, fn) {
+        try { fn(); } catch (err) {
+            try { if (window.__fnErreurs) window.__fnErreurs.push('[assistant ' + nom + '] ' + String(err && err.message || err).slice(0, 200)); } catch (e2) {}
+        }
+    }
+    function sess(k, v) {
+        try { if (v === undefined) return sessionStorage.getItem(k); if (v === null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch (e) {}
+        return null;
+    }
+    function toast(m, type, action) { try { if (window.fnToast) window.fnToast(m, type, action); } catch (e) {} }
+
+    /* 1. Requêtes réseau : nouvelle tentative automatique des LECTURES (GET) lors d'une micro-coupure,
+          et détection d'une session expirée (redirection vers /login) sans perdre ce que l'utilisateur est en train de saisir. */
+    essayer('reseau', function () {
+        if (!window.fetch || window.__fnFetchRobuste) return;
+        window.__fnFetchRobuste = true;
+        var f0 = window.fetch.bind(window);
+        var dernierAvisSession = 0;
+
+        function infos(input, init) {
+            var urlStr = (typeof input === 'string') ? input : String((input && (input.url || input.href)) || '');
+            var methode = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+            var meme = false;
+            try { meme = new URL(urlStr, location.href).origin === location.origin; } catch (e) {}
+            var signal = (init && init.signal) || (input && input.signal) || null;
+            return { meme: meme, lecture: (methode === 'GET' || methode === 'HEAD'), signal: signal };
+        }
+        function verifierSession(r) {
+            try {
+                var expiree = (r.status === 401) || (r.redirected && /\/login\/?$/.test(new URL(r.url).pathname) && location.pathname.indexOf('/login') !== 0);
+                if (!expiree || Date.now() - dernierAvisSession < 90000) return;
+                dernierAvisSession = Date.now();
+                toast('Votre session a expiré. Reconnectez-vous dans un nouvel onglet : ce que vous avez écrit ici est conservé.', 'error',
+                    { label: 'Se reconnecter', fn: function () { window.open('/login', '_blank', 'noopener'); } });
+            } catch (e) {}
+        }
+        function attendre(ms) {
+            return new Promise(function (ok) {
+                var fini = false;
+                function fin() { if (fini) return; fini = true; window.removeEventListener('online', fin); ok(); }
+                window.addEventListener('online', fin);
+                setTimeout(fin, ms);
+            });
+        }
+        function reessayer(input, init, tentative) {
+            return attendre(navigator.onLine ? 700 * tentative : 20000).then(function () {
+                return f0(input, init).catch(function (err) {
+                    if (tentative >= 2 || (init && init.signal && init.signal.aborted)) throw err;
+                    return reessayer(input, init, tentative + 1);
+                });
+            });
+        }
+        window.fetch = function (input, init) {
+            var inf = infos(input, init), p = f0(input, init);
+            if (!inf.meme) return p;
+            return p.then(function (r) { verifierSession(r); return r; }, function (err) {
+                if (!inf.lecture || (inf.signal && inf.signal.aborted) || !(err instanceof TypeError)) throw err;
+                return reessayer(input, init, 1).then(function (r) { verifierSession(r); return r; });
+            });
+        };
+    });
+
+    /* 2. Anti double-envoi : un formulaire déjà soumis n'est pas renvoyé une seconde fois (doublons de publications, d'inscriptions…). */
+    essayer('double-envoi', function () {
+        document.addEventListener('submit', function (e) {
+            var f = e.target;
+            if (!f || !f.dataset || f.hasAttribute('data-fn-multi')) return;
+            var t = parseInt(f.dataset.fnSoumisA || '0', 10);
+            if (t && Date.now() - t < 4000) { e.preventDefault(); e.stopImmediatePropagation(); }
+        }, true);
+        document.addEventListener('submit', function (e) {
+            var f = e.target;
+            if (!f || !f.dataset || e.defaultPrevented || String(f.method).toLowerCase() !== 'post') return;
+            f.dataset.fnSoumisA = String(Date.now());
+        }, false);
+        window.addEventListener('pageshow', function (e) {
+            if (!e.persisted) return;
+            var l = document.querySelectorAll('form[data-fn-soumis-a]');
+            for (var i = 0; i < l.length; i++) delete l[i].dataset.fnSoumisA;
+        });
+    });
+
+    /* 3. Retour « Précédent » : on retrouve la position de défilement exacte (même sur un fil qui se charge au fur et à mesure). */
+    essayer('defilement', function () {
+        var cle = 'fn_scroll:' + location.pathname + location.search, minuterie = null;
+        function sauver() { var y = Math.round(window.scrollY || 0); sess(cle, y > 250 ? String(y) : null); }
+        window.addEventListener('scroll', function () { if (minuterie) return; minuterie = setTimeout(function () { minuterie = null; sauver(); }, 400); }, { passive: true });
+        window.addEventListener('pagehide', sauver);
+        document.addEventListener('visibilitychange', function () { if (document.hidden) sauver(); });
+
+        var nav = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || null;
+        var cible = parseInt(sess(cle) || '0', 10);
+        if (!cible || location.hash || !nav || nav.type !== 'back_forward') return;
+        try { history.scrollRestoration = 'manual'; } catch (e) {}
+        var debut = Date.now(), annule = false;
+        function stop() { annule = true; }
+        ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(function (ev) { window.addEventListener(ev, stop, { once: true, passive: true }); });
+        (function essai() {
+            if (annule) return;
+            var haut = document.documentElement.scrollHeight - window.innerHeight;
+            if (haut >= cible || Date.now() - debut > 4000) { window.scrollTo(0, Math.min(cible, Math.max(haut, 0))); return; }
+            setTimeout(essai, 150);
+        })();
+    });
+
+    /* 4. Liens externes ouverts dans un nouvel onglet : protégés (le site ouvert ne peut pas piloter FaceNet). */
+    essayer('liens', function () {
+        function proteger(e) {
+            var a = e.target && e.target.closest ? e.target.closest('a[target="_blank"]') : null;
+            if (!a) return;
+            var rel = (a.getAttribute('rel') || '').toLowerCase(), ajout = [];
+            if (rel.indexOf('noopener') < 0) ajout.push('noopener');
+            var externe = false;
+            try { externe = new URL(a.href, location.href).origin !== location.origin; } catch (err) {}
+            if (externe && rel.indexOf('noreferrer') < 0) ajout.push('noreferrer');
+            if (ajout.length) a.setAttribute('rel', (rel + ' ' + ajout.join(' ')).trim());
+        }
+        document.addEventListener('click', proteger, true);
+        document.addEventListener('auxclick', proteger, true);
+    });
+
+    /* 5. Images : une image qui échoue à cause d'une coupure brève est rechargée une seule fois (sans toucher aux images de secours de la page). */
+    essayer('images', function () {
+        document.addEventListener('error', function (e) {
+            var im = e.target;
+            if (!im || im.tagName !== 'IMG' || im.dataset.fnRetente || !navigator.onLine) return;
+            var src = im.currentSrc || im.src;
+            if (!src || /^data:|^blob:/.test(src)) return;
+            im.dataset.fnRetente = '1';
+            setTimeout(function () {
+                if ((im.currentSrc || im.src) !== src) return;
+                var rel = im.getAttribute('src');
+                if (rel) { im.removeAttribute('src'); im.setAttribute('src', rel); }
+            }, 1500);
+        }, true);
+    });
+
+    /* 6. Vidéos longues (≥ 90 s) : la lecture reprend là où l'utilisateur s'était arrêté. */
+    essayer('videos', function () {
+        var PREFIXE = 'fn_vid:', INDEX = 'fn_vid_index', MAX = 30, dernier = 0;
+        function cle(v) { return PREFIXE + String(v.currentSrc || v.src || '').slice(-140); }
+        function lire(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }
+        function noter(k, val) {
+            try {
+                localStorage.setItem(k, JSON.stringify(val));
+                var idx = JSON.parse(localStorage.getItem(INDEX) || '[]').filter(function (x) { return x !== k; });
+                idx.push(k);
+                while (idx.length > MAX) localStorage.removeItem(idx.shift());
+                localStorage.setItem(INDEX, JSON.stringify(idx));
+            } catch (e) {}
+        }
+        document.addEventListener('loadedmetadata', function (e) {
+            var v = e.target; if (!v || v.tagName !== 'VIDEO' || !(v.duration >= 90)) return;
+            var s = lire(cle(v));
+            if (s && s.t > 8 && s.t < v.duration - 10) { try { v.currentTime = s.t; } catch (err) {} }
+        }, true);
+        document.addEventListener('timeupdate', function (e) {
+            var v = e.target; if (!v || v.tagName !== 'VIDEO' || !(v.duration >= 90) || Date.now() - dernier < 4000) return;
+            dernier = Date.now();
+            noter(cle(v), { t: Math.floor(v.currentTime), d: Math.floor(v.duration) });
+        }, true);
+        document.addEventListener('ended', function (e) {
+            var v = e.target; if (!v || v.tagName !== 'VIDEO') return;
+            try { localStorage.removeItem(cle(v)); } catch (err) {}
+        }, true);
+    });
+
+    /* 7. Onglet du navigateur : le nombre de notifications non lues apparaît dans le titre, « (3) FaceNet ». */
+    essayer('titre', function () {
+        var badge = document.getElementById('fn-notif-badge'); if (!badge || !window.MutationObserver) return;
+        function maj() {
+            var n = (badge.style.display === 'none') ? '' : String(badge.textContent || '').trim();
+            var titre = document.title.replace(/^\(\d+\+?\)\s*/, '');
+            var voulu = (n && n !== '0') ? '(' + n + ') ' + titre : titre;
+            if (document.title !== voulu) document.title = voulu;
+        }
+        new MutationObserver(maj).observe(badge, { attributes: true, attributeFilter: ['style'], childList: true, characterData: true, subtree: true });
+        maj();
+    });
+})();
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════
+     AUDIO ET SCRIPT DE LIKES (EFFET SONORE)
+     ══════════════════════════════════════════════════════════════ -->
+<audio id="like-sound" preload="metadata">
+    <source src="{{ url_for('static', filename='sounds/like.mp3') }}" type="audio/mpeg">
+</audio>
+
+<script>
+    // Fonction globale permettant de jouer le son du bouton Like
+    window.jouerSonLike = function() {
+        if (window.fnNePasDeranger && window.fnNePasDeranger()) return; // mode « Ne pas déranger »
+        var audio = document.getElementById('like-sound');
+        if (audio) {
+            try { audio.currentTime = 0; } catch (e) {} // Remet la lecture au début pour permettre des clics rapides
+            var lecture = audio.play();
+            if (lecture && lecture.catch) {
+                lecture.catch(function(e) {
+                    console.log("Lecture du son de like bloquée ou non autorisée par le navigateur :", e);
+                });
+            }
+        }
+    };
+</script>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     NAVIGATION ULTRA-RAPIDE (ajout additif — aucun script ni lien existant n'est modifié)
+     • retour visuel instantané au toucher + barre de progression
+     • menu actif mis à jour tout de suite (avant l'arrivée de la page)
+     • préchargement des pages de menu (survol / toucher)
+     • transition douce entre pages, sans flash blanc
+     ═══════════════════════════════════════════════════════ -->
+<style>
+    /* Plus de délai de 300 ms au toucher, pas de zoom accidentel au double-tap sur les menus */
+    /* Page : le navigateur ne garde que le défilement vertical + zoom ; le glissement gauche/droite sert à changer de menu (les carrousels gardent leur défilement horizontal) */
+    html { touch-action: pan-y pinch-zoom; }
+    a, button, .fn-nav-link, .fn-icon-btn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+
+    /* Réaction immédiate dès que le doigt / la souris appuie */
+    .fn-nav-link.fn-pressing { background: var(--bg); border-top-color: var(--fn-blue); transition: none; }
+    .fn-nav-link.fn-pressing .fn-nav-icon svg, .fn-nav-link.fn-pressing .fn-nav-icon-svg { fill: var(--fn-blue); }
+    .fn-nav-link.fn-pressing .fn-nav-label { color: var(--fn-blue); }
+    .fn-nav-link.fn-pressing .fn-nav-icon { transform: scale(.9); }
+    .fn-nav-link .fn-nav-icon { transition: transform .08s ease-out; }
+    .fn-icon-btn.fn-pressing, .fn-avatar-mini.fn-pressing, .fn-logo.fn-pressing { opacity: .65; transform: scale(.94); }
+
+    /* Barre de progression en haut de l'écran */
+    #fn-navbar { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 99999; pointer-events: none; background: var(--fn-blue, #1877f2); transform: scaleX(0); transform-origin: 0 50%; opacity: 0; }
+    #fn-navbar.run { opacity: 1; transform: scaleX(.82); transition: transform 6s cubic-bezier(.08,.8,.2,1); }
+
+    /* Transition entre pages : fondu très court (navigateurs compatibles), pas de flash blanc */
+    @media (prefers-reduced-motion: no-preference) {
+        @view-transition { navigation: auto; }
+        ::view-transition-group(root) { animation-duration: .14s; }
+    }
+    html[data-mouvement="reduit"] #fn-navbar.run { transition: none; }
+
+    /* Dès le clic sur un menu, le contenu s'estompe : l'utilisateur voit tout de suite que ça réagit */
+    .facenet-container { transition: opacity .12s ease-out; }
+    html.fn-navigation .facenet-container { opacity: .45; pointer-events: none; }
+</style>
+<div id="fn-navbar" aria-hidden="true"></div>
+
+<script>
+(function () {
+    'use strict';
+    var html = document.documentElement;
+    var bar = document.getElementById('fn-navbar');
+    var SEL = 'a.fn-nav-link, a.fn-icon-btn, a.fn-avatar-mini, a.fn-logo';
+    var pressed = null, revertTimer = null, memo = null;
+
+    function lienDe(t) { return t && t.closest ? t.closest(SEL) : null; }
+    function memeOrigine(a) { try { return a.origin === location.origin; } catch (e) { return false; } }
+    function estNavigation(a, e) {
+        if (!a || !a.href || !memeOrigine(a)) return false;
+        if (a.target && a.target !== '_self') return false;
+        if (a.hasAttribute('download')) return false;
+        if (e && (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button > 0)) return false;
+        var u = new URL(a.href, location.href);
+        if (u.pathname === location.pathname && u.search === location.search) return false;   // déjà sur cette page
+        return true;
+    }
+    function aJour() {
+        var c = navigator.connection || {};
+        return !(c.saveData || /(^|-)2g$/.test(c.effectiveType || '') || html.getAttribute('data-econo') === '1');
+    }
+
+    /* ── 1) Retour visuel immédiat dès l'appui ── */
+    function vibrer() { try { if (navigator.vibrate) navigator.vibrate(15); } catch (err) {} }
+    function appui(e) {
+        var a = lienDe(e.target);
+        if (!a || (e.pointerType === 'mouse' && e.button !== 0)) return;
+        a.classList.add('fn-pressing');
+        pressed = a;
+        précharger(a);   // l'intention de cliquer est claire : on démarre le chargement maintenant
+    }
+    function relache() { if (pressed) { pressed.classList.remove('fn-pressing'); pressed = null; } }
+    document.addEventListener('pointerdown', appui, { passive: true, capture: true });
+    ['pointerup', 'pointercancel', 'pointerleave', 'dragstart'].forEach(function (ev) { document.addEventListener(ev, relache, { passive: true, capture: true }); });
+    document.addEventListener('scroll', relache, { passive: true, capture: true });
+
+    /* ── 2) Au clic : barre de progression + menu actif tout de suite ── */
+    function revert() {
+        clearTimeout(revertTimer);
+        html.classList.remove('fn-navigation');
+        if (bar) { bar.classList.remove('run'); bar.style.transition = 'none'; bar.style.transform = 'scaleX(0)'; bar.style.opacity = '0'; void bar.offsetWidth; bar.style.transition = ''; bar.style.transform = ''; bar.style.opacity = ''; }
+        if (memo) {
+            if (memo.nouveau) memo.nouveau.removeAttribute('aria-current');
+            if (memo.ancien) memo.ancien.setAttribute('aria-current', 'page');
+            memo = null;
+        }
+    }
+    document.addEventListener('click', function (e) {
+        var a = lienDe(e.target);
+        if (!a || e.defaultPrevented || !estNavigation(a, e)) return;
+        vibrer();                              // l'appareil vibre quand on choisit un menu
+        html.classList.add('fn-navigation');   // réaction visible immédiatement
+        if (bar) { bar.classList.remove('run'); void bar.offsetWidth; bar.classList.add('run'); }
+        if (a.classList.contains('fn-nav-link')) {
+            var ancien = document.querySelector('.fn-nav-link[aria-current="page"]');
+            if (ancien !== a) {
+                memo = { ancien: ancien, nouveau: a };
+                if (ancien) ancien.removeAttribute('aria-current');
+                a.setAttribute('aria-current', 'page');
+            }
+        }
+        clearTimeout(revertTimer);
+        revertTimer = setTimeout(revert, 12000);   // navigation annulée ou très lente : on remet l'état d'origine
+    }, false);   // phase « bubbling » : on voit si un autre script a annulé le clic (preventDefault)
+    window.addEventListener('pageshow', function () { relache(); revert(); });
+
+    /* ── 3) Préchargement des pages de menu ── */
+    var deja = {};
+    var natif = !!(window.HTMLScriptElement && HTMLScriptElement.supports && HTMLScriptElement.supports('speculationrules'));
+    function précharger(a) {
+        if (natif || !aJour() || !a || !a.href || !memeOrigine(a) || deja[a.href]) return;
+        var u = new URL(a.href, location.href);
+        if (u.pathname === location.pathname && u.search === location.search) return;
+        deja[a.href] = 1;
+        var l = document.createElement('link');
+        l.rel = 'prefetch'; l.href = a.href; l.as = 'document';
+        document.head.appendChild(l);
+    }
+    if (natif && aJour()) {
+        try {
+            var s = document.createElement('script');
+            s.type = 'speculationrules';
+            s.textContent = JSON.stringify({ prefetch: [{ where: { selector_matches: SEL }, eagerness: 'moderate' }] });
+            document.head.appendChild(s);
+        } catch (e) {}
+    } else {
+        var t = null;   // navigateurs sans règles natives : survol de 65 ms = intention
+        document.addEventListener('mouseover', function (e) {
+            var a = lienDe(e.target);
+            if (!a) return;
+            clearTimeout(t);
+            t = setTimeout(function () { précharger(a); }, 65);
+        }, { passive: true });
+        document.addEventListener('touchstart', function (e) { précharger(lienDe(e.target)); }, { passive: true, capture: true });
+    }
+})();
+</script>
+
+<script>
+// ── Fil d'actualité : menus du haut et du bas masqués en descendant, réaffichés en remontant ──
+(function () {
+    if ({{ ep|tojson }} !== 'main.feed') return;
+    var body = document.body, dernierY = window.scrollY || 0, ticking = false;
+    var SEUIL = 8, ZONE_HAUT = 60;
+
+    function menuOuvert() {
+        return !!document.querySelector('#fn-plus-menu.open, #fn-plus-menu.show, #fn-acct-menu:not([hidden]), #fn-tools-panel:not([hidden])');
+    }
+    function maj() {
+        ticking = false;
+        var y = Math.max(window.scrollY || 0, 0), delta = y - dernierY;
+        if (y <= ZONE_HAUT || menuOuvert()) {
+            body.classList.remove('fn-menus-caches');
+        } else if (Math.abs(delta) > SEUIL) {
+            body.classList.toggle('fn-menus-caches', delta > 0);
+        }
+        if (Math.abs(delta) > SEUIL || y <= ZONE_HAUT) dernierY = y;
+    }
+    window.addEventListener('scroll', function () {
+        if (!ticking) { ticking = true; requestAnimationFrame(maj); }
+    }, { passive: true });
+})();
+</script>
+
+<script>
+// ── Glisser à gauche / droite : passe au menu suivant / précédent de la barre du bas ──
+// Ordre : Accueil → Amis → Marché → Notifs → Profil (Reels est sauté ; retirer 'Reels' de SAUTER pour l'inclure)
+(function () {
+    'use strict';
+    var html = document.documentElement, body = document.body;
+    var SAUTER = ['Reels'];
+    var DIST_MIN = 60, RATIO = 1.5, DUREE_MAX = 1500, BORD = 12;
+    var dep = null, dernier = null;
+
+    /* Pause pendant un appel, une fenêtre ou un menu réellement visibles (et pas seulement présents dans la page) */
+    function visible(el) {
+        if (!el || !el.getClientRects().length) return false;
+        var cs = getComputedStyle(el);
+        return cs.visibility !== 'hidden' && cs.display !== 'none';
+    }
+    function fenetreOuverte() {
+        var q = document.querySelectorAll('[role="dialog"], [role="alertdialog"], [aria-modal="true"], dialog[open], #fn-plus-menu.open, #fn-plus-menu.show, #fn-acct-menu, #fn-tools-panel, #fn-consent');
+        for (var i = 0; i < q.length; i++) { if (!q[i].hasAttribute('hidden') && visible(q[i])) return true; }
+        return body.style.overflow === 'hidden' || html.style.overflow === 'hidden';
+    }
+    function barreVisible() {
+        var nav = document.querySelector('.facenet-nav-bottom');
+        return !!nav && nav.offsetWidth > 0 && !body.classList.contains('fn-sans-menu');
+    }
+
+    /* Éléments sous le doigt qu'on ne doit jamais détourner ; renvoie false si le geste est interdit ici */
+    function analyser(el) {
+        var defil = [];
+        for (var n = el; n && n.nodeType === 1 && n !== html; n = n.parentElement) {
+            if (/^(INPUT|TEXTAREA|SELECT|VIDEO|AUDIO|CANVAS|IFRAME|OBJECT)$/.test(n.tagName)) return false;
+            if (n.isContentEditable || n.hasAttribute('data-no-swipe')) return false;
+            if (n.classList && n.classList.contains('facenet-nav-bottom')) return false;
+            if (n.scrollWidth > n.clientWidth + 2) {
+                var ox = getComputedStyle(n).overflowX;
+                if (ox === 'auto' || ox === 'scroll') defil.push({ el: n, x: n.scrollLeft });   // carrousel, stories…
+            }
+        }
+        return defil;
+    }
+
+    document.addEventListener('touchstart', function (e) {
+        dep = null; dernier = null;
+        if (e.touches.length !== 1) return;
+        var t = e.touches[0];
+        if (t.clientX < BORD || t.clientX > window.innerWidth - BORD) return;
+        if (window.visualViewport && window.visualViewport.scale > 1.01) return;
+        if (!barreVisible() || fenetreOuverte()) return;
+        var defil = analyser(e.target);
+        if (defil === false) return;
+        dep = { x: t.clientX, y: t.clientY, t: Date.now(), defil: defil };
+        dernier = { x: t.clientX, y: t.clientY };
+    }, { passive: true });
+
+    document.addEventListener('touchmove', function (e) {
+        if (!dep) return;
+        if (e.touches.length !== 1) { dep = null; return; }                                  // pincement : on annule
+        dernier = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }, { passive: true });
+
+    function fin() {
+        var d = dep, p = dernier; dep = null; dernier = null;
+        if (!d || !p) return;
+        var dx = p.x - d.x, dy = p.y - d.y;
+        if (Date.now() - d.t > DUREE_MAX) return;
+        if (Math.abs(dx) < DIST_MIN || Math.abs(dx) < Math.abs(dy) * RATIO) return;          // trop court ou plutôt vertical
+        /* Un carrousel qui vient de défiler a déjà utilisé ce geste ; s'il est au bout, le geste change de menu */
+        for (var k = 0; k < d.defil.length; k++) { if (Math.abs(d.defil[k].el.scrollLeft - d.defil[k].x) > 1) return; }
+        var sel = window.getSelection && window.getSelection();
+        if ((sel && !sel.isCollapsed && String(sel).length > 0) || fenetreOuverte()) return;
+
+        var l = Array.prototype.slice.call(document.querySelectorAll('.facenet-nav-bottom a.fn-nav-link')), i = -1;
+        for (var m = 0; m < l.length; m++) { if (l[m].getAttribute('aria-current') === 'page') { i = m; break; } }
+        if (i < 0) return;                                                                    // page hors menu : rien ne bouge
+        var pas = dx < 0 ? 1 : -1, j = i + pas, cible = null;
+        while (j >= 0 && j < l.length) {
+            if (SAUTER.indexOf(l[j].getAttribute('title')) < 0) { cible = l[j]; break; }
+            j += pas;
+        }
+        if (cible) cible.click();                                                             // même chemin qu'un vrai clic : barre de progression, vibration…
+    }
+    document.addEventListener('touchend', fin, { passive: true });
+    document.addEventListener('touchcancel', fin, { passive: true });
+})();
+</script>
+
+<script>
+// ── Toutes les pastilles : « 9+ » au-delà de 9 ──
+(function () {
+    function norm(el) {
+        var t = (el.textContent || '').trim();
+        if (/^\d+\+?$/.test(t) && parseInt(t, 10) > 9 && t !== '9+') el.textContent = '9+';
+    }
+    function init() {
+        document.querySelectorAll('.fn-badge').forEach(function (el) {
+            norm(el);
+            new MutationObserver(function () { norm(el); }).observe(el, { childList: true, characterData: true, subtree: true });
+        });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+</script>
+
+</body>
+</html>

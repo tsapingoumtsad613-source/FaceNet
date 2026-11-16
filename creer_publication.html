@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Créer une publication - FaceNet</title>
+    <!-- Intégration de FontAwesome pour de jolies icônes -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #1877f2;
+            --primary-hover: #166fe5;
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-color: #050505;
+            --text-secondary: #65676b;
+            --border-color: #ccd0d5;
+        }
+
+        body {
+            font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .publication-container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+        }
+
+        .publication-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        .publication-form {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 15px;
+            box-sizing: border-box;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        /* Barre d'options pour l'ajout de médias (photo, vidéo, etc.) */
+        .media-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            background-color: #f7f8fa;
+        }
+
+        .media-options span {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .media-buttons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .media-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            transition: transform 0.2s;
+        }
+
+        .media-btn.photo { color: #45bd62; }
+        .media-btn.video { color: #f3425f; }
+        .media-btn.file { color: #1877f2; }
+
+        .media-btn:hover {
+            transform: scale(1.15);
+        }
+
+        .btn-submit {
+            width: 100%;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-submit:hover {
+            background-color: var(--primary-hover);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="publication-container">
+        <div class="publication-header">
+            Créer une publication
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="publication-form">
+            {{ form.hidden_tag() }}
+
+            <!-- Champ Titre -->
+            <div class="form-group">
+                {{ form.titre.label }}
+                {{ form.titre(class="form-control", placeholder="Donnez un titre à votre publication...") }}
+            </div>
+
+            <!-- Champ Contenu (Texte) -->
+            <div class="form-group">
+                {{ form.contenu.label }}
+                {{ form.contenu(class="form-control", placeholder="Qu'avez-vous à l'esprit ? (Texte, liens, réflexions...)") }}
+            </div>
+
+            <!-- Section visuelle pour ajouter des fichiers multimédias -->
+            <div class="media-options">
+                <span>Ajouter à votre publication</span>
+                <div class="media-buttons">
+                    <button type="button" class="media-btn photo" title="Ajouter une photo"><i class="fa-solid fa-image"></i></button>
+                    <button type="button" class="media-btn video" title="Ajouter une vidéo"><i class="fa-solid fa-video"></i></button>
+                    <button type="button" class="media-btn file" title="Ajouter un fichier"><i class="fa-solid fa-paperclip"></i></button>
+                </div>
+            </div>
+
+            <!-- Bouton de soumission -->
+            <div class="form-group" style="margin-bottom: 0;">
+                {{ form.submit(class="btn-submit") }}
+            </div>
+        </form>
+    </div>
+
+</body>
+</html>

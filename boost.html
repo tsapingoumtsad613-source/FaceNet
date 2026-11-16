@@ -1,0 +1,2331 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>FaceNet - Booster une Publication</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            /* ── Palette FaceNet ── */
+            --primary: #1877f2;
+            --primary-hover: #166fe5;
+            --primary-soft: #e7f3ff;
+            --primary-ring: rgba(24, 119, 242, 0.18);
+
+            --bg-main: #f0f2f5;
+            --bg-elevated: #ffffff;
+            --bg-card: #ffffff;
+            --bg-subtle: #f7f8fa;
+            --bg-overlay: rgba(15, 20, 25, 0.5);
+
+            --text-main: #050505;
+            --text-secondary: #65676b;
+            --text-tertiary: #8a8d91;
+            --text-inverse: #ffffff;
+
+            --border: #e4e6eb;
+            --border-strong: #ccd0d5;
+            --divider: #eef0f2;
+
+            --error: #e41e3f;
+            --error-soft: #fff5f5;
+            --success: #31a24c;
+            --success-soft: #e8f6ec;
+            --promo: #ff4757;
+
+            /* ── Rayons ── */
+            --r-xs: 6px;
+            --r-sm: 8px;
+            --r-md: 10px;
+            --r-lg: 12px;
+            --r-xl: 16px;
+            --r-full: 999px;
+
+            /* ── Ombres ── */
+            --shadow-xs: 0 1px 2px rgba(0,0,0,.04);
+            --shadow-sm: 0 2px 8px rgba(0,0,0,.06);
+            --shadow-md: 0 4px 16px rgba(0,0,0,.08);
+            --shadow-lg: 0 12px 32px rgba(0,0,0,.12);
+            --shadow-focus: 0 0 0 3px var(--primary-ring);
+
+            /* ── Typo ── */
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto, Helvetica, Arial, sans-serif;
+            --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", monospace;
+
+            /* ── Mouvement ── */
+            --ease: cubic-bezier(0.4, 0, 0.2, 1);
+            --dur-fast: 120ms;
+            --dur: 200ms;
+            --dur-slow: 320ms;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-main: #0b0d10;
+                --bg-elevated: #14171c;
+                --bg-card: #14171c;
+                --bg-subtle: #1a1e24;
+                --bg-overlay: rgba(0, 0, 0, 0.7);
+
+                --text-main: #f0f2f5;
+                --text-secondary: #a8adb4;
+                --text-tertiary: #7d838a;
+                --text-inverse: #0b0d10;
+
+                --border: #2a2f36;
+                --border-strong: #3a4048;
+                --divider: #1f242a;
+
+                --primary-soft: #12233a;
+                --primary-ring: rgba(24, 119, 242, 0.35);
+
+                --error-soft: #2a1418;
+                --success-soft: #122a1a;
+                --shadow-md: 0 4px 16px rgba(0,0,0,.4);
+                --shadow-lg: 0 12px 32px rgba(0,0,0,.55);
+            }
+        }
+
+        * { box-sizing: border-box; }
+
+        html { -webkit-text-size-adjust: 100%; }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-main);
+            color: var(--text-main);
+            margin: 0;
+            padding: 24px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            min-height: 100vh;
+            line-height: 1.45;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            font-feature-settings: "cv11", "ss01";
+        }
+
+        /* ── Conteneur principal ── */
+        .boost-container {
+            background: var(--bg-card);
+            width: 100%;
+            max-width: 680px;
+            border-radius: var(--r-xl);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-md);
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            max-height: 95vh;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-strong) transparent;
+        }
+        .boost-container::-webkit-scrollbar { width: 8px; }
+        .boost-container::-webkit-scrollbar-thumb {
+            background: var(--border-strong); border-radius: var(--r-full);
+        }
+
+        /* ── Titres ── */
+        h2 {
+            margin: 0;
+            font-size: 24px;
+            color: var(--text-main);
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            line-height: 1.2;
+        }
+        p.subtitle {
+            margin: 0;
+            font-size: 14.5px;
+            color: var(--text-secondary);
+            line-height: 1.55;
+        }
+
+        /* ── Aperçu de la publication ── */
+        .post-preview-card {
+            background: var(--bg-subtle);
+            border: 1px solid var(--border);
+            border-radius: var(--r-lg);
+            padding: 16px;
+            transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+        }
+        .post-preview-card:hover { border-color: var(--border-strong); }
+        .post-preview-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 10px; gap: 10px; flex-wrap: wrap;
+        }
+        .sponsored-tag {
+            background: var(--primary-soft);
+            color: var(--primary);
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: var(--r-full);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            letter-spacing: 0.01em;
+        }
+        .post-preview-content {
+            font-size: 14.5px;
+            color: var(--text-main);
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        /* ── Sections ── */
+        .form-section {
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .form-section label.section-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            letter-spacing: 0.01em;
+            text-transform: none;
+        }
+        .form-section p.help {
+            margin: 0;
+            font-size: 12.5px;
+            color: var(--text-tertiary);
+            line-height: 1.5;
+        }
+
+        /* ── Champs ── */
+        select, input[type="text"], input[type="number"], input[type="email"],
+        input[type="datetime-local"], textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--border-strong);
+            border-radius: var(--r-sm);
+            font-size: 15px;
+            color: var(--text-main);
+            background: var(--bg-subtle);
+            outline: none;
+            transition: border-color var(--dur) var(--ease),
+                        background var(--dur) var(--ease),
+                        box-shadow var(--dur) var(--ease);
+            font-family: inherit;
+        }
+        select:hover, input:hover, textarea:hover { border-color: var(--text-tertiary); }
+        select:focus, input:focus, textarea:focus {
+            border-color: var(--primary);
+            background: var(--bg-elevated);
+            box-shadow: var(--shadow-focus);
+        }
+        input::placeholder, textarea::placeholder { color: var(--text-tertiary); }
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2365676b' d='M6 8 0 0h12z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            background-size: 10px;
+            padding-right: 38px;
+        }
+
+        .row { display: flex; gap: 12px; }
+        .row > * { flex: 1; min-width: 0; }
+
+        /* ── Toggle groupe ── */
+        .toggle-group {
+            display: flex;
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            overflow: hidden;
+            background: var(--bg-subtle);
+            padding: 3px;
+            gap: 3px;
+        }
+        .toggle-group button {
+            flex: 1;
+            padding: 10px 12px;
+            border: none;
+            background: transparent;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: var(--r-xs);
+            transition: all var(--dur) var(--ease);
+            font-family: inherit;
+        }
+        .toggle-group button:hover:not(.active) { background: var(--bg-elevated); color: var(--text-main); }
+        .toggle-group button.active {
+            background: var(--primary);
+            color: var(--text-inverse);
+            box-shadow: var(--shadow-xs);
+        }
+
+        /* ── Champs audience / dynamiques ── */
+        .audience-fields, .dynamic-fields-container {
+            background: var(--bg-subtle);
+            border: 1px dashed var(--border-strong);
+            padding: 16px;
+            border-radius: var(--r-lg);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            animation: fadeIn var(--dur-slow) var(--ease);
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to   { opacity: 1; transform: none; }
+        }
+
+        /* ── Chips intérêts ── */
+        .chip-input {
+            display: flex; flex-wrap: wrap; gap: 6px;
+            padding: 8px;
+            border: 1px solid var(--border-strong);
+            border-radius: var(--r-sm);
+            background: var(--bg-subtle);
+            transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+        }
+        .chip-input:focus-within {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-focus);
+        }
+        .chip {
+            background: var(--primary-soft);
+            color: var(--primary);
+            font-size: 13px;
+            font-weight: 600;
+            padding: 5px 10px;
+            border-radius: var(--r-full);
+            display: flex; align-items: center; gap: 6px;
+            animation: chipIn var(--dur) var(--ease);
+        }
+        @keyframes chipIn {
+            from { opacity: 0; transform: scale(.85); }
+            to   { opacity: 1; transform: none; }
+        }
+        .chip i {
+            cursor: pointer;
+            font-size: 11px;
+            opacity: 0.75;
+            transition: opacity var(--dur-fast) var(--ease);
+        }
+        .chip i:hover { opacity: 1; }
+        .chip-input input {
+            border: none; background: transparent; flex: 1; min-width: 120px; padding: 6px 4px;
+        }
+        .chip-input input:focus { outline: none; box-shadow: none; background: transparent; }
+
+        /* ── Slider budget ── */
+        .budget-slider-wrap { display: flex; flex-direction: column; gap: 6px; padding: 4px 2px 0; }
+        .budget-slider-value {
+            text-align: center;
+            font-size: 30px;
+            font-weight: 800;
+            color: var(--primary);
+            letter-spacing: -0.02em;
+            font-variant-numeric: tabular-nums;
+            transition: transform var(--dur) var(--ease);
+        }
+
+        /* ── Bannière promo ── */
+        .budget-promo-banner {
+            background: linear-gradient(135deg, #ff4757 0%, #ff6348 100%);
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: var(--r-sm);
+            text-align: center;
+            font-weight: 800;
+            font-size: 13.5px;
+            letter-spacing: 0.03em;
+            margin-bottom: 4px;
+            box-shadow: 0 4px 16px rgba(255, 71, 87, 0.28);
+            display: flex; align-items: center; justify-content: center;
+            gap: 8px;
+            animation: promoPulse 3s ease-in-out infinite;
+        }
+        @keyframes promoPulse {
+            0%, 100% { box-shadow: 0 4px 16px rgba(255, 71, 87, 0.28); }
+            50%      { box-shadow: 0 4px 22px rgba(255, 71, 87, 0.5); }
+        }
+        .budget-promo-banner i { font-size: 16px; }
+
+        /* ── Prix normal barré / économies ── */
+        .budget-slider-original {
+            text-align: center;
+            font-size: 13.5px;
+            color: var(--text-tertiary);
+            text-decoration: line-through;
+            margin-top: -2px;
+            font-variant-numeric: tabular-nums;
+        }
+        .budget-slider-savings {
+            text-align: center;
+            font-size: 13px;
+            color: var(--success);
+            font-weight: 700;
+            margin-bottom: 4px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ── Champ manuel budget ── */
+        .budget-manual-row {
+            display: flex; align-items: stretch; gap: 8px; margin-bottom: 4px;
+        }
+        .budget-manual-row input[type="text"] {
+            flex: 1; text-align: center;
+            font-size: 17px; font-weight: 700;
+            padding: 12px 14px;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.01em;
+        }
+        .budget-manual-row input[type="text"].input-error {
+            border-color: var(--error) !important;
+            background: var(--error-soft) !important;
+        }
+        .budget-currency-badge {
+            display: flex; align-items: center; padding: 0 16px;
+            border-radius: var(--r-sm);
+            background: var(--primary-soft);
+            color: var(--primary);
+            font-weight: 800;
+            font-size: 13px;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+            border: 1px solid transparent;
+        }
+        .budget-manual-hint {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            text-align: center;
+        }
+
+        /* ── Range ── */
+        input[type="range"]#budgetSlider {
+            -webkit-appearance: none; appearance: none;
+            width: 100%; height: 6px; border-radius: var(--r-full);
+            background: linear-gradient(to right, var(--primary) 0%, var(--primary) 5%, var(--border) 5%, var(--border) 100%);
+            outline: none; cursor: pointer; margin: 10px 0 4px;
+            transition: filter var(--dur) var(--ease);
+        }
+        input[type="range"]#budgetSlider:hover { filter: brightness(1.05); }
+        input[type="range"]#budgetSlider:focus-visible { box-shadow: var(--shadow-focus); }
+        input[type="range"]#budgetSlider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 26px; height: 26px; border-radius: 50%;
+            background: var(--primary);
+            border: 3px solid var(--bg-elevated);
+            box-shadow: 0 2px 8px rgba(0,0,0,.25), 0 0 0 1px var(--border);
+            cursor: pointer;
+            transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur) var(--ease);
+        }
+        input[type="range"]#budgetSlider::-webkit-slider-thumb:hover {
+            transform: scale(1.12);
+            box-shadow: 0 4px 12px rgba(24,119,242,.4), 0 0 0 1px var(--primary);
+        }
+        input[type="range"]#budgetSlider::-moz-range-thumb {
+            width: 26px; height: 26px; border-radius: 50%;
+            background: var(--primary);
+            border: 3px solid var(--bg-elevated);
+            box-shadow: 0 2px 8px rgba(0,0,0,.25);
+            cursor: pointer;
+        }
+        .budget-slider-minmax {
+            display: flex; justify-content: space-between;
+            font-size: 11.5px; color: var(--text-tertiary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ── Estimation ── */
+        .estimate-box {
+            background: var(--primary-soft);
+            border: 1px solid transparent;
+            border-radius: var(--r-lg);
+            padding: 18px;
+            display: flex; flex-direction: column; gap: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+        .estimate-box::before {
+            content: ""; position: absolute; left: 0; top: 0; bottom: 0;
+            width: 4px; background: var(--primary);
+        }
+        .estimate-value {
+            font-size: 22px; color: var(--primary);
+            font-weight: 800; letter-spacing: -0.01em;
+            font-variant-numeric: tabular-nums;
+        }
+        .estimate-caption {
+            font-size: 12px; color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* ── Résumé prix ── */
+        .price-summary-box {
+            background: var(--bg-subtle);
+            border: 1px solid var(--border);
+            border-radius: var(--r-lg);
+            padding: 18px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            gap: 12px;
+        }
+        .price-label { font-size: 14px; color: var(--text-secondary); font-weight: 600; }
+        .price-value {
+            font-size: 24px; color: var(--text-main);
+            font-weight: 800; letter-spacing: -0.02em;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ── Messages ── */
+        .error-msg {
+            font-size: 12.5px; color: var(--error);
+            display: none; margin-top: 4px; font-weight: 600;
+        }
+        .success-msg {
+            font-size: 12.5px; color: var(--success);
+            display: none; margin-top: 4px; font-weight: 600;
+        }
+        .info-note { font-size: 12px; color: var(--primary); margin-top: 2px; }
+        .input-error {
+            border-color: var(--error) !important;
+            background: var(--error-soft) !important;
+        }
+
+        /* ── Wallet ── */
+        .wallet-box {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            padding: 14px;
+            text-align: center;
+        }
+        .wallet-address {
+            font-family: var(--font-mono);
+            font-size: 12.5px;
+            background: var(--bg-subtle);
+            padding: 10px;
+            border-radius: var(--r-xs);
+            word-break: break-all;
+            margin: 10px 0 0;
+        }
+
+        /* ── Carte bancaire ── */
+        .card-number-wrap { position: relative; }
+        .card-type-badge {
+            position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+            font-size: 13px; font-weight: 700; color: var(--primary);
+            display: flex; align-items: center; gap: 6px;
+            pointer-events: none;
+        }
+
+        /* ── Bouton principal ── */
+        .btn-submit {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 15px 20px;
+            border-radius: var(--r-sm);
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            gap: 10px;
+            letter-spacing: 0.01em;
+            transition: background var(--dur) var(--ease),
+                        transform var(--dur-fast) var(--ease),
+                        box-shadow var(--dur) var(--ease);
+            box-shadow: 0 1px 3px rgba(24, 119, 242, 0.3);
+            font-family: inherit;
+        }
+        .btn-submit:hover:not(:disabled) {
+            background: var(--primary-hover);
+            box-shadow: 0 4px 14px rgba(24, 119, 242, 0.35);
+            transform: translateY(-1px);
+        }
+        .btn-submit:active:not(:disabled) { transform: translateY(0); }
+        .btn-submit:disabled { background: #a4c7fc; cursor: not-allowed; box-shadow: none; }
+        .btn-submit .fa-spinner { animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .security-note {
+            font-size: 12px; color: var(--text-tertiary);
+            text-align: center;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .security-note i { color: var(--success); }
+
+        /* ── Feed top ── */
+        .feed-top {
+            width: 100%; max-width: 680px;
+            display: none; flex-direction: column; gap: 8px;
+        }
+        .feed-top.visible { display: flex; animation: feedIn var(--dur-slow) var(--ease); }
+        @keyframes feedIn {
+            from { opacity: 0; transform: translateY(-14px); }
+            to   { opacity: 1; transform: none; }
+        }
+        .feed-top-label {
+            font-size: 13px; font-weight: 700; color: var(--success);
+            display: flex; align-items: center; gap: 6px; padding: 0 4px;
+        }
+        .feed-post {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--r-xl);
+            box-shadow: var(--shadow-md);
+        }
+        .feed-post-head {
+            display: flex; align-items: center; gap: 12px;
+            padding: 16px 18px 8px;
+        }
+        .feed-avatar {
+            width: 44px; height: 44px; border-radius: 50%;
+            background: var(--primary-soft); color: var(--primary);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; flex-shrink: 0;
+        }
+        .feed-author { font-weight: 700; font-size: 15px; }
+        .feed-meta {
+            font-size: 12px; color: var(--text-secondary);
+            display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+        }
+        .feed-post-body {
+            padding: 8px 18px 14px;
+            font-size: 15px; line-height: 1.5;
+            word-break: break-word; white-space: pre-wrap;
+        }
+        .feed-stats {
+            display: flex; justify-content: space-between; gap: 10px;
+            padding: 10px 18px; font-size: 13px; color: var(--text-secondary);
+            border-top: 1px solid var(--divider);
+        }
+        .feed-actions {
+            display: flex; padding: 4px 8px;
+            border-top: 1px solid var(--divider);
+            position: relative;
+        }
+        .feed-actions button {
+            flex: 1; background: none; border: none; border-radius: var(--r-sm);
+            padding: 10px 8px; font-size: 14px; font-weight: 600;
+            color: var(--text-secondary); cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            font-family: inherit;
+            transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+        }
+        .feed-actions button:hover { background: var(--bg-subtle); color: var(--text-main); }
+        .feed-actions button.liked { color: var(--primary); }
+        .feed-actions button:focus-visible,
+        .btn-submit:focus-visible,
+        .share-menu button:focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 1px;
+        }
+
+        /* ── Partage ── */
+        .share-wrap { position: relative; flex: 1; display: flex; }
+        .share-wrap > button { width: 100%; }
+        .share-menu {
+            position: absolute; right: 0; bottom: calc(100% + 6px);
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: var(--r-md);
+            box-shadow: var(--shadow-lg);
+            min-width: 220px; padding: 6px;
+            display: none; z-index: 20;
+            animation: menuIn var(--dur-fast) var(--ease);
+        }
+        @keyframes menuIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to   { opacity: 1; transform: none; }
+        }
+        .share-menu.open { display: block; }
+        .share-menu button {
+            width: 100%; justify-content: flex-start; text-align: left;
+            font-weight: 500; color: var(--text-main);
+        }
+
+        /* ── Commentaires ── */
+        .comments-box {
+            display: none;
+            border-top: 1px solid var(--divider);
+            padding: 12px 18px 16px;
+            flex-direction: column; gap: 8px;
+        }
+        .comments-box.open { display: flex; }
+        .comment-item {
+            background: var(--bg-subtle);
+            border-radius: var(--r-xl);
+            padding: 10px 14px;
+            font-size: 14px; line-height: 1.4;
+            word-break: break-word;
+        }
+        .comment-item b { display: block; font-size: 13px; margin-bottom: 2px; }
+        .comment-row { display: flex; gap: 8px; }
+        .comment-row input {
+            flex: 1; border-radius: var(--r-full); padding: 10px 16px; font-size: 14px;
+        }
+        .comment-row button {
+            border: none; background: var(--primary); color: #fff;
+            border-radius: 50%; width: 40px; height: 40px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background var(--dur) var(--ease), transform var(--dur-fast) var(--ease);
+            flex-shrink: 0;
+        }
+        .comment-row button:hover { background: var(--primary-hover); }
+        .comment-row button:active { transform: scale(0.94); }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed; left: 50%; bottom: 24px;
+            transform: translateX(-50%) translateY(8px);
+            background: #222; color: #fff;
+            padding: 11px 20px; border-radius: var(--r-full);
+            font-size: 14px; z-index: 50;
+            opacity: 0; pointer-events: none;
+            transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+            max-width: 90vw;
+            box-shadow: var(--shadow-lg);
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* ── Skeleton loader ── */
+        .skeleton {
+            background: linear-gradient(90deg, var(--bg-subtle) 25%, var(--border) 50%, var(--bg-subtle) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+            border-radius: var(--r-xs);
+            height: 14px;
+            margin: 6px 0;
+        }
+        @keyframes shimmer {
+            0%   { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* ── Bannière boost actif ── */
+        .active-boost-banner {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            background: var(--success-soft);
+            color: var(--success);
+            border: 1px solid transparent;
+            border-radius: var(--r-sm);
+            padding: 12px 16px;
+            font-size: 13.5px;
+            font-weight: 600;
+        }
+        .active-boost-banner.visible { display: flex; }
+        .active-boost-banner i { font-size: 16px; }
+
+        /* ── Responsive ── */
+        @media (max-width: 520px) {
+            body { padding: 12px 10px; }
+            .boost-container { padding: 18px; gap: 20px; border-radius: var(--r-lg); }
+            h2 { font-size: 21px; }
+            .row { flex-direction: column; }
+            .feed-actions button { font-size: 13px; gap: 5px; }
+            .budget-slider-value { font-size: 26px; }
+            .price-value { font-size: 20px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .feed-top.visible { animation: none; }
+            * { transition: none !important; animation: none !important; }
+        }
+    </style>
+    <style id="bx-additif">
+        .bx-preview { overflow: hidden; }
+        .bx-author { display:flex; align-items:center; gap:10px; margin:10px 0 6px; }
+        .bx-avatar { width:42px; height:42px; border-radius:50%; object-fit:cover; background:var(--bg-subtle); }
+        .bx-author-meta { display:flex; flex-direction:column; min-width:0; }
+        .bx-author-meta strong { font-size:15px; color:var(--text-main); }
+        .bx-author-meta span { font-size:13px; color:var(--text-secondary); }
+        .bx-media { margin:10px -16px 0; background:#000; max-height:460px; display:flex; justify-content:center; }
+        .bx-media img, .bx-media video { width:100%; max-height:460px; object-fit:contain; display:block; }
+        .bx-linkbar { display:flex; justify-content:space-between; align-items:center; gap:10px; background:var(--bg-subtle); margin:0 -16px; padding:10px 16px; }
+        .bx-linkbar small { display:block; color:var(--text-secondary); font-size:12px; }
+        .bx-linkbar strong { font-size:15px; color:var(--text-main); }
+        .bx-cta { background:var(--border); color:var(--text-main); padding:8px 14px; border-radius:var(--r-sm); font-weight:600; font-size:14px; }
+        .bx-actions { display:flex; justify-content:space-around; padding-top:10px; color:var(--text-secondary); font-size:14px; font-weight:600; border-top:1px solid var(--divider); }
+        .bx-stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+        .bx-stat { background:var(--bg-subtle); border:1px solid var(--border); border-radius:var(--r-sm); padding:12px 10px; display:flex; flex-direction:column; gap:10px; min-height:96px; }
+        .bx-stat-label { font-size:13px; color:var(--text-main); line-height:1.25; }
+        .bx-stat-value { font-size:24px; font-weight:800; color:var(--text-main); margin-top:auto; }
+        .bx-title-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+        .bx-info { width:30px; height:30px; border-radius:50%; border:1.5px solid var(--text-secondary); background:none; color:var(--text-secondary); cursor:pointer; font-size:13px; }
+        .bx-tip { display:flex; gap:12px; align-items:flex-start; background:var(--bg-subtle); border-radius:var(--r-sm); padding:14px; margin:10px 0 14px; }
+        .bx-tip > i { color:#8a3ffc; font-size:22px; margin-top:2px; }
+        .bx-tip div { flex:1; display:flex; flex-direction:column; gap:4px; font-size:14px; color:var(--text-secondary); }
+        .bx-tip div strong { color:var(--text-main); font-size:16px; }
+        .bx-tip button { border:none; background:var(--border); width:26px; height:26px; border-radius:50%; cursor:pointer; color:var(--text-main); }
+        .bx-phone-row { display:grid; grid-template-columns:minmax(120px,36%) 1fr auto; gap:10px; align-items:center; margin-top:12px; }
+        .bx-phone-row[hidden] { display:none; }
+        .bx-phone-row select, .bx-phone-row input { width:100%; }
+        .bx-phone-ok { color:var(--success); font-size:22px; visibility:hidden; }
+        .bx-phone-ok.on { visibility:visible; }
+        .bx-phone-row input.bx-bad { border-color:var(--error); }
+        .bx-switch-row { display:flex; justify-content:space-between; align-items:center; gap:14px; cursor:pointer; font-size:15px; color:var(--text-main); }
+        .bx-switch-row small { display:block; color:var(--text-secondary); font-size:13px; margin-top:4px; }
+        .bx-switch-row input { width:22px; height:22px; accent-color:var(--primary); flex:none; }
+        @media (max-width:480px){ .bx-stats-grid{ gap:6px; } .bx-stat{ padding:10px 8px; } .bx-media,.bx-linkbar{ margin-left:-12px; margin-right:-12px; } }
+            .bx-counts { display:flex; justify-content:space-between; gap:10px; padding:10px 0 8px; font-size:14px; color:var(--text-secondary); }
+        .bx-actions span { flex:1; text-align:center; padding:6px 0; }
+        .bx-media video, .bx-media img { background:#000; min-height:180px; }
+        .bx-media-error { padding:28px 16px; text-align:center; color:var(--text-secondary); background:var(--bg-subtle); font-size:14px; width:100%; }
+        .fp-media { background:#000; display:flex; justify-content:center; }
+        .fp-media video, .fp-media img { width:100%; max-height:480px; object-fit:contain; display:block; }
+    </style>
+</head>
+<body>
+
+    <!-- Haut du fil d'actualité : la publication boostée apparaît ici après le paiement -->
+    <section class="feed-top" id="feedTop" aria-label="Haut du fil d'actualité"></section>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <div class="boost-container">
+        <h2>🚀 Booster une Publication</h2>
+        <p class="subtitle">Payez pour élargir la portée réelle de votre publication dans le fil d'actualité FaceNet. Aucune fausse interaction n'est jamais générée : vous payez pour de la diffusion, pas pour des chiffres artificiels.</p>
+
+        <!-- Bannière boost actif (AJOUT cosmétique) -->
+        <div class="active-boost-banner" id="activeBoostBanner">
+            <i class="fas fa-circle-check"></i>
+            <span>Un boost est actuellement actif sur cette publication.</span>
+        </div>
+
+        {% if post is defined and post %}
+        {% set bx = boost if (boost is defined and boost) else none %}
+        <div class="post-preview-card bx-preview" id="bxPreview" data-post-id="{{ post.id }}">
+            <div class="post-preview-header">
+                <span class="sponsored-tag"><i class="fas fa-bullhorn"></i> {{ 'Reel à booster' if (bx and bx.est_reel) else 'Publication à booster' }}</span>
+                <small style="color: var(--text-secondary);">ID : #{{ post.id }}</small>
+            </div>
+            {% if bx %}
+            <div class="bx-author">
+                <img class="bx-avatar" src="{{ bx.auteur_avatar }}" alt="" loading="lazy">
+                <div class="bx-author-meta">
+                    <strong>{{ bx.auteur_nom }}</strong>
+                    <span>Sponsorisé · <i class="fas fa-earth-africa"></i>{% if bx.date %} · {{ bx.date }}{% endif %}</span>
+                </div>
+            </div>
+            {% endif %}
+            <div class="post-preview-content">
+                {{ post.contenu | truncate(220) if post.contenu else ("Reel" if (bx and bx.est_reel) else "Publication média") }}
+            </div>
+            {% if bx and bx.media_url %}
+            <div class="bx-media">
+                {% if bx.media_type == 'video' %}
+                <video src="{{ bx.media_url }}#t=0.1" data-bx-autoplay="1" muted loop controls playsinline webkit-playsinline preload="auto" onerror="bxMediaErreur(this)"></video>
+                {% else %}
+                <img src="{{ bx.media_url }}" alt="Aperçu de la publication" onerror="bxMediaErreur(this)">
+                {% endif %}
+            </div>
+            {% endif %}
+            {% if bx %}
+            <div class="bx-counts" id="bxCounts">
+                <span><i class="fas fa-thumbs-up" style="color:var(--primary)"></i> {{ bx.stats.likes }}</span>
+                <span>{{ bx.stats.comments }} commentaire{{ 's' if bx.stats.comments > 1 else '' }} · {{ bx.stats.shares }} partage{{ 's' if bx.stats.shares > 1 else '' }}</span>
+            </div>
+            {% endif %}
+            <div class="bx-linkbar"><span><small>facenet</small><strong>FaceNet</strong></span><span class="bx-cta">En savoir plus</span></div>
+            <div class="bx-actions"><span><i class="fa-regular fa-thumbs-up"></i> J'aime</span><span><i class="fa-regular fa-comment"></i> Commenter</span><span><i class="fas fa-share"></i> Partager</span></div>
+        </div>
+
+        {% if bx %}
+        <!-- Statistiques de la publication (valeurs réelles) -->
+        <div class="form-section bx-stats" id="bxStats">
+            <label class="section-label">Statistiques de la publication</label>
+            <div class="bx-stats-grid">
+                <div class="bx-stat"><span class="bx-stat-label">Spectateur(ice)s</span><span class="bx-stat-value">{{ bx.stats.viewers }}</span></div>
+                <div class="bx-stat"><span class="bx-stat-label">Interactions avec la publication</span><span class="bx-stat-value">{{ bx.stats.interactions }}</span></div>
+                <div class="bx-stat"><span class="bx-stat-label">Clics sur un lien</span><span class="bx-stat-value">{{ bx.stats.link_clicks }}</span></div>
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <!-- 1. Objectif publicitaire -->
+        <div class="form-section">
+            <label class="section-label" for="selectObjective">1. Objectif</label>
+            <select id="selectObjective" onchange="onObjectiveChange()">
+                <option value="reach">Toucher un maximum de personnes</option>
+                <option value="profile_visits">Générer des visites de profil</option>
+                <option value="link_clicks">Générer des clics vers un lien</option>
+                <option value="new_followers">Gagner de nouveaux abonnés</option>
+            </select>
+            <p class="help" id="objectiveHelp">La publication sera montrée en priorité à des personnes susceptibles de s'y intéresser, même si elles ne vous suivent pas encore.</p>
+        </div>
+
+        <!-- 2. Audience -->
+        <div class="form-section">
+            <label class="section-label">2. Audience</label>
+            <div class="toggle-group">
+                <button type="button" id="audienceAutoBtn" class="active" onclick="setAudienceMode('auto')">Automatique (recommandée)</button>
+                <button type="button" id="audienceCustomBtn" onclick="setAudienceMode('custom')">Personnalisée</button>
+            </div>
+            <p class="help" id="audienceAutoHelp">FaceNet choisit les personnes les plus susceptibles d'être intéressées, à partir de votre audience actuelle.</p>
+
+            <div class="audience-fields" id="audienceCustomFields" style="display:none;">
+                <p class="help" id="audienceCustomHelp">Définissez précisément l'audience à cibler : tranche d'âge, genre, localisation et centres d'intérêt.</p>
+                <div class="row">
+                    <div>
+                        <label class="section-label" for="ageMin">Âge minimum</label>
+                        <select id="ageMin"></select>
+                    </div>
+                    <div>
+                        <label class="section-label" for="ageMax">Âge maximum</label>
+                        <select id="ageMax"></select>
+                    </div>
+                </div>
+                <div>
+                    <label class="section-label" for="genderSelect">Genre</label>
+                    <select id="genderSelect">
+                        <option value="all">Tous</option>
+                        <option value="men">Hommes</option>
+                        <option value="women">Femmes</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="section-label" for="locationInput">Localisation (pays / ville)</label>
+                    <input type="text" id="locationInput" placeholder="Ex : Cameroun, Douala" />
+                </div>
+                <div>
+                    <label class="section-label" for="interestsField">Centres d'intérêt</label>
+                    <div class="chip-input" id="interestsChipBox">
+                        <input type="text" id="interestsField" placeholder="Tapez un centre d'intérêt et Entrée" onkeydown="onInterestKeydown(event)" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Programmation -->
+        <div class="form-section">
+            <label class="section-label">3. Programmation</label>
+            <div class="row">
+                <div>
+                    <label class="section-label" for="startDateTime">Date et heure de début</label>
+                    <input type="datetime-local" id="startDateTime" onchange="syncEndFromDuration()" />
+                </div>
+                <div>
+                    <label class="section-label" for="inputDuration">Durée (jours)</label>
+                    <input type="number" id="inputDuration" value="3" min="1" max="30" step="1" inputmode="numeric" oninput="syncEndFromDuration()" />
+                </div>
+            </div>
+            <div>
+                <label class="section-label" for="endDateTime">Date et heure de fin</label>
+                <input type="datetime-local" id="endDateTime" onchange="onEndDateTimeChange()" />
+            </div>
+            <span class="error-msg" id="scheduleError">La date et l'heure de fin doivent être postérieures à la date et l'heure de début.</span>
+            <span class="help">Modifiez soit la durée, soit la date de fin : l'autre valeur se recalcule automatiquement. Le boost s'arrête tout seul à la fin de la période.</span>
+        </div>
+
+        <!-- 4. Pays de facturation -->
+        <div class="form-section">
+            <label class="section-label" for="selectCountry">4. Pays de facturation</label>
+            <select id="selectCountry" onchange="onCountryChange()"></select>
+            <span class="help">Tous les pays sont disponibles. La devise de facturation ci-dessous est ajustée automatiquement quand c'est possible.</span>
+        </div>
+
+        <!-- 5. Devise -->
+        <div class="form-section">
+            <label class="section-label" for="selectCurrency">5. Devise de facturation</label>
+            <select id="selectCurrency" onchange="onCurrencyChange()">
+                <option value="XAF" data-rate="650">Franc CFA (BEAC - XAF)</option>
+                <option value="XOF" data-rate="650">Franc CFA (BCEAO - XOF)</option>
+                <option value="EUR" data-rate="0.92">Euro (EUR)</option>
+                <option value="USD" data-rate="1.0" selected>Dollar Américain (USD)</option>
+                <option value="GBP" data-rate="0.78">Livre Sterling (GBP)</option>
+                <option value="CAD" data-rate="1.37">Dollar canadien (CAD)</option>
+                <option value="NGN" data-rate="1500">Naira nigérian (NGN)</option>
+                <option value="KES" data-rate="130">Shilling kényan (KES)</option>
+                <option value="ZAR" data-rate="18.5">Rand sud-africain (ZAR)</option>
+                <option value="INR" data-rate="83.5">Roupie indienne (INR)</option>
+                <option value="AED" data-rate="3.67">Dirham des Émirats (AED)</option>
+            </select>
+            <span class="info-note" id="currencyNote"></span>
+        </div>
+
+        <!-- 6. Budget total -->
+        <div class="form-section">
+            <label class="section-label" for="budgetManualInput">6. Budget total</label>
+
+            <!-- Bannière promo -->
+            <div class="budget-promo-banner" id="budgetPromoBanner">
+                <i class="fas fa-fire"></i>
+                <span id="budgetPromoText">PROMO -50% sur tous les boosts</span>
+            </div>
+
+            <p class="help">Tapez votre budget directement au clavier, ou faites glisser le curseur : les deux restent toujours synchronisés.</p>
+
+            <!-- Champ de saisie manuelle -->
+            <div class="budget-manual-row">
+                <input type="text"
+                       id="budgetManualInput"
+                       inputmode="decimal"
+                       autocomplete="off"
+                       placeholder="Saisir le montant"
+                       aria-label="Saisir le montant du budget au clavier"
+                       oninput="onBudgetManualInput()"
+                       onblur="onBudgetManualBlur()"
+                       onkeydown="onBudgetManualKeydown(event)" />
+                <span class="budget-currency-badge" id="budgetCurrencyBadge">—</span>
+            </div>
+            <div class="budget-manual-hint" id="budgetManualHint">Tapez un nombre uniquement (ex. 25 000).</div>
+
+            <div class="budget-slider-wrap">
+                <div class="budget-slider-value" id="budgetSliderValue">—</div>
+                <div class="budget-slider-original" id="budgetSliderOriginal"></div>
+                <div class="budget-slider-savings" id="budgetSliderSavings"></div>
+
+                <input type="range" id="budgetSlider" min="1" max="1000" step="1" value="50" oninput="onBudgetSliderInput()" />
+                <div class="budget-slider-minmax">
+                    <span id="budgetMinLabel"></span>
+                    <span id="budgetMaxLabel"></span>
+                </div>
+            </div>
+            <input type="hidden" id="inputBudget" value="50" />
+            <span class="help" id="dailyBudgetHelp"></span>
+        </div>
+
+        <!-- Estimation de portée -->
+        <div class="estimate-box">
+            <span class="price-label">Portée quotidienne estimée</span>
+            <span class="estimate-value" id="estimateDisplay">—</span>
+            <span class="estimate-caption">Estimation approximative fournie à titre indicatif ; la portée réelle dépend de l'algorithme du fil et de la qualité de la publication.</span>
+        </div>
+
+        <!-- 7. Paiement -->
+        <div class="form-section">
+            <label class="section-label" for="paymentMethod">7. Mode de paiement</label>
+            <select id="paymentMethod" onchange="switchPaymentFields()">
+                <option value="mobile_money">Mobile Money (Orange / MTN / Moov / Wave)</option>
+                <option value="card" selected>Carte bancaire (Visa / Mastercard / Amex)</option>
+                <option value="paypal">PayPal</option>
+                <option value="crypto">Crypto-monnaie (USDT / Bitcoin)</option>
+            </select>
+        </div>
+
+        <div class="dynamic-fields-container" id="dynamicFields"></div>
+
+        <!-- Moyen de contact supplémentaire -->
+        <div class="form-section" id="bxContactSection">
+            <div class="bx-title-row"><label class="section-label" for="bxContactMethod" style="margin:0;">Moyen de contact supplémentaire</label>
+                <button type="button" class="bx-info" onclick="showToast('Aidez la clientèle à vous joindre après avoir consulté votre publicité.')" aria-label="Informations"><i class="fas fa-info"></i></button></div>
+            <p class="help">Aidez la clientèle à vous joindre après avoir vu votre publicité FaceNet.</p>
+            <div class="bx-tip" id="bxTip"><i class="fas fa-star"></i>
+                <div><strong>Aidez la clientèle à vous joindre</strong><span>Vos clients peuvent démarrer facilement un appel ou une discussion WhatsApp avec vous depuis votre publicité.</span></div>
+                <button type="button" onclick="document.getElementById('bxTip').style.display='none'" aria-label="Fermer"><i class="fas fa-xmark"></i></button></div>
+            <select id="bxContactMethod" onchange="bxContactChange()">
+                <option value="none">Aucun</option>
+                <option value="whatsapp">WhatsApp</option>
+                <option value="phone" selected>Appel téléphonique</option>
+            </select>
+            <div class="bx-phone-row" id="bxPhoneRow">
+                <select id="bxPhoneCountry" aria-label="Pays"></select>
+                <input type="tel" id="bxPhoneNumber" inputmode="tel" autocomplete="tel-national" placeholder="Numéro de téléphone" maxlength="18" value="{{ (boost.telephone if (boost is defined and boost) else '') }}">
+                <span class="bx-phone-ok" id="bxPhoneOk" aria-hidden="true"><i class="fas fa-circle-check"></i></span>
+            </div>
+            <p class="help" id="bxPhoneHelp">Les informations sur le numéro de téléphone sont soumises aux restrictions en matière d'utilisation des données présentes dans les règles publicitaires FaceNet.</p>
+        </div>
+
+        <!-- Contenu publicitaire Advantage+ -->
+        <div class="form-section" id="bxAdvSection">
+            <div class="bx-title-row"><label class="section-label" style="margin:0;">Contenu publicitaire Advantage+</label>
+                <button type="button" class="bx-info" onclick="showToast('Advantage+ optimise automatiquement la diffusion de votre publicité.')" aria-label="Informations"><i class="fas fa-info"></i></button></div>
+            <label class="bx-switch-row"><span>Optimiser automatiquement le contenu et la diffusion<small>FaceNet ajuste le format et les emplacements pour toucher plus de personnes intéressées.</small></span>
+                <input type="checkbox" id="bxAdvantage" checked></label>
+        </div>
+
+        <div class="price-summary-box">
+            <span class="price-label">Montant total :</span>
+            <span class="price-value" id="totalDisplay">—</span>
+        </div>
+
+        <div class="error-msg" id="formError" role="alert"></div>
+        <div class="success-msg" id="formSuccess" role="status"></div>
+
+        <button class="btn-submit" id="payBtn" onclick="processPayment()">
+            <i class="fas fa-rocket"></i> Payer et lancer le boost
+        </button>
+        <div class="security-note"><i class="fas fa-lock"></i> Paiement chiffré, traité par notre prestataire de paiement</div>
+    </div>
+
+<script>
+    const CURRENT_POST_ID = {{ post.id if post is defined and post else 'null' }};
+    const CURRENT_POST_CONTENT = {{ (post.contenu | tojson) if post is defined and post and post.contenu else 'null' }};
+    const BOOST_MEDIA = {{ ({'url': boost.media_url, 'type': boost.media_type} | tojson) if (boost is defined and boost) else 'null' }};
+    const BOOST_STATS = {{ (boost.stats | tojson) if (boost is defined and boost) else '{"likes":0,"comments":0,"shares":0}' }};
+
+    /* Compteurs réels de la publication (ajoutés aux interactions locales du haut du fil) */
+    function bxBase(post) {
+        if (post && String(post.id) === String(CURRENT_POST_ID)) {
+            post.baseLikes = BOOST_STATS.likes || 0;
+            post.baseComments = BOOST_STATS.comments || 0;
+            post.baseShares = BOOST_STATS.shares || 0;
+        }
+        return post;
+    }
+    function bxMediaErreur(el) {
+        if (!el || !el.parentNode) return;
+        const d = document.createElement('div');
+        d.className = 'bx-media-error';
+        d.textContent = 'Média indisponible pour le moment.';
+        el.replaceWith(d);
+    }
+    /* Lecture automatique quand la vidéo est visible, pause dès qu'on scrolle ailleurs */
+    const bxIO = ('IntersectionObserver' in window) ? new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+            const v = en.target;
+            if (en.isIntersecting && en.intersectionRatio >= 0.5) { v.muted = v.dataset.bxUnmuted === '1' ? false : true; const p = v.play(); if (p && p.catch) p.catch(function () {}); }
+            else { v.pause(); }
+        });
+    }, { threshold: [0, 0.5, 1] }) : null;
+    function bxWatchVideo(v) {
+        if (!v || v.dataset.bxWatched === '1') return;
+        v.dataset.bxWatched = '1';
+        v.addEventListener('volumechange', function () { v.dataset.bxUnmuted = v.muted ? '0' : '1'; });
+        if (bxIO) bxIO.observe(v); else { const p = v.play(); if (p && p.catch) p.catch(function () {}); }
+    }
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) document.querySelectorAll('video[data-bx-autoplay]').forEach(function (v) { v.pause(); });
+    });
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('video[data-bx-autoplay]').forEach(bxWatchVideo);
+    });
+    /* Média (photo/vidéo) dans la publication épinglée en haut du fil */
+    function bxInjectFeedMedia(post) {
+        if (!BOOST_MEDIA || !BOOST_MEDIA.url || String(post.id) !== String(CURRENT_POST_ID)) return;
+        const body = document.getElementById('fpBody');
+        if (!body || document.getElementById('fpMedia')) return;
+        const wrap = document.createElement('div');
+        wrap.id = 'fpMedia'; wrap.className = 'fp-media';
+        if (BOOST_MEDIA.type === 'video') {
+            const v = document.createElement('video');
+            v.src = BOOST_MEDIA.url + '#t=0.1'; v.muted = true; v.loop = true; v.controls = true; v.playsInline = true;
+            v.preload = 'auto'; v.setAttribute('data-bx-autoplay', '1'); v.addEventListener('error', function () { bxMediaErreur(v); });
+            wrap.appendChild(v); body.after(wrap); bxWatchVideo(v);
+        } else {
+            const i = document.createElement('img');
+            i.src = BOOST_MEDIA.url; i.alt = 'Publication boostée'; i.addEventListener('error', function () { bxMediaErreur(i); });
+            wrap.appendChild(i); body.after(wrap);
+        }
+    }
+    const POST_URL_TEMPLATE = '/post/{id}';   // Adaptez à l'URL réelle d'une publication
+    const interests = [];
+
+    /* ══════════════════════════════════════════════════════════════
+       REMISE GLOBALE — Modifiez UNIQUEMENT cette ligne pour changer
+       la réduction appliquée à tous les boosts, dans toutes les devises,
+       pour la barre ET pour la saisie manuelle.
+       Exemples : 30 = -30 %, 50 = -50 %, 0 = pas de remise.
+    ══════════════════════════════════════════════════════════════ */
+    const DISCOUNT_PERCENT = 50;
+    const DISCOUNT_FACTOR = 1 - (DISCOUNT_PERCENT / 100);
+
+    // Applique la remise à un montant (prix "normal" -> prix "promo").
+    function applyDiscount(amount) {
+        return amount * DISCOUNT_FACTOR;
+    }
+
+    const allCountries = [
+        { name: "Afghanistan", code: "AF", phoneCode: "+93", currency: "AFN" },
+        { name: "Afrique du Sud", code: "ZA", phoneCode: "+27", currency: "ZAR" },
+        { name: "Albanie", code: "AL", phoneCode: "+355", currency: "ALL" },
+        { name: "Algérie", code: "DZ", phoneCode: "+213", currency: "DZD" },
+        { name: "Allemagne", code: "DE", phoneCode: "+49", currency: "EUR" },
+        { name: "Andorre", code: "AD", phoneCode: "+376", currency: "EUR" },
+        { name: "Angola", code: "AO", phoneCode: "+244", currency: "AOA" },
+        { name: "Antigua-et-Barbuda", code: "AG", phoneCode: "+1", currency: "XCD" },
+        { name: "Arabie saoudite", code: "SA", phoneCode: "+966", currency: "SAR" },
+        { name: "Argentine", code: "AR", phoneCode: "+54", currency: "ARS" },
+        { name: "Arménie", code: "AM", phoneCode: "+374", currency: "AMD" },
+        { name: "Australie", code: "AU", phoneCode: "+61", currency: "AUD" },
+        { name: "Autriche", code: "AT", phoneCode: "+43", currency: "EUR" },
+        { name: "Azerbaïdjan", code: "AZ", phoneCode: "+994", currency: "AZN" },
+        { name: "Bahamas", code: "BS", phoneCode: "+1", currency: "BSD" },
+        { name: "Bahreïn", code: "BH", phoneCode: "+973", currency: "BHD" },
+        { name: "Bangladesh", code: "BD", phoneCode: "+880", currency: "BDT" },
+        { name: "Barbade", code: "BB", phoneCode: "+1", currency: "BBD" },
+        { name: "Belgique", code: "BE", phoneCode: "+32", currency: "EUR" },
+        { name: "Belize", code: "BZ", phoneCode: "+501", currency: "BZD" },
+        { name: "Bénin", code: "BJ", phoneCode: "+229", currency: "XOF", operators: ["MTN Mobile Money", "Moov Money"] },
+        { name: "Bhoutan", code: "BT", phoneCode: "+975", currency: "BTN" },
+        { name: "Biélorussie", code: "BY", phoneCode: "+375", currency: "BYN" },
+        { name: "Birmanie (Myanmar)", code: "MM", phoneCode: "+95", currency: "MMK" },
+        { name: "Bolivie", code: "BO", phoneCode: "+591", currency: "BOB" },
+        { name: "Bosnie-Herzégovine", code: "BA", phoneCode: "+387", currency: "BAM" },
+        { name: "Botswana", code: "BW", phoneCode: "+267", currency: "BWP" },
+        { name: "Brésil", code: "BR", phoneCode: "+55", currency: "BRL" },
+        { name: "Brunei", code: "BN", phoneCode: "+673", currency: "BND" },
+        { name: "Bulgarie", code: "BG", phoneCode: "+359", currency: "BGN" },
+        { name: "Burkina Faso", code: "BF", phoneCode: "+226", currency: "XOF", operators: ["Orange Money", "Moov Money"] },
+        { name: "Burundi", code: "BI", phoneCode: "+257", currency: "BIF" },
+        { name: "Cambodge", code: "KH", phoneCode: "+855", currency: "KHR" },
+        { name: "Cameroun", code: "CM", phoneCode: "+237", currency: "XAF", operators: ["Orange Money", "MTN Mobile Money"] },
+        { name: "Canada", code: "CA", phoneCode: "+1", currency: "CAD" },
+        { name: "Cap-Vert", code: "CV", phoneCode: "+238", currency: "CVE" },
+        { name: "République centrafricaine", code: "CF", phoneCode: "+236", currency: "XAF" },
+        { name: "Chili", code: "CL", phoneCode: "+56", currency: "CLP" },
+        { name: "Chine", code: "CN", phoneCode: "+86", currency: "CNY" },
+        { name: "Chypre", code: "CY", phoneCode: "+357", currency: "EUR" },
+        { name: "Colombie", code: "CO", phoneCode: "+57", currency: "COP" },
+        { name: "Comores", code: "KM", phoneCode: "+269", currency: "KMF" },
+        { name: "Congo", code: "CG", phoneCode: "+242", currency: "XAF", operators: ["MTN Mobile Money", "Airtel Money"] },
+        { name: "République démocratique du Congo", code: "CD", phoneCode: "+243", currency: "CDF", operators: ["Orange Money", "Airtel Money", "M-Pesa"] },
+        { name: "Corée du Nord", code: "KP", phoneCode: "+850", currency: "KPW" },
+        { name: "Corée du Sud", code: "KR", phoneCode: "+82", currency: "KRW" },
+        { name: "Costa Rica", code: "CR", phoneCode: "+506", currency: "CRC" },
+        { name: "Côte d'Ivoire", code: "CI", phoneCode: "+225", currency: "XOF", operators: ["Orange Money", "MTN Mobile Money", "Wave", "Moov Money"] },
+        { name: "Croatie", code: "HR", phoneCode: "+385", currency: "EUR" },
+        { name: "Cuba", code: "CU", phoneCode: "+53", currency: "CUP" },
+        { name: "Danemark", code: "DK", phoneCode: "+45", currency: "DKK" },
+        { name: "Djibouti", code: "DJ", phoneCode: "+253", currency: "DJF" },
+        { name: "Dominique", code: "DM", phoneCode: "+1", currency: "XCD" },
+        { name: "Égypte", code: "EG", phoneCode: "+20", currency: "EGP" },
+        { name: "Émirats arabes unis", code: "AE", phoneCode: "+971", currency: "AED" },
+        { name: "Équateur", code: "EC", phoneCode: "+593", currency: "USD" },
+        { name: "Érythrée", code: "ER", phoneCode: "+291", currency: "ERN" },
+        { name: "Espagne", code: "ES", phoneCode: "+34", currency: "EUR" },
+        { name: "Estonie", code: "EE", phoneCode: "+372", currency: "EUR" },
+        { name: "Eswatini", code: "SZ", phoneCode: "+268", currency: "SZL" },
+        { name: "États-Unis", code: "US", phoneCode: "+1", currency: "USD" },
+        { name: "Éthiopie", code: "ET", phoneCode: "+251", currency: "ETB" },
+        { name: "Fidji", code: "FJ", phoneCode: "+679", currency: "FJD" },
+        { name: "Finlande", code: "FI", phoneCode: "+358", currency: "EUR" },
+        { name: "France", code: "FR", phoneCode: "+33", currency: "EUR" },
+        { name: "Gabon", code: "GA", phoneCode: "+241", currency: "XAF", operators: ["Airtel Money", "Moov Money"] },
+        { name: "Gambie", code: "GM", phoneCode: "+220", currency: "GMD" },
+        { name: "Géorgie", code: "GE", phoneCode: "+995", currency: "GEL" },
+        { name: "Ghana", code: "GH", phoneCode: "+233", currency: "GHS", operators: ["MTN Mobile Money", "AirtelTigo Money", "Vodafone Cash"] },
+        { name: "Grèce", code: "GR", phoneCode: "+30", currency: "EUR" },
+        { name: "Grenade", code: "GD", phoneCode: "+1", currency: "XCD" },
+        { name: "Guatemala", code: "GT", phoneCode: "+502", currency: "GTQ" },
+        { name: "Guinée", code: "GN", phoneCode: "+224", currency: "GNF", operators: ["Orange Money", "MTN Mobile Money"] },
+        { name: "Guinée-Bissau", code: "GW", phoneCode: "+245", currency: "XOF" },
+        { name: "Guinée équatoriale", code: "GQ", phoneCode: "+240", currency: "XAF" },
+        { name: "Guyana", code: "GY", phoneCode: "+592", currency: "GYD" },
+        { name: "Haïti", code: "HT", phoneCode: "+509", currency: "HTG" },
+        { name: "Honduras", code: "HN", phoneCode: "+504", currency: "HNL" },
+        { name: "Hongrie", code: "HU", phoneCode: "+36", currency: "HUF" },
+        { name: "Îles Cook", code: "CK", phoneCode: "+682", currency: "NZD" },
+        { name: "Îles Marshall", code: "MH", phoneCode: "+692", currency: "USD" },
+        { name: "Îles Salomon", code: "SB", phoneCode: "+677", currency: "SBD" },
+        { name: "Inde", code: "IN", phoneCode: "+91", currency: "INR" },
+        { name: "Indonésie", code: "ID", phoneCode: "+62", currency: "IDR" },
+        { name: "Irak", code: "IQ", phoneCode: "+964", currency: "IQD" },
+        { name: "Iran", code: "IR", phoneCode: "+98", currency: "IRR" },
+        { name: "Irlande", code: "IE", phoneCode: "+353", currency: "EUR" },
+        { name: "Islande", code: "IS", phoneCode: "+354", currency: "ISK" },
+        { name: "Israël", code: "IL", phoneCode: "+972", currency: "ILS" },
+        { name: "Italie", code: "IT", phoneCode: "+39", currency: "EUR" },
+        { name: "Jamaïque", code: "JM", phoneCode: "+1", currency: "JMD" },
+        { name: "Japon", code: "JP", phoneCode: "+81", currency: "JPY" },
+        { name: "Jordanie", code: "JO", phoneCode: "+962", currency: "JOD" },
+        { name: "Kazakhstan", code: "KZ", phoneCode: "+7", currency: "KZT" },
+        { name: "Kenya", code: "KE", phoneCode: "+254", currency: "KES", operators: ["M-Pesa", "Airtel Money"] },
+        { name: "Kirghizistan", code: "KG", phoneCode: "+996", currency: "KGS" },
+        { name: "Kiribati", code: "KI", phoneCode: "+686", currency: "AUD" },
+        { name: "Kosovo", code: "XK", phoneCode: "+383", currency: "EUR" },
+        { name: "Koweït", code: "KW", phoneCode: "+965", currency: "KWD" },
+        { name: "Laos", code: "LA", phoneCode: "+856", currency: "LAK" },
+        { name: "Lesotho", code: "LS", phoneCode: "+266", currency: "LSL" },
+        { name: "Lettonie", code: "LV", phoneCode: "+371", currency: "EUR" },
+        { name: "Liban", code: "LB", phoneCode: "+961", currency: "LBP" },
+        { name: "Liberia", code: "LR", phoneCode: "+231", currency: "LRD" },
+        { name: "Libye", code: "LY", phoneCode: "+218", currency: "LYD" },
+        { name: "Liechtenstein", code: "LI", phoneCode: "+423", currency: "CHF" },
+        { name: "Lituanie", code: "LT", phoneCode: "+370", currency: "EUR" },
+        { name: "Luxembourg", code: "LU", phoneCode: "+352", currency: "EUR" },
+        { name: "Macédoine du Nord", code: "MK", phoneCode: "+389", currency: "MKD" },
+        { name: "Madagascar", code: "MG", phoneCode: "+261", currency: "MGA", operators: ["Orange Money", "Airtel Money", "Mvola"] },
+        { name: "Malaisie", code: "MY", phoneCode: "+60", currency: "MYR" },
+        { name: "Malawi", code: "MW", phoneCode: "+265", currency: "MWK" },
+        { name: "Maldives", code: "MV", phoneCode: "+960", currency: "MVR" },
+        { name: "Mali", code: "ML", phoneCode: "+223", currency: "XOF", operators: ["Orange Money", "Moov Money"] },
+        { name: "Malte", code: "MT", phoneCode: "+356", currency: "EUR" },
+        { name: "Maroc", code: "MA", phoneCode: "+212", currency: "MAD" },
+        { name: "Maurice", code: "MU", phoneCode: "+230", currency: "MUR" },
+        { name: "Mauritanie", code: "MR", phoneCode: "+222", currency: "MRU" },
+        { name: "Mexique", code: "MX", phoneCode: "+52", currency: "MXN" },
+        { name: "Micronésie", code: "FM", phoneCode: "+691", currency: "USD" },
+        { name: "Moldavie", code: "MD", phoneCode: "+373", currency: "MDL" },
+        { name: "Monaco", code: "MC", phoneCode: "+377", currency: "EUR" },
+        { name: "Mongolie", code: "MN", phoneCode: "+976", currency: "MNT" },
+        { name: "Monténégro", code: "ME", phoneCode: "+382", currency: "EUR" },
+        { name: "Mozambique", code: "MZ", phoneCode: "+258", currency: "MZN", operators: ["M-Pesa", "eMola"] },
+        { name: "Namibie", code: "NA", phoneCode: "+264", currency: "NAD" },
+        { name: "Nauru", code: "NR", phoneCode: "+674", currency: "AUD" },
+        { name: "Népal", code: "NP", phoneCode: "+977", currency: "NPR" },
+        { name: "Nicaragua", code: "NI", phoneCode: "+505", currency: "NIO" },
+        { name: "Niger", code: "NE", phoneCode: "+227", currency: "XOF", operators: ["Orange Money", "Moov Money", "Airtel Money"] },
+        { name: "Nigeria", code: "NG", phoneCode: "+234", currency: "NGN", operators: ["MTN MoMo", "Airtel Money", "OPay"] },
+        { name: "Norvège", code: "NO", phoneCode: "+47", currency: "NOK" },
+        { name: "Nouvelle-Zélande", code: "NZ", phoneCode: "+64", currency: "NZD" },
+        { name: "Oman", code: "OM", phoneCode: "+968", currency: "OMR" },
+        { name: "Ouganda", code: "UG", phoneCode: "+256", currency: "UGX", operators: ["MTN Mobile Money", "Airtel Money"] },
+        { name: "Ouzbékistan", code: "UZ", phoneCode: "+998", currency: "UZS" },
+        { name: "Pakistan", code: "PK", phoneCode: "+92", currency: "PKR" },
+        { name: "Palaos", code: "PW", phoneCode: "+680", currency: "USD" },
+        { name: "Palestine", code: "PS", phoneCode: "+970", currency: "ILS" },
+        { name: "Panama", code: "PA", phoneCode: "+507", currency: "PAB" },
+        { name: "Papouasie-Nouvelle-Guinée", code: "PG", phoneCode: "+675", currency: "PGK" },
+        { name: "Paraguay", code: "PY", phoneCode: "+595", currency: "PYG" },
+        { name: "Pays-Bas", code: "NL", phoneCode: "+31", currency: "EUR" },
+        { name: "Pérou", code: "PE", phoneCode: "+51", currency: "PEN" },
+        { name: "Philippines", code: "PH", phoneCode: "+63", currency: "PHP" },
+        { name: "Pologne", code: "PL", phoneCode: "+48", currency: "PLN" },
+        { name: "Portugal", code: "PT", phoneCode: "+351", currency: "EUR" },
+        { name: "Qatar", code: "QA", phoneCode: "+974", currency: "QAR" },
+        { name: "République dominicaine", code: "DO", phoneCode: "+1", currency: "DOP" },
+        { name: "République tchèque", code: "CZ", phoneCode: "+420", currency: "CZK" },
+        { name: "Roumanie", code: "RO", phoneCode: "+40", currency: "RON" },
+        { name: "Royaume-Uni", code: "GB", phoneCode: "+44", currency: "GBP" },
+        { name: "Russie", code: "RU", phoneCode: "+7", currency: "RUB" },
+        { name: "Rwanda", code: "RW", phoneCode: "+250", currency: "RWF", operators: ["MTN Mobile Money", "Airtel Money"] },
+        { name: "Saint-Kitts-et-Nevis", code: "KN", phoneCode: "+1", currency: "XCD" },
+        { name: "Saint-Marin", code: "SM", phoneCode: "+378", currency: "EUR" },
+        { name: "Saint-Vincent-et-les-Grenadines", code: "VC", phoneCode: "+1", currency: "XCD" },
+        { name: "Sainte-Lucie", code: "LC", phoneCode: "+1", currency: "XCD" },
+        { name: "Salvador", code: "SV", phoneCode: "+503", currency: "USD" },
+        { name: "Samoa", code: "WS", phoneCode: "+685", currency: "WST" },
+        { name: "Sao Tomé-et-Principe", code: "ST", phoneCode: "+239", currency: "STN" },
+        { name: "Sénégal", code: "SN", phoneCode: "+221", currency: "XOF", operators: ["Orange Money", "Wave", "Free Money"] },
+        { name: "Serbie", code: "RS", phoneCode: "+381", currency: "RSD" },
+        { name: "Seychelles", code: "SC", phoneCode: "+248", currency: "SCR" },
+        { name: "Sierra Leone", code: "SL", phoneCode: "+232", currency: "SLE" },
+        { name: "Singapour", code: "SG", phoneCode: "+65", currency: "SGD" },
+        { name: "Slovaquie", code: "SK", phoneCode: "+421", currency: "EUR" },
+        { name: "Slovénie", code: "SI", phoneCode: "+386", currency: "EUR" },
+        { name: "Somalie", code: "SO", phoneCode: "+252", currency: "SOS" },
+        { name: "Soudan", code: "SD", phoneCode: "+249", currency: "SDG" },
+        { name: "Soudan du Sud", code: "SS", phoneCode: "+211", currency: "SSP" },
+        { name: "Sri Lanka", code: "LK", phoneCode: "+94", currency: "LKR" },
+        { name: "Suède", code: "SE", phoneCode: "+46", currency: "SEK" },
+        { name: "Suisse", code: "CH", phoneCode: "+41", currency: "CHF" },
+        { name: "Suriname", code: "SR", phoneCode: "+597", currency: "SRD" },
+        { name: "Syrie", code: "SY", phoneCode: "+963", currency: "SYP" },
+        { name: "Tadjikistan", code: "TJ", phoneCode: "+992", currency: "TJS" },
+        { name: "Tanzanie", code: "TZ", phoneCode: "+255", currency: "TZS", operators: ["M-Pesa", "Tigo Pesa", "Airtel Money"] },
+        { name: "Tchad", code: "TD", phoneCode: "+235", currency: "XAF", operators: ["Airtel Money", "Moov Money"] },
+        { name: "Thaïlande", code: "TH", phoneCode: "+66", currency: "THB" },
+        { name: "Timor oriental", code: "TL", phoneCode: "+670", currency: "USD" },
+        { name: "Togo", code: "TG", phoneCode: "+228", currency: "XOF", operators: ["Moov Money", "Togocom Money"] },
+        { name: "Tonga", code: "TO", phoneCode: "+676", currency: "TOP" },
+        { name: "Trinité-et-Tobago", code: "TT", phoneCode: "+1", currency: "TTD" },
+        { name: "Tunisie", code: "TN", phoneCode: "+216", currency: "TND" },
+        { name: "Turkménistan", code: "TM", phoneCode: "+993", currency: "TMT" },
+        { name: "Turquie", code: "TR", phoneCode: "+90", currency: "TRY" },
+        { name: "Tuvalu", code: "TV", phoneCode: "+688", currency: "AUD" },
+        { name: "Ukraine", code: "UA", phoneCode: "+380", currency: "UAH" },
+        { name: "Uruguay", code: "UY", phoneCode: "+598", currency: "UYU" },
+        { name: "Vanuatu", code: "VU", phoneCode: "+678", currency: "VUV" },
+        { name: "Vatican", code: "VA", phoneCode: "+379", currency: "EUR" },
+        { name: "Venezuela", code: "VE", phoneCode: "+58", currency: "VES" },
+        { name: "Vietnam", code: "VN", phoneCode: "+84", currency: "VND" },
+        { name: "Yémen", code: "YE", phoneCode: "+967", currency: "YER" },
+        { name: "Zambie", code: "ZM", phoneCode: "+260", currency: "ZMW", operators: ["Airtel Money", "MTN Mobile Money"] },
+        { name: "Zimbabwe", code: "ZW", phoneCode: "+263", currency: "ZWL" }
+    ];
+
+    const objectiveHelpText = {
+        reach: "La publication sera montrée en priorité à des personnes susceptibles de s'y intéresser, même si elles ne vous suivent pas encore.",
+        profile_visits: "La publication met en avant un bouton \"Voir le profil\" pour encourager les visites.",
+        link_clicks: "La publication met en avant le lien inclus, pour générer des clics.",
+        new_followers: "La publication met en avant un bouton \"Suivre\" pour encourager de nouveaux abonnements."
+    };
+
+    function populateAgeSelects() {
+        const min = document.getElementById('ageMin');
+        const max = document.getElementById('ageMax');
+        let optsMin = '', optsMax = '';
+        for (let age = 13; age <= 65; age += (age < 20 ? 1 : 5)) {
+            optsMin += `<option value="${age}" ${age === 18 ? 'selected' : ''}>${age} ans</option>`;
+            optsMax += `<option value="${age}" ${age === 65 ? 'selected' : ''}>${age} ans</option>`;
+        }
+        min.innerHTML = optsMin;
+        max.innerHTML = optsMax;
+    }
+
+    function onObjectiveChange() {
+        const objective = document.getElementById('selectObjective').value;
+        document.getElementById('objectiveHelp').innerText = objectiveHelpText[objective];
+    }
+
+    function setAudienceMode(mode) {
+        document.getElementById('audienceAutoBtn').classList.toggle('active', mode === 'auto');
+        document.getElementById('audienceCustomBtn').classList.toggle('active', mode === 'custom');
+        document.getElementById('audienceCustomFields').style.display = mode === 'custom' ? 'flex' : 'none';
+        document.getElementById('audienceAutoHelp').style.display = mode === 'auto' ? 'block' : 'none';
+    }
+
+    function onInterestKeydown(e) {
+        if (e.key === 'Enter' && e.target.value.trim()) {
+            e.preventDefault();
+            addInterestChip(e.target.value.trim());
+            e.target.value = '';
+        }
+    }
+
+    function addInterestChip(text) {
+        text = String(text).trim().slice(0, 40);
+        if (!text || interests.length >= 15 || interests.some(i => i.toLowerCase() === text.toLowerCase())) return;
+        interests.push(text);
+        const box = document.getElementById('interestsChipBox');
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.appendChild(document.createTextNode(text + ' '));
+        const close = document.createElement('i');
+        close.className = 'fas fa-times';
+        close.setAttribute('role', 'button');
+        close.setAttribute('aria-label', 'Retirer ' + text);
+        close.addEventListener('click', () => removeInterestChip(close, text));
+        chip.appendChild(close);
+        box.insertBefore(chip, document.getElementById('interestsField'));
+    }
+
+    function removeInterestChip(el, text) {
+        const idx = interests.indexOf(text);
+        if (idx > -1) interests.splice(idx, 1);
+        el.parentElement.remove();
+    }
+
+    // --- Dates / durée ---
+    function toLocalInputValue(date) {
+        const tzOffset = date.getTimezoneOffset() * 60000;
+        return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
+    }
+
+    function initSchedule() {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() + 5);
+        document.getElementById('startDateTime').value = toLocalInputValue(now);
+        syncEndFromDuration();
+    }
+
+    function setScheduleError(message) {
+        const errorEl = document.getElementById('scheduleError');
+        const endInput = document.getElementById('endDateTime');
+        if (message) {
+            errorEl.innerText = message;
+            errorEl.style.display = 'block';
+            endInput.classList.add('input-error');
+        } else {
+            errorEl.style.display = 'none';
+            endInput.classList.remove('input-error');
+        }
+    }
+
+    function isScheduleValid() {
+        return document.getElementById('scheduleError').style.display !== 'block';
+    }
+
+    function syncEndFromDuration() {
+        const startVal = document.getElementById('startDateTime').value;
+        if (!startVal) return;
+        const start = new Date(startVal);
+        let days = Math.max(1, parseInt(document.getElementById('inputDuration').value) || 1);
+        if (days > 30) { days = 30; document.getElementById('inputDuration').value = 30; }
+        const end = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
+        document.getElementById('endDateTime').value = toLocalInputValue(end);
+        setScheduleError(null);
+        updateEstimate();
+    }
+
+    function onEndDateTimeChange() {
+        const startVal = document.getElementById('startDateTime').value;
+        const endVal = document.getElementById('endDateTime').value;
+        const start = new Date(startVal);
+        const end = new Date(endVal);
+        const diffMs = end - start;
+
+        if (!startVal || !endVal || isNaN(diffMs) || diffMs <= 0) {
+            setScheduleError("La date et l'heure de fin doivent être postérieures à la date et l'heure de début.");
+            return;
+        }
+        if (diffMs > 30 * 24 * 60 * 60 * 1000) {
+            setScheduleError("La durée maximale d'un boost est de 30 jours.");
+            return;
+        }
+        setScheduleError(null);
+        document.getElementById('inputDuration').value = Math.max(1, Math.round(diffMs / (24 * 60 * 60 * 1000)));
+        updateEstimate();
+    }
+
+    // --- Pays / devise ---
+    function populateCountrySelect() {
+        const select = document.getElementById('selectCountry');
+        const sorted = [...allCountries].sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+        select.innerHTML = sorted.map(c =>
+            `<option value="${c.code}" data-phone="${c.phoneCode}" data-currency="${c.currency}">${c.name}</option>`
+        ).join('');
+        const defaultCountry = sorted.find(c => c.code === 'CM');
+        if (defaultCountry) select.value = defaultCountry.code;
+    }
+
+    function getSelectedCurrencyData() {
+        const select = document.getElementById('selectCurrency');
+        const opt = select.options[select.selectedIndex];
+        return { currencyCode: opt.value, rate: parseFloat(opt.getAttribute('data-rate')) };
+    }
+
+    function getSelectedCountryData() {
+        const select = document.getElementById('selectCountry');
+        if (!select || select.selectedIndex === -1) return null;
+        const opt = select.options[select.selectedIndex];
+        return { countryCode: opt.value, phoneCode: opt.getAttribute('data-phone'), countryName: opt.textContent, currency: opt.getAttribute('data-currency') };
+    }
+
+    function onCountryChange() {
+        const country = getSelectedCountryData();
+        const currencySelect = document.getElementById('selectCurrency');
+        const note = document.getElementById('currencyNote');
+        const hasCurrency = country && Array.from(currencySelect.options).some(o => o.value === country.currency);
+
+        if (hasCurrency) {
+            currencySelect.value = country.currency;
+            note.innerText = '';
+        } else if (country) {
+            note.innerText = `${country.countryName} facture habituellement en ${country.currency} ; devise la plus proche disponible sélectionnée ci-dessus.`;
+        }
+        updateCountryAndPayment();
+    }
+
+    function onCurrencyChange() {
+        document.getElementById('currencyNote').innerText = '';
+        updateCountryAndPayment();
+    }
+
+    function updateCountryAndPayment() {
+        refreshBudgetForCurrency();
+        updateBudgetCurrencyBadge();
+        if (document.getElementById('paymentMethod').value === 'mobile_money') switchPaymentFields();
+    }
+
+    // --- Curseur de budget (avec remise appliquée) ---
+    // Le curseur reste calibré sur un équivalent USD brut (1 à 1000). À chaque
+    // position, on calcule le montant "prix normal" (usdEquivalent * rate),
+    // puis on applique la remise pour obtenir le montant réellement payé.
+    // C'est ce montant remisé qui est stocké dans inputBudget et envoyé au serveur.
+    function onBudgetSliderInput() {
+        const slider = document.getElementById('budgetSlider');
+        const { currencyCode, rate } = getSelectedCurrencyData();
+        const usdEquivalent = Math.max(1, parseFloat(slider.value) || 1);
+
+        const baseAmount = usdEquivalent * rate;                 // Prix normal (avant promo)
+        const localAmount = applyDiscount(baseAmount);           // Prix remisé (ce que paie l'utilisateur)
+
+        const percent = ((usdEquivalent - slider.min) / (slider.max - slider.min)) * 100;
+        slider.style.background = `linear-gradient(to right, var(--primary) 0%, var(--primary) ${percent}%, var(--border) ${percent}%, var(--border) 100%)`;
+
+        document.getElementById('inputBudget').value = localAmount;
+        document.getElementById('budgetSliderValue').innerText = formatMoney(localAmount, currencyCode);
+
+        // Affichage "prix normal barré" + économies
+        const originalEl = document.getElementById('budgetSliderOriginal');
+        const savingsEl = document.getElementById('budgetSliderSavings');
+        if (DISCOUNT_PERCENT > 0) {
+            if (originalEl) originalEl.innerText = `Prix normal : ${formatMoney(baseAmount, currencyCode)}`;
+            if (savingsEl) savingsEl.innerText = `Vous économisez ${formatMoney(baseAmount - localAmount, currencyCode)} (-${DISCOUNT_PERCENT}%)`;
+        } else {
+            if (originalEl) originalEl.innerText = '';
+            if (savingsEl) savingsEl.innerText = '';
+        }
+
+        document.getElementById('budgetMinLabel').innerText = formatMoney(applyDiscount(1 * rate), currencyCode);
+        document.getElementById('budgetMaxLabel').innerText = formatMoney(applyDiscount(1000 * rate), currencyCode);
+
+        syncManualFromSlider(localAmount, currencyCode);
+
+        updateEstimate();
+    }
+
+    function refreshBudgetForCurrency() {
+        onBudgetSliderInput();
+    }
+
+    function formatMoney(amount, currencyCode) {
+        try {
+            return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: currencyCode, maximumFractionDigits: 0 }).format(amount);
+        } catch (e) {
+            return `${Math.round(amount).toLocaleString('fr-FR')} ${currencyCode}`;
+        }
+    }
+
+    function updateEstimate() {
+        const { currencyCode, rate } = getSelectedCurrencyData();
+        const budget = Math.max(0, parseFloat(document.getElementById('inputBudget').value) || 0);
+        const duration = Math.max(1, parseInt(document.getElementById('inputDuration').value) || 1);
+
+        document.getElementById('totalDisplay').innerText = formatMoney(budget, currencyCode);
+
+        const dailyBudget = budget / duration;
+        document.getElementById('dailyBudgetHelp').innerText = `Soit environ ${formatMoney(dailyBudget, currencyCode)} par jour sur ${duration} jour(s).`;
+
+        const dailyUSD = dailyBudget / rate;
+        const low = Math.round(dailyUSD * 800);
+        const high = Math.round(dailyUSD * 1800);
+        document.getElementById('estimateDisplay').innerText = dailyUSD > 0
+            ? `${low.toLocaleString('fr-FR')} - ${high.toLocaleString('fr-FR')} comptes/jour`
+            : '—';
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       SAISIE MANUELLE DU BUDGET
+       L'utilisateur tape ce qu'il veut payer (prix déjà remisé).
+       Le curseur se repositionne automatiquement sur l'équivalent
+       "prix normal", afin que la cohérence reste parfaite.
+    ══════════════════════════════════════════════════════════════ */
+    let isEditingBudget = false;
+
+    function getBudgetBounds() {
+        const { rate } = getSelectedCurrencyData();
+        return { minLocal: applyDiscount(1 * rate), maxLocal: applyDiscount(1000 * rate), rate };
+    }
+
+    function parseBudgetInput(raw) {
+        if (raw == null) return NaN;
+        let s = String(raw).trim();
+        if (!s) return NaN;
+        s = s.replace(/[^\d.,]/g, '');
+        if (!s) return NaN;
+
+        const hasComma = s.includes(',');
+        const hasDot = s.includes('.');
+
+        if (hasComma && hasDot) {
+            const lastComma = s.lastIndexOf(',');
+            const lastDot = s.lastIndexOf('.');
+            if (lastComma > lastDot) {
+                s = s.replace(/\./g, '').replace(',', '.');
+            } else {
+                s = s.replace(/,/g, '');
+            }
+        } else if (hasComma) {
+            const parts = s.split(',');
+            if (parts.length === 2 && parts[1].length > 0 && parts[1].length <= 2) {
+                s = parts[0] + '.' + parts[1];
+            } else {
+                s = s.replace(/,/g, '');
+            }
+        } else if (hasDot) {
+            const parts = s.split('.');
+            if (parts.length === 2 && parts[1].length > 0 && parts[1].length <= 2) {
+                s = parts[0] + '.' + parts[1];
+            } else {
+                s = s.replace(/\./g, '');
+            }
+        }
+        const n = parseFloat(s);
+        return isNaN(n) ? NaN : n;
+    }
+
+    function syncManualFromSlider(localAmount, currencyCode) {
+        if (isEditingBudget) return;
+        const el = document.getElementById('budgetManualInput');
+        if (!el) return;
+        el.value = Math.round(localAmount).toLocaleString('fr-FR');
+        el.classList.remove('input-error');
+    }
+
+    function onBudgetManualKeydown(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            e.target.blur();
+        }
+    }
+
+    function onBudgetManualInput() {
+        isEditingBudget = true;
+        const el = document.getElementById('budgetManualInput');
+        const hint = document.getElementById('budgetManualHint');
+        const { currencyCode } = getSelectedCurrencyData();
+        const { minLocal, maxLocal, rate } = getBudgetBounds();
+
+        const n = parseBudgetInput(el.value);
+        if (isNaN(n)) {
+            el.classList.remove('input-error');
+            if (hint) hint.innerText = `Tapez un nombre uniquement (ex. ${Math.round(minLocal).toLocaleString('fr-FR')}).`;
+            return;
+        }
+
+        // On borne à l'intérieur du range remisé autorisé
+        const clamped = Math.min(maxLocal, Math.max(minLocal, n));
+
+        // n représente le prix remisé : on remonte au prix normal pour positionner le curseur
+        const baseAmount = clamped / DISCOUNT_FACTOR;
+        const usdEquivalent = baseAmount / rate;
+        const slider = document.getElementById('budgetSlider');
+        slider.value = Math.min(parseFloat(slider.max), Math.max(parseFloat(slider.min), usdEquivalent));
+
+        document.getElementById('inputBudget').value = clamped;
+        document.getElementById('budgetSliderValue').innerText = formatMoney(clamped, currencyCode);
+
+        // Affiche le prix normal barré + économies
+        const originalEl = document.getElementById('budgetSliderOriginal');
+        const savingsEl = document.getElementById('budgetSliderSavings');
+        if (DISCOUNT_PERCENT > 0) {
+            if (originalEl) originalEl.innerText = `Prix normal : ${formatMoney(baseAmount, currencyCode)}`;
+            if (savingsEl) savingsEl.innerText = `Vous économisez ${formatMoney(baseAmount - clamped, currencyCode)} (-${DISCOUNT_PERCENT}%)`;
+        } else {
+            if (originalEl) originalEl.innerText = '';
+            if (savingsEl) savingsEl.innerText = '';
+        }
+
+        document.getElementById('budgetMinLabel').innerText = formatMoney(minLocal, currencyCode);
+        document.getElementById('budgetMaxLabel').innerText = formatMoney(maxLocal, currencyCode);
+
+        const percent = ((usdEquivalent - slider.min) / (slider.max - slider.min)) * 100;
+        slider.style.background = `linear-gradient(to right, var(--primary) 0%, var(--primary) ${percent}%, var(--border) ${percent}%, var(--border) 100%)`;
+
+        if (n < minLocal || n > maxLocal) {
+            el.classList.add('input-error');
+            if (hint) hint.innerText = `Montant ajusté automatiquement (min ${Math.round(minLocal).toLocaleString('fr-FR')} / max ${Math.round(maxLocal).toLocaleString('fr-FR')}).`;
+        } else {
+            el.classList.remove('input-error');
+            if (hint) hint.innerText = `Tapez un nombre uniquement (ex. ${Math.round(minLocal).toLocaleString('fr-FR')}).`;
+        }
+
+        updateEstimate();
+    }
+
+    function onBudgetManualBlur() {
+        isEditingBudget = false;
+        const el = document.getElementById('budgetManualInput');
+        const { currencyCode } = getSelectedCurrencyData();
+        const { minLocal, maxLocal, rate } = getBudgetBounds();
+        const hint = document.getElementById('budgetManualHint');
+
+        const n = parseBudgetInput(el.value);
+        const finalValue = isNaN(n) ? Math.max(minLocal, parseFloat(document.getElementById('inputBudget').value) || minLocal)
+                                    : Math.min(maxLocal, Math.max(minLocal, n));
+
+        el.value = Math.round(finalValue).toLocaleString('fr-FR');
+        el.classList.remove('input-error');
+        if (hint) hint.innerText = `Tapez un nombre uniquement (ex. ${Math.round(minLocal).toLocaleString('fr-FR')}).`;
+
+        const baseAmount = finalValue / DISCOUNT_FACTOR;
+        const usdEquivalent = baseAmount / rate;
+        const slider = document.getElementById('budgetSlider');
+        slider.value = Math.min(parseFloat(slider.max), Math.max(parseFloat(slider.min), usdEquivalent));
+
+        document.getElementById('inputBudget').value = finalValue;
+        document.getElementById('budgetSliderValue').innerText = formatMoney(finalValue, currencyCode);
+
+        const originalEl = document.getElementById('budgetSliderOriginal');
+        const savingsEl = document.getElementById('budgetSliderSavings');
+        if (DISCOUNT_PERCENT > 0) {
+            if (originalEl) originalEl.innerText = `Prix normal : ${formatMoney(baseAmount, currencyCode)}`;
+            if (savingsEl) savingsEl.innerText = `Vous économisez ${formatMoney(baseAmount - finalValue, currencyCode)} (-${DISCOUNT_PERCENT}%)`;
+        } else {
+            if (originalEl) originalEl.innerText = '';
+            if (savingsEl) savingsEl.innerText = '';
+        }
+
+        document.getElementById('budgetMinLabel').innerText = formatMoney(minLocal, currencyCode);
+        document.getElementById('budgetMaxLabel').innerText = formatMoney(maxLocal, currencyCode);
+
+        const percent = ((usdEquivalent - slider.min) / (slider.max - slider.min)) * 100;
+        slider.style.background = `linear-gradient(to right, var(--primary) 0%, var(--primary) ${percent}%, var(--border) ${percent}%, var(--border) 100%)`;
+
+        updateEstimate();
+    }
+
+    function updateBudgetCurrencyBadge() {
+        const badge = document.getElementById('budgetCurrencyBadge');
+        const manualInput = document.getElementById('budgetManualInput');
+        if (!badge) return;
+        const { currencyCode } = getSelectedCurrencyData();
+        badge.innerText = currencyCode;
+        if (manualInput) manualInput.setAttribute('aria-label', `Montant du budget en ${currencyCode}`);
+    }
+
+    function updatePromoBanner() {
+        const banner = document.getElementById('budgetPromoBanner');
+        const text = document.getElementById('budgetPromoText');
+        if (!banner || !text) return;
+        if (DISCOUNT_PERCENT > 0) {
+            banner.style.display = 'flex';
+            text.innerText = `PROMO -${DISCOUNT_PERCENT}% sur tous les boosts`;
+        } else {
+            banner.style.display = 'none';
+        }
+    }
+
+    // --- Paiement ---
+    function detectCardType(number) {
+        const n = number.replace(/\D/g, '');
+        if (/^4/.test(n)) return { name: 'Visa', icon: 'fa-cc-visa' };
+        if (/^(5[1-5]|2(2[2-9]|[3-6]\d|7[01]|720))/.test(n)) return { name: 'Mastercard', icon: 'fa-cc-mastercard' };
+        if (/^3[47]/.test(n)) return { name: 'American Express', icon: 'fa-cc-amex' };
+        if (/^6(?:011|5)/.test(n)) return { name: 'Discover', icon: 'fa-cc-discover' };
+        return null;
+    }
+
+    function onCardNumberInput(el) {
+        let digits = el.value.replace(/\D/g, '').slice(0, 16);
+        el.value = digits.replace(/(.{4})/g, '$1 ').trim();
+        const badge = document.getElementById('cardTypeBadge');
+        const type = detectCardType(digits);
+        if (badge) badge.innerHTML = type ? `<i class="fab ${type.icon}"></i> ${type.name}` : '';
+        const cvv = document.getElementById('cardCvv');
+        if (cvv) cvv.maxLength = (type && type.name === 'American Express') ? 4 : 3;
+    }
+
+    function onCardExpiryInput(el) {
+        let digits = el.value.replace(/\D/g, '').slice(0, 4);
+        if (digits.length >= 3) digits = digits.slice(0, 2) + '/' + digits.slice(2);
+        el.value = digits;
+    }
+
+    function onPaypalEmailInput(el) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const valid = emailRegex.test(el.value.trim());
+        const errorEl = document.getElementById('paypalEmailError');
+        const successEl = document.getElementById('paypalEmailSuccess');
+        if (errorEl) errorEl.style.display = (!valid && el.value.length > 0) ? 'block' : 'none';
+        if (successEl) successEl.style.display = valid ? 'block' : 'none';
+    }
+
+    function getFlagEmoji(countryCode) {
+        return String.fromCodePoint(...[...countryCode.toUpperCase()].map(c => 127397 + c.charCodeAt(0)));
+    }
+
+    function updateMomoOperatorOptions(countryData) {
+        const select = document.getElementById('momoOperator');
+        if (!select) return;
+        const operators = (countryData && countryData.operators && countryData.operators.length)
+            ? countryData.operators
+            : ["Orange Money", "MTN Mobile Money", "Moov Money", "Wave"];
+        select.innerHTML = operators.map(o => `<option>${o}</option>`).join('');
+    }
+
+    function syncCountrySelection(countryCode) {
+        const countrySelect = document.getElementById('selectCountry');
+        if (!countrySelect || countrySelect.value === countryCode) return false;
+        countrySelect.value = countryCode;
+
+        const country = getSelectedCountryData();
+        const currencySelect = document.getElementById('selectCurrency');
+        const note = document.getElementById('currencyNote');
+        const hasCurrency = country && Array.from(currencySelect.options).some(o => o.value === country.currency);
+        if (hasCurrency) {
+            currencySelect.value = country.currency;
+            note.innerText = '';
+        } else if (country) {
+            note.innerText = `${country.countryName} facture habituellement en ${country.currency} ; devise la plus proche disponible sélectionnée ci-dessus.`;
+        }
+        refreshBudgetForCurrency();
+        updateBudgetCurrencyBadge();
+        return true;
+    }
+
+    function detectCountryFromPhoneNumber(digits) {
+        if (digits.length < 5) return null;
+        const candidates = allCountries.filter(c => {
+            const code = c.phoneCode.replace('+', '');
+            return digits.startsWith(code) && (digits.length - code.length) >= 5;
+        });
+        if (!candidates.length) return null;
+        candidates.sort((a, b) => b.phoneCode.length - a.phoneCode.length);
+        return candidates[0];
+    }
+
+    function onMomoNumberInput(el) {
+        const digits = el.value.replace(/\D/g, '');
+        const badge = document.getElementById('momoDetectedCountry');
+        const match = detectCountryFromPhoneNumber(digits);
+
+        if (match) {
+            syncCountrySelection(match.code);
+            updateMomoOperatorOptions(allCountries.find(c => c.code === match.code));
+            if (badge) badge.innerHTML = `<i class="fas fa-circle-check"></i> Pays détecté automatiquement : ${getFlagEmoji(match.code)} ${match.name} (${match.phoneCode})`;
+        } else if (badge) {
+            badge.innerHTML = '';
+        }
+
+        const country = getSelectedCountryData();
+        const countryData = allCountries.find(c => c.code === (country && country.countryCode));
+        if (!countryData || !countryData.operators || !countryData.operators.length) return;
+        const local = countryData.phoneCode && digits.startsWith(countryData.phoneCode.replace('+', ''))
+            ? digits.slice(countryData.phoneCode.length - 1)
+            : digits;
+        const prefix2 = local.slice(0, 2);
+        const guess = countryData.operators.find(op => op.toLowerCase().includes('orange')) && ['65', '69'].includes(prefix2)
+            ? countryData.operators.find(op => op.toLowerCase().includes('orange'))
+            : null;
+        const select = document.getElementById('momoOperator');
+        if (guess && select) select.value = guess;
+    }
+
+    function switchPaymentFields() {
+        const method = document.getElementById('paymentMethod').value;
+        const container = document.getElementById('dynamicFields');
+        const country = getSelectedCountryData();
+        const countryData = allCountries.find(c => c.code === (country && country.countryCode));
+
+        if (method === 'mobile_money') {
+            const supported = countryData && countryData.operators && countryData.operators.length;
+            const operators = supported ? countryData.operators : ["Orange Money", "MTN Mobile Money", "Moov Money", "Wave"];
+            container.innerHTML = `
+                ${!supported ? `<p class="help"><i class="fas fa-circle-info"></i> Mobile Money est surtout répandu en Afrique ; vérifiez que votre opérateur est bien disponible dans ${country ? country.countryName : 'ce pays'}.</p>` : ''}
+                <div class="form-section">
+                    <label class="section-label" for="momoOperator">Opérateur</label>
+                    <select id="momoOperator">${operators.map(o => `<option>${o}</option>`).join('')}</select>
+                </div>
+                <div class="form-section">
+                    <label class="section-label" for="momoNumber">Numéro de téléphone</label>
+                    <input type="text" id="momoNumber" inputmode="tel" placeholder="${country ? country.phoneCode : ''} 6XX XX XX XX" oninput="onMomoNumberInput(this)" />
+                    <span class="help" id="momoDetectedCountry"></span>
+                    <span class="help">Saisissez l'indicatif international de votre pays suivi de votre numéro (ex. ${country ? country.phoneCode : '+237'} 6XX XX XX XX) : le pays est détecté automatiquement et la devise ainsi que l'opérateur se mettent à jour tout seuls. L'opérateur reste modifiable si besoin.</span>
+                </div>`;
+        } else if (method === 'card') {
+            container.innerHTML = `
+                <div class="form-section">
+                    <label class="section-label" for="cardHolder">Nom figurant sur la carte</label>
+                    <input type="text" id="cardHolder" placeholder="Nom complet, comme inscrit sur la carte" autocomplete="cc-name" />
+                    <span class="help">Le nom et prénom exactement comme imprimés au recto de la carte.</span>
+                </div>
+                <div class="form-section">
+                    <label class="section-label" for="cardNumber">Numéro de la carte</label>
+                    <div class="card-number-wrap">
+                        <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456" inputmode="numeric" autocomplete="cc-number" oninput="onCardNumberInput(this)" />
+                        <span id="cardTypeBadge" class="card-type-badge"></span>
+                    </div>
+                    <span class="help">Saisissez les 16 chiffres inscrits en relief ou imprimés au recto de la carte (15 chiffres pour American Express), sans espaces ni tirets. Le type de carte (Visa, Mastercard, Amex...) est détecté automatiquement dès les premiers chiffres saisis.</span>
+                </div>
+                <div class="row">
+                    <div class="form-section">
+                        <label class="section-label" for="cardExpiry">Expiration (MM/AA)</label>
+                        <input type="text" id="cardExpiry" placeholder="MM/AA" inputmode="numeric" maxlength="5" autocomplete="cc-exp" oninput="onCardExpiryInput(this)" />
+                        <span class="help">La date d'expiration inscrite au recto de la carte (mois/année).</span>
+                    </div>
+                    <div class="form-section">
+                        <label class="section-label" for="cardCvv">CVV</label>
+                        <input type="text" id="cardCvv" placeholder="123" inputmode="numeric" maxlength="3" autocomplete="cc-csc" />
+                        <span class="help">Les 3 derniers chiffres au dos de la carte (4 chiffres au recto, au-dessus du numéro, pour American Express).</span>
+                    </div>
+                </div>
+                <p class="help"><i class="fas fa-shield-halved"></i> Avant mise en production, ces champs doivent être remplacés par le formulaire hébergé de votre prestataire (Stripe Elements, Flutterwave, etc.) : FaceNet ne doit jamais recevoir ni stocker le numéro de carte complet côté serveur.</p>`;
+        } else if (method === 'paypal') {
+            container.innerHTML = `
+                <div class="form-section">
+                    <label class="section-label" for="paypalEmail">Adresse e-mail du compte PayPal</label>
+                    <input type="email" id="paypalEmail" placeholder="vous@exemple.com" autocomplete="email" oninput="onPaypalEmailInput(this)" />
+                    <span class="error-msg" id="paypalEmailError">Adresse e-mail invalide.</span>
+                    <span class="success-msg" id="paypalEmailSuccess">Adresse valide.</span>
+                </div>
+                <p class="help">Vous serez redirigé(e) vers PayPal pour confirmer le paiement en toute sécurité.</p>`;
+        } else if (method === 'crypto') {
+            container.innerHTML = `
+                <div class="form-section">
+                    <label class="section-label" for="cryptoCoin">Crypto-monnaie</label>
+                    <select id="cryptoCoin">
+                        <option value="USDT">USDT (TRC20)</option>
+                        <option value="BTC">Bitcoin (BTC)</option>
+                    </select>
+                </div>
+                <div class="wallet-box">
+                    <p class="help">Envoyez le montant exact à l'adresse générée pour cette commande :</p>
+                    <div class="wallet-address" id="walletAddressDisplay">Adresse générée après validation</div>
+                </div>`;
+        }
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       PUBLICATION BOOSTÉE EN HAUT DU FIL (J'aime / Commenter / Partager)
+       - s'affiche tout en haut dès que le boost est lancé
+       - état (likes, commentaires, partages) conservé dans le navigateur
+       - le fil réel peut lire window.FaceNetBoostFeed.getPinned()
+         ou écouter le BroadcastChannel "facenet-feed"
+    ══════════════════════════════════════════════════════════════ */
+    const FEED_KEY = 'facenet_boost_feed';
+
+    function loadPinned() {
+        try {
+            const list = JSON.parse(localStorage.getItem(FEED_KEY) || '[]');
+            const now = Date.now();
+            return Array.isArray(list) ? list.filter(p => !p.endAt || p.endAt > now) : [];
+        } catch (e) { return []; }
+    }
+    function savePinned(list) {
+        try { localStorage.setItem(FEED_KEY, JSON.stringify(list)); } catch (e) { /* stockage indisponible */ }
+    }
+    function upsertPinned(post) {
+        const list = loadPinned().filter(p => String(p.id) !== String(post.id));
+        list.unshift(post);                       // toujours en première position
+        savePinned(list);
+        try { new BroadcastChannel('facenet-feed').postMessage({ type: 'boost-pinned', post }); } catch (e) {}
+    }
+    function getPinned(id) { return loadPinned().find(p => String(p.id) === String(id)); }
+    window.FaceNetBoostFeed = { getPinned: loadPinned };
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        clearTimeout(showToast._t);
+        showToast._t = setTimeout(() => t.classList.remove('show'), 2200);
+    }
+
+    function postUrl(post) {
+        return location.origin + POST_URL_TEMPLATE.replace('{id}', encodeURIComponent(post.id));
+    }
+
+    function renderFeedPost(post) {
+        const feed = document.getElementById('feedTop');
+        const end = post.endAt ? new Date(post.endAt).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+        feed.innerHTML = `
+            <div class="feed-top-label"><i class="fas fa-circle-check"></i> Votre publication est en haut de votre fil d'actualité</div>
+            <article class="feed-post" id="boostedPost">
+                <div class="feed-post-head">
+                    <div class="feed-avatar"><i class="fas fa-user"></i></div>
+                    <div>
+                        <div class="feed-author">Vous</div>
+                        <div class="feed-meta"><span class="sponsored-tag"><i class="fas fa-bullhorn"></i> Sponsorisé</span>
+                            <span>À l'instant</span><i class="fas fa-earth-africa"></i>${end ? `<span>Jusqu'au ${end}</span>` : ''}</div>
+                    </div>
+                </div>
+                <div class="feed-post-body" id="fpBody"></div>
+                <div class="feed-stats">
+                    <span id="fpLikes"></span>
+                    <span><span id="fpComments"></span> · <span id="fpShares"></span></span>
+                </div>
+                <div class="feed-actions">
+                    <button type="button" id="fpLikeBtn" aria-pressed="false"><i class="fa-regular fa-thumbs-up"></i> J'aime</button>
+                    <button type="button" id="fpCommentBtn"><i class="fa-regular fa-comment"></i> Commenter</button>
+                    <div class="share-wrap">
+                        <button type="button" id="fpShareBtn" aria-haspopup="true" aria-expanded="false"><i class="fas fa-share"></i> Partager</button>
+                        <div class="share-menu" id="fpShareMenu" role="menu">
+                            <button type="button" role="menuitem" data-share="copy"><i class="fas fa-link"></i> Copier le lien</button>
+                            <button type="button" role="menuitem" data-share="whatsapp"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+                            <button type="button" role="menuitem" data-share="facebook"><i class="fab fa-facebook"></i> Facebook</button>
+                            <button type="button" role="menuitem" data-share="native"><i class="fas fa-arrow-up-from-bracket"></i> Autres applications…</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="comments-box" id="fpCommentsBox">
+                    <div id="fpCommentList"></div>
+                    <div class="comment-row">
+                        <input type="text" id="fpCommentInput" placeholder="Écrire un commentaire..." maxlength="500" aria-label="Écrire un commentaire" />
+                        <button type="button" id="fpCommentSend" aria-label="Envoyer le commentaire"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </article>`;
+        feed.classList.add('visible');
+        document.getElementById('fpBody').textContent = post.content;
+        bxInjectFeedMedia(post);
+        wireFeedPost(post.id);
+        refreshFeedPost(post.id);
+
+        // Affiche la bannière boost actif dans le formulaire
+        const banner = document.getElementById('activeBoostBanner');
+        if (banner) banner.classList.add('visible');
+    }
+
+    function refreshFeedPost(id) {
+        const post = bxBase(getPinned(id));
+        if (!post) return;
+        const n = post.comments.length + (post.baseComments || 0);
+        const nl = (post.likes || 0) + (post.baseLikes || 0);
+        const ns = (post.shares || 0) + (post.baseShares || 0);
+        document.getElementById('fpLikes').innerHTML = nl > 0 ? `<i class="fas fa-thumbs-up" style="color:var(--primary)"></i> ${nl}` : '';
+        document.getElementById('fpComments').textContent = `${n} commentaire${n > 1 ? 's' : ''}`;
+        document.getElementById('fpShares').textContent = `${ns} partage${ns > 1 ? 's' : ''}`;
+        const likeBtn = document.getElementById('fpLikeBtn');
+        likeBtn.classList.toggle('liked', !!post.liked);
+        likeBtn.setAttribute('aria-pressed', post.liked ? 'true' : 'false');
+        likeBtn.querySelector('i').className = post.liked ? 'fas fa-thumbs-up' : 'fa-regular fa-thumbs-up';
+        const list = document.getElementById('fpCommentList');
+        list.innerHTML = '';
+        post.comments.forEach(c => {
+            const d = document.createElement('div');
+            d.className = 'comment-item';
+            const b = document.createElement('b'); b.textContent = 'Vous';
+            d.appendChild(b); d.appendChild(document.createTextNode(c.text));
+            list.appendChild(d);
+        });
+    }
+
+    function mutatePinned(id, fn) {
+        const list = loadPinned();
+        const post = list.find(p => String(p.id) === String(id));
+        if (!post) return;
+        fn(post);
+        savePinned(list);
+        refreshFeedPost(id);
+    }
+
+    function wireFeedPost(id) {
+        const menu = document.getElementById('fpShareMenu');
+        const shareBtn = document.getElementById('fpShareBtn');
+        const closeMenu = () => { menu.classList.remove('open'); shareBtn.setAttribute('aria-expanded', 'false'); };
+
+        document.getElementById('fpLikeBtn').addEventListener('click', () => {
+            mutatePinned(id, p => { p.liked = !p.liked; p.likes = Math.max(0, p.likes + (p.liked ? 1 : -1)); });
+        });
+
+        document.getElementById('fpCommentBtn').addEventListener('click', () => {
+            const box = document.getElementById('fpCommentsBox');
+            box.classList.toggle('open');
+            if (box.classList.contains('open')) document.getElementById('fpCommentInput').focus();
+        });
+
+        const sendComment = () => {
+            const input = document.getElementById('fpCommentInput');
+            const text = input.value.trim();
+            if (!text) return;
+            mutatePinned(id, p => p.comments.push({ text, at: Date.now() }));
+            input.value = '';
+        };
+        document.getElementById('fpCommentSend').addEventListener('click', sendComment);
+        document.getElementById('fpCommentInput').addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); sendComment(); }
+        });
+
+        shareBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            const open = menu.classList.toggle('open');
+            shareBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+        document.addEventListener('click', e => { if (!menu.contains(e.target)) closeMenu(); });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+
+        menu.querySelectorAll('[data-share]').forEach(btn => btn.addEventListener('click', async () => {
+            const post = getPinned(id);
+            if (!post) return;
+            const url = postUrl(post);
+            const text = (post.content || '').slice(0, 100);
+            const type = btn.getAttribute('data-share');
+            let done = true;
+            try {
+                if (type === 'copy') {
+                    if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(url);
+                    else { const t = document.createElement('textarea'); t.value = url; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+                    showToast('Lien copié');
+                } else if (type === 'whatsapp') {
+                    window.open('https://wa.me/?text=' + encodeURIComponent(text + ' ' + url), '_blank', 'noopener');
+                } else if (type === 'facebook') {
+                    window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url), '_blank', 'noopener');
+                } else if (navigator.share) {
+                    await navigator.share({ title: 'FaceNet', text, url });
+                } else {
+                    showToast("Le partage natif n'est pas disponible sur cet appareil");
+                    done = false;
+                }
+            } catch (err) { done = false; }
+            closeMenu();
+            if (done) mutatePinned(id, p => { p.shares += 1; });
+        }));
+    }
+
+    function pinBoostedPost(extra) {
+        if (CURRENT_POST_ID === null || CURRENT_POST_ID === undefined) return;
+        const old = getPinned(CURRENT_POST_ID) || {};
+        const endVal = document.getElementById('endDateTime').value;
+        const post = Object.assign({
+            id: CURRENT_POST_ID,
+            content: CURRENT_POST_CONTENT || 'Publication média',
+            boostedAt: Date.now(),
+            endAt: endVal ? new Date(endVal).getTime() : null,
+            likes: 0, liked: false, comments: [], shares: 0
+        }, old, extra || {});
+        post.endAt = endVal ? new Date(endVal).getTime() : post.endAt;
+        upsertPinned(post);
+        renderFeedPost(post);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function renderPinnedIfAny() {
+        if (CURRENT_POST_ID === null || CURRENT_POST_ID === undefined) return;
+        const post = getPinned(CURRENT_POST_ID);
+        if (post) renderFeedPost(post);
+    }
+
+    // --- Validation de carte ---
+    function luhnValid(num) {
+        let sum = 0, alt = false;
+        for (let i = num.length - 1; i >= 0; i--) {
+            let d = parseInt(num[i], 10);
+            if (alt) { d *= 2; if (d > 9) d -= 9; }
+            sum += d; alt = !alt;
+        }
+        return sum % 10 === 0;
+    }
+
+    let boostLaunched = false;
+
+    async function processPayment() {
+        if (boostLaunched) return;
+        const errorEl = document.getElementById('formError');
+        const successEl = document.getElementById('formSuccess');
+        const btn = document.getElementById('payBtn');
+        errorEl.style.display = 'none';
+        successEl.style.display = 'none';
+
+        const fail = (msg) => {
+            errorEl.innerText = msg;
+            errorEl.style.display = 'block';
+            errorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        };
+
+        if (!isScheduleValid()) {
+            return fail("Corrigez la date et l'heure de fin avant de continuer : elles doivent être postérieures à la date de début.");
+        }
+
+        const budget = parseFloat(document.getElementById('inputBudget').value) || 0;
+        if (budget <= 0) return fail("Merci de saisir un budget valide.");
+
+        const audienceMode = document.getElementById('audienceCustomBtn').classList.contains('active') ? 'custom' : 'auto';
+        if (audienceMode === 'custom' && parseInt(document.getElementById('ageMin').value) > parseInt(document.getElementById('ageMax').value)) {
+            return fail("L'âge minimum ne peut pas dépasser l'âge maximum.");
+        }
+
+        const method = document.getElementById('paymentMethod').value;
+        if (method === 'paypal') {
+            const emailField = document.getElementById('paypalEmail');
+            if (!emailField || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailField.value.trim())) {
+                return fail("Merci de saisir une adresse e-mail PayPal valide.");
+            }
+        }
+        if (method === 'mobile_money') {
+            const momo = document.getElementById('momoNumber');
+            if (!momo || momo.value.replace(/\D/g, '').length < 8) return fail("Merci de saisir un numéro Mobile Money valide.");
+        }
+        if (method === 'card') {
+            const holder = (document.getElementById('cardHolder').value || '').trim();
+            const numberDigits = (document.getElementById('cardNumber').value || '').replace(/\D/g, '');
+            const exp = (document.getElementById('cardExpiry').value || '').match(/^(\d{2})\/(\d{2})$/);
+            const cvv = (document.getElementById('cardCvv').value || '').replace(/\D/g, '');
+            if (!holder) return fail("Merci de saisir le nom figurant sur la carte.");
+            if (numberDigits.length < 13 || !luhnValid(numberDigits)) return fail("Merci de saisir un numéro de carte valide.");
+            if (!exp || +exp[1] < 1 || +exp[1] > 12) return fail("Merci de saisir une date d'expiration valide (MM/AA).");
+            const expDate = new Date(2000 + (+exp[2]), +exp[1], 1);   // 1er jour du mois suivant
+            if (expDate <= new Date()) return fail("Cette carte est expirée.");
+            const cvvLen = /^3[47]/.test(numberDigits) ? 4 : 3;
+            if (cvv.length !== cvvLen) return fail(`Le code CVV doit contenir ${cvvLen} chiffres.`);
+        }
+
+        const bxContact = (typeof bxGetContact === 'function') ? bxGetContact() : { method: 'none' };
+        if (bxContact.error) return fail(bxContact.error);
+
+        const payload = {
+            post_id: CURRENT_POST_ID,
+            contact_method: bxContact.method,
+            contact_country: bxContact.country || null,
+            contact_phone: bxContact.phone || null,
+            advantage_plus: !!(document.getElementById('bxAdvantage') || {}).checked,
+            objective: document.getElementById('selectObjective').value,
+            audience: audienceMode === 'auto' ? { mode: 'auto' } : {
+                mode: 'custom',
+                age_min: document.getElementById('ageMin').value,
+                age_max: document.getElementById('ageMax').value,
+                gender: document.getElementById('genderSelect').value,
+                location: document.getElementById('locationInput').value,
+                interests: interests
+            },
+            start_datetime: document.getElementById('startDateTime').value,
+            end_datetime: document.getElementById('endDateTime').value,
+            duration_days: parseInt(document.getElementById('inputDuration').value) || 1,
+            billing_country: (getSelectedCountryData() || {}).countryCode,
+            currency: document.getElementById('selectCurrency').value,
+            budget_total: budget,
+            budget_usd: (function () { const r = getSelectedCurrencyData().rate; return r > 0 ? budget / r : 0; })(),
+            tz_offset_min: new Date().getTimezoneOffset(),
+            payment_method: method
+        };
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Traitement...';
+
+        try {
+            const response = await fetch('/api/boost/creer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            let data = {};
+            try { data = await response.json(); } catch (e) { /* réponse non JSON */ }
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || "Le paiement n'a pas pu être initié.");
+            }
+
+            if (data.redirect_url) {
+                window.location.href = data.redirect_url;
+                return;
+            }
+            if (data.wallet_address) {
+                document.getElementById('walletAddressDisplay').innerText = data.wallet_address;
+            }
+
+            boostLaunched = true;
+            successEl.innerText = data.message || "Boost programmé avec succès.";
+            successEl.style.display = 'block';
+
+            // La publication boostée passe tout en haut du fil, avec J'aime / Commenter / Partager
+            pinBoostedPost(data.post && data.post.content ? { content: String(data.post.content) } : null);
+        } catch (err) {
+            fail(err.message || "Une erreur est survenue. Merci de réessayer.");
+        } finally {
+            if (boostLaunched) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-circle-check"></i> Boost lancé';
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-rocket"></i> Payer et lancer le boost';
+            }
+        }
+    }
+
+    // Initialisation
+    populateAgeSelects();
+    populateCountrySelect();
+    initSchedule();
+    onCountryChange();
+    switchPaymentFields();
+    refreshBudgetForCurrency();
+    updateBudgetCurrencyBadge();
+    updatePromoBanner();
+    renderPinnedIfAny();
+</script>
+<script id="bx-contact-js">
+(function () {
+    function $(id) { return document.getElementById(id); }
+    var countrySel = $('bxPhoneCountry'), numInp = $('bxPhoneNumber');
+    if (!countrySel || !numInp || typeof allCountries === 'undefined') return;
+    allCountries.forEach(function (c) {
+        var o = document.createElement('option');
+        o.value = c.code; o.textContent = c.code + ' (' + c.phoneCode + ')'; o.dataset.dial = c.phoneCode;
+        countrySel.appendChild(o);
+    });
+    countrySel.value = 'CM';
+    function digits() { return (numInp.value || '').replace(/\D/g, ''); }
+    function validPhone() { var d = digits(); return d.length >= 6 && d.length <= 14; }
+    function refresh() {
+        var on = validPhone();
+        $('bxPhoneOk').classList.toggle('on', on);
+        numInp.classList.toggle('bx-bad', digits().length > 0 && !on);
+    }
+    window.bxContactChange = function () {
+        var m = $('bxContactMethod').value;
+        $('bxPhoneRow').hidden = (m === 'none');
+        refresh();
+    };
+    window.bxGetContact = function () {
+        var m = $('bxContactMethod').value;
+        if (m === 'none') return { method: 'none' };
+        if (!validPhone()) return { method: m, error: 'Merci de saisir un numéro de téléphone valide pour le moyen de contact choisi (ou sélectionnez « Aucun »).' };
+        var opt = countrySel.options[countrySel.selectedIndex];
+        return { method: m, country: countrySel.value, phone: (opt.dataset.dial || '') + digits() };
+    };
+    numInp.addEventListener('input', refresh);
+    countrySel.addEventListener('change', refresh);
+    bxContactChange();
+})();
+</script>
+</body>
+</html>

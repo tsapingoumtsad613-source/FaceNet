@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.cn-card { max-width: 560px; margin: 40px auto 60px; background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+.cn-opt { display: block; position: relative; margin: 0 0 12px; cursor: pointer; }
+.cn-opt input { position: absolute; opacity: 0; width: 0; height: 0; }
+.cn-box { display: flex; align-items: center; gap: 14px; padding: 14px; border: 2px solid #dddfe2; border-radius: 10px; background: #fff; transition: border-color .15s, background .15s; }
+.cn-av { width: 52px; height: 52px; border-radius: 50%; background: #e4e6eb center/cover no-repeat; flex: none; }
+.cn-who { flex: 1; min-width: 0; }
+.cn-who strong { display: block; font-size: 18px; color: #1c1e21; word-break: break-word; }
+.cn-who small { color: #65676b; font-size: 12px; }
+.cn-radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #bcc0c4; flex: none; position: relative; }
+.cn-opt input:checked ~ .cn-box { border-color: #1877f2; background: #f0f6ff; }
+.cn-opt input:checked ~ .cn-box .cn-radio { border-color: #1877f2; }
+.cn-opt input:checked ~ .cn-box .cn-radio::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: #1877f2; }
+.cn-opt input:focus-visible ~ .cn-box { outline: 2px solid #1877f2; outline-offset: 2px; }
+.cn-btn { width: 100%; padding: 12px; border: none; border-radius: 5px; font-weight: bold; font-size: 16px; cursor: pointer; font-family: inherit; }
+.cn-btn.ok { background: #1877f2; color: #fff; }
+.cn-btn.ok:disabled { background: #e4e6eb; color: #8a8d91; cursor: not-allowed; }
+.cn-btn.no { background: #f0f2f5; color: #1c1e21; margin-top: 10px; }
+.cn-note { background: #f0f2f5; border: 1px solid #dddfe2; color: #65676b; padding: 10px 14px; border-radius: 8px; margin: 0 0 18px; font-size: 13px; line-height: 1.4; }
+</style>
+{% set _av = current_user.avatar or 'default_avatar.png' %}
+<div class="cn-card">
+    <h2 style="text-align: center; color: #1877f2; margin-top: 0;">Comment afficher votre nom ?</h2>
+    <p style="text-align:center; color:#65676b; font-size:14px; line-height:1.5; margin: 0 0 18px;">
+        Choisissez l'ordre dans lequel votre nom apparaîtra sur votre profil, dans le fil d'actualité et dans les commentaires.
+    </p>
+
+    {% if erreur %}
+    <div role="alert" style="background:#fff0f2; border:1px solid #e41e3f; color:#b3122d; padding:12px 14px; border-radius:8px; margin:0 0 16px; font-size:14px;">⚠️ {{ erreur }}</div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('main.choix_nom_profil') }}" id="cn-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        {% for o in options %}
+        <label class="cn-opt">
+            <input type="radio" name="choix" value="{{ loop.index0 }}">
+            <span class="cn-box">
+                <span class="cn-av" style="background-image:url('{{ url_for('static', filename='uploads/' + _av) }}');"></span>
+                <span class="cn-who">
+                    <strong>{{ o }}</strong>
+                    <small>{% if loop.first %}Comme vous l'avez saisi{% else %}Ordre inversé{% endif %}</small>
+                </span>
+                <span class="cn-radio" aria-hidden="true"></span>
+            </span>
+        </label>
+        {% endfor %}
+
+        <p class="cn-note">🔒 Une fois votre choix confirmé, vous ne pourrez plus modifier votre nom pendant 15 jours.</p>
+
+        <button type="submit" class="cn-btn ok" id="cn-ok" disabled>Confirmer ce nom</button>
+        <button type="submit" name="action" value="annuler" class="cn-btn no" formnovalidate>Annuler et garder {{ nom_actuel if nom_actuel else 'mon nom actuel' }}</button>
+    </form>
+</div>
+<script>
+(function () {
+    var ok = document.getElementById('cn-ok');
+    var radios = document.querySelectorAll('#cn-form input[name="choix"]');
+    Array.prototype.forEach.call(radios, function (r) {
+        r.addEventListener('change', function () { ok.disabled = false; });
+    });
+})();
+</script>
+{% endblock %}

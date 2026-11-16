@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FaceNet Messenger - Tsapi AI</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+        .chat-container { max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; height: 620px; position: relative; }
+        
+        /* En-tête */
+        .chat-header { background: #fff; padding: 15px; border-bottom: 1px solid #e4e6eb; display: flex; align-items: center; }
+        .tsapi-profile { display: inline-flex; align-items: center; }
+        .tsapi-name { font-weight: 600; font-size: 17px; color: #050505; margin-right: 5px; }
+        
+        /* BADGE META AI : Badge bleu dégradé exact avec coche blanche */
+        .fb-verified-badge { width: 20px; height: 20px; display: inline-block; vertical-align: middle; margin-left: 3px; }
+        .tsapi-status { font-size: 12px; color: #31a24c; font-weight: 600; margin-top: 2px; }
+        
+        /* Zone des messages */
+        .chat-box { flex: 1; padding: 15px; overflow-y: auto; display: block; background: #fff; scroll-behavior: smooth; overflow: auto; }
+        .message { max-width: 70%; padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.4; word-wrap: break-word; display: inline-block; }
+        .user-message { background: #0084ff; color: white; align-self: flex-end; border-bottom-right-radius: 4px; clear: both; float: right; margin-bottom: 8px; }
+        .bot-message { background: #e4e6eb; color: black; align-self: flex-start; border-bottom-left-radius: 4px; white-space: pre-wrap; clear: both; float: left; margin-bottom: 8px; }
+        
+        /* Barre d'envoi Facebook Messenger */
+        .input-area { padding: 12px 16px; background: #fff; border-top: 1px solid #f0f0f0; position: relative; }
+        .controls-row { display: flex; align-items: center; gap: 10px; width: 100%; }
+        
+        /* Bouton ➕ bleu circulaire de gauche */
+        .plus-btn { background: #e7f3ff; color: #0084ff; border: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s ease; flex-shrink: 0; }
+        .plus-btn:hover { background: #dbedff; }
+        .plus-btn.active { transform: rotate(45deg); background: #f2f3f5; color: #65676b; }
+        .plus-btn svg { width: 22px; height: 22px; }
+
+        /* MENU DES OPTIONS */
+        .options-menu { display: flex; flex-direction: column; background: #ffffff; border: 1px solid rgba(0,0,0,0.06); border-radius: 18px; padding: 10px; position: absolute; bottom: 60px; left: 16px; z-index: 10; box-shadow: 0 12px 32px rgba(0,0,0,0.16), 0 2px 8px rgba(0,0,0,0.06); width: 272px; gap: 2px; opacity: 0; visibility: hidden; transform: scale(0.92) translateY(10px); transform-origin: bottom left; transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s; pointer-events: none; }
+        .options-menu.show { opacity: 1; visibility: visible; transform: scale(1) translateY(0); pointer-events: auto; }
+
+        .options-menu-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8a8d91; padding: 6px 10px 8px; }
+        .menu-divider { height: 1px; background: #eef0f2; margin: 6px 4px; }
+        
+        .menu-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 8px; background: none; border: none; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 500; color: #050505; text-align: left; transition: background 0.18s ease, transform 0.18s ease; }
+        .menu-item:hover { background: #f5f6f7; transform: translateX(2px); }
+        .menu-item:active { background: #eef0f2; }
+        .menu-item svg { width: 19px; height: 19px; flex-shrink: 0; }
+
+        .menu-item-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .menu-item-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+        .menu-item-label { font-size: 14.5px; font-weight: 600; color: #050505; display: flex; align-items: center; gap: 6px; }
+        .menu-item-sub { font-size: 12px; color: #8a8d91; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .menu-badge-ai { font-size: 10px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #a855f7, #ec4899); padding: 1.5px 6px; border-radius: 8px; letter-spacing: 0.3px; }
+        
+        /* Couleurs des icônes de fonctions */
+        .icon-gallery { color: #16a34a; }
+        .icon-bg-gallery { background: rgba(22, 163, 74, 0.1); }
+        .icon-camera { color: #0084ff; }
+        .icon-bg-camera { background: rgba(0, 132, 255, 0.1); }
+        .icon-mic { color: #f3425f; }
+        .icon-mic.recording { animation: pulse 1.5s infinite; color: #ea4335; }
+        .icon-bg-mic { background: rgba(243, 66, 95, 0.1); }
+        .icon-file { color: #1877f2; }
+        .icon-bg-file { background: rgba(24, 119, 242, 0.1); }
+        .icon-imagine { color: #b030b0; } /* Teinte violette IA créative */
+        .icon-bg-imagine { background: linear-gradient(135deg, rgba(168,85,247,0.14), rgba(236,72,153,0.14)); }
+
+        /* CHAMP DE SAISIE : Bordure en pointillés gris, fond blanc à l'intérieur */
+        .input-wrapper { flex: 1; display: flex; align-items: center; background: #ffffff; border: 1.5px dashed #ccd0d5; border-radius: 20px; padding: 8px 16px; min-height: 22px; }
+        .input-wrapper input[type="text"] { width: 100%; border: none; background: transparent; font-size: 15px; outline: none; color: #050505; padding: 0; margin: 0; }
+        .input-wrapper input[type="text"]::placeholder { color: #898f9c; }
+
+        /* BOUTON ENVOYER TOUT À DROITE */
+        .send-btn { color: #0084ff; background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 6px; flex-shrink: 0; transition: transform 0.1s; }
+        .send-btn:hover { transform: scale(1.1); }
+        .send-btn svg { width: 24px; height: 24px; }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .file-preview-bar { display: none; background: #f0f2f5; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; align-items: center; justify-content: space-between; font-size: 13px; color: #65676b; }
+        .cancel-file { color: #ea4335; cursor: pointer; font-weight: bold; }
+
+        /* Style pour l'indicateur d'écriture discret de Tsapi AI */
+        .tsapi-writing-indicator { display: none; align-self: flex-start; color: #65676b; font-style: italic; font-size: 13px; padding: 5px 14px; margin-bottom: 2px; }
+
+        /* AJOUT DE STYLE COMPLÉMENTAIRE POUR LA NOTIFICATION FLOTTANTE DU SCROLL SANS MODIFIER LE RESTE */
+        .tsapi-scroll-notice { display: none; position: absolute; left: 50%; transform: translateX(-50%); background: rgba(0, 132, 255, 0.95); color: white; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2); pointer-events: none; transition: all 0.3s ease; }
+        .notice-top { top: 65px; }
+        .notice-bottom { bottom: 65px; }
+
+        /* ===================================================================== */
+        /* AJOUT : BARRE D'ACTIONS SOUS LES REPONSES DE L'IA (copier / j'aime / je n'aime pas / recommencer / ecouter / pause) */
+        /* ===================================================================== */
+        .bot-actions { display: flex; align-items: center; gap: 2px; clear: both; float: left; margin: 2px 0 10px 4px; }
+        .action-btn { background: none; border: none; cursor: pointer; padding: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #65676b; transition: background 0.15s ease, color 0.15s ease; }
+        .action-btn:hover { background: #f0f2f5; color: #050505; }
+        .action-btn svg { width: 16px; height: 16px; }
+        .action-btn.liked { color: #0084ff; }
+        .action-btn.disliked { color: #ea4335; }
+        .action-btn.speak-btn, .action-btn.pause-btn { color: #0084ff; }
+
+        /* AJOUT : PETITE MENTION EN BAS DE LA ZONE DE SAISIE */
+        .ai-disclaimer { text-align: center; font-size: 11px; color: #98a2ad; padding: 4px 0 0; user-select: none; }
+
+        /* ===================================================================== */
+        /* AJOUT : AVATAR "BARRE D'ONDE" STYLE SIRI (photo de profil de l'IA) */
+        /* ===================================================================== */
+        .siri-avatar { width: 40px; height: 40px; background: #050505; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .siri-bars { display: flex; align-items: center; justify-content: center; gap: 2px; height: 20px; }
+        .siri-bars span { display: block; width: 3px; border-radius: 2px; animation: siriBarPulse 1s ease-in-out infinite; }
+        .siri-bars span:nth-child(1) { background: #3b82f6; height: 8px; animation-delay: 0s; }
+        .siri-bars span:nth-child(2) { background: #a855f7; height: 16px; animation-delay: 0.12s; }
+        .siri-bars span:nth-child(3) { background: #ec4899; height: 20px; animation-delay: 0.24s; }
+        .siri-bars span:nth-child(4) { background: #f97316; height: 14px; animation-delay: 0.36s; }
+        .siri-bars span:nth-child(5) { background: #22c55e; height: 10px; animation-delay: 0.48s; }
+        @keyframes siriBarPulse { 0%, 100% { transform: scaleY(0.4); } 50% { transform: scaleY(1); } }
+
+        /* ===================================================================== */
+        /* AJOUT : PANNEAU "NOUVELLE DISCUSSION" AVEC SUGGESTIONS (scroll vers le haut) */
+        /* ===================================================================== */
+        .tsapi-suggestions-panel { display: none; clear: both; float: none; width: 100%; padding: 4px 2px 16px; box-sizing: border-box; animation: tsapiFadeInUp 0.3s ease; }
+        .tsapi-suggestions-panel.show { display: block; }
+        @keyframes tsapiFadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .tsapi-suggestions-avatar-wrap { display: flex; justify-content: center; margin: 6px 0 22px; }
+        .tsapi-suggestions-avatar.siri-avatar { width: 64px; height: 64px; }
+        .tsapi-suggestions-avatar .siri-bars { height: 28px; gap: 3px; }
+        .tsapi-suggestions-avatar .siri-bars span { width: 4px; }
+
+        .suggestion-group-title { font-size: 13px; font-weight: 600; color: #65676b; margin: 16px 4px 8px; }
+        .suggestion-chip { display: flex; align-items: center; gap: 12px; width: 100%; background: #f0f2f5; border: none; border-radius: 16px; padding: 15px 16px; margin-bottom: 10px; text-align: left; font-size: 14.5px; font-weight: 600; color: #050505; cursor: pointer; transition: background 0.15s ease, transform 0.15s ease; box-sizing: border-box; }
+        .suggestion-chip:hover { background: #e4e6eb; }
+        .suggestion-chip:active { transform: scale(0.98); }
+        .suggestion-chip-icon { width: 32px; height: 32px; border-radius: 50%; background: #e4e6eb; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #65676b; }
+        .suggestion-chip-icon svg { width: 16px; height: 16px; }
+
+        /* ===================================================================== */
+        /* AJOUT : FICHE D'INFORMATION DU PROFIL (style "Meta Verified") */
+        /* ===================================================================== */
+        .tsapi-info-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.45); z-index: 1000; align-items: flex-end; justify-content: center; }
+        .tsapi-info-overlay.show { display: flex; }
+        .tsapi-info-sheet { background: #f0f2f5; width: 100%; max-width: 500px; border-radius: 16px 16px 0 0; padding: 18px 20px 24px; box-sizing: border-box; max-height: 85%; overflow-y: auto; animation: tsapiSlideUp 0.25s ease; }
+        @keyframes tsapiSlideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .tsapi-info-close-row { display: flex; justify-content: flex-end; margin-bottom: 6px; }
+        .tsapi-info-close-row button { background: #e4e6eb; border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 16px; line-height: 1; cursor: pointer; color: #050505; display: flex; align-items: center; justify-content: center; }
+        .tsapi-info-title { font-size: 21px; font-weight: 700; text-align: center; color: #050505; margin: 0 0 10px; }
+        .tsapi-info-subtitle { font-size: 14px; color: #65676b; text-align: center; margin: 0 0 16px; line-height: 1.4; }
+        .tsapi-info-card { background: #fff; border-radius: 14px; padding: 16px; display: flex; gap: 12px; align-items: flex-start; }
+        .tsapi-info-badge { flex-shrink: 0; width: 26px; height: 26px; margin-top: 2px; }
+        .tsapi-info-card-title { font-size: 17px; font-weight: 600; color: #050505; margin: 0 0 6px; line-height: 1.3; }
+        .tsapi-info-card-text { font-size: 14px; color: #65676b; line-height: 1.4; margin: 0 0 16px; }
+        .tsapi-info-btn { display: block; width: 100%; background: #0866ff; color: #fff; border: none; padding: 12px; border-radius: 24px; font-size: 15px; font-weight: 700; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div id="tsapiNoticeTop" class="tsapi-scroll-notice notice-top">Glisse encore vers le haut pour une nouvelle discussion 💬</div>
+    <div id="tsapiNoticeBottom" class="tsapi-scroll-notice notice-bottom">Glisse vers le bas pour retrouver l'ancienne discussion ↩️</div>
+
+    <div class="chat-header">
+        <div class="tsapi-profile">
+            <div style="margin-right: 10px; position: relative;">
+                <div class="siri-avatar">
+                    <div class="siri-bars">
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                </div>
+                <div style="width: 12px; height: 12px; background: #31a24c; border-radius: 50%; position: absolute; bottom: 0; right: 0; border: 2px solid white;"></div>
+            </div>
+            <div>
+                <div style="display: flex; align-items: center; cursor: pointer;" id="tsapiProfileTrigger" onclick="tsapiOpenProfileInfo()">
+                    <span class="tsapi-name">Tsapi AI</span>
+                    <svg viewBox="0 0 24 24" width="20" height="20" style="vertical-align: middle; margin-left: 3px;">
+                        <path fill="#1877F2" d="M23 12l-2.44-2.78.34-3.68-3.61-.82-1.89-3.18L12 3 8.6 1.54 6.71 4.72l-3.61.81.34 3.68L1 12l2.44 2.78-.34 3.69 3.61.82 1.89 3.18L12 21l3.4 1.46 1.89-3.18 3.61-.82-.34-3.68L23 12z"></path>
+                        <path fill="white" d="M10.5 15.6L6.4 11.8L7.8 10.4L10.2 12.8L16.2 6.8L17.6 8.2L10.2 15.6Z"></path>
+                    </svg>
+                </div>
+                <div class="tsapi-status">En ligne</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="chat-box" id="chatBox" onscroll="handleChatScroll(this)">
+        <div id="tsapiWelcomeMessage" class="message bot-message">Bonjour ! Comment puis-je t'aider aujourd'hui...</div>
+
+        <div id="tsapiSuggestionsPanel" class="tsapi-suggestions-panel">
+            <div class="tsapi-suggestions-avatar-wrap">
+                <div class="siri-avatar tsapi-suggestions-avatar">
+                    <div class="siri-bars">
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                </div>
+            </div>
+
+            <button class="suggestion-chip" onclick="tsapiUseSuggestion(this.dataset.q)" data-q="Discute de moyens créatifs d'utiliser l'IA">
+                <span class="suggestion-chip-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="15" y2="18"/></svg></span>
+                <span>Discute de moyens créatifs d'utiliser l'IA</span>
+            </button>
+            <button class="suggestion-chip" onclick="tsapiUseSuggestion(this.dataset.q)" data-q="Explique comment Tsapi AI fonctionne">
+                <span class="suggestion-chip-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="15" y2="18"/></svg></span>
+                <span>Explique comment Tsapi AI fonctionne</span>
+            </button>
+            <button class="suggestion-chip" onclick="tsapiUseSuggestion(this.dataset.q)" data-q="Quelles sont les qualités de l'IA ?">
+                <span class="suggestion-chip-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="15" y2="18"/></svg></span>
+                <span>Quelles sont les qualités de l'IA ?</span>
+            </button>
+
+            <div class="suggestion-group-title">Amusons-nous un peu</div>
+            <button class="suggestion-chip" onclick="tsapiUseSuggestion(this.dataset.q)" data-q="Jouons au jeu des 20 questions">
+                <span class="suggestion-chip-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="15" y2="18"/></svg></span>
+                <span>Jouons au jeu des 20 questions</span>
+            </button>
+
+            <div class="suggestion-group-title">Parlons-en</div>
+            <button class="suggestion-chip" onclick="tsapiUseSuggestion(this.dataset.q)" data-q="Apprendre à réduire le stress">
+                <span class="suggestion-chip-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="15" y2="18"/></svg></span>
+                <span>Apprendre à réduire le stress</span>
+            </button>
+            <button class="suggestion-chip" onclick="tsapiUseSuggestion(this.dataset.q)" data-q="Comment vaincre les pensées négatives">
+                <span class="suggestion-chip-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="15" y2="18"/></svg></span>
+                <span>Comment vaincre les pensées négatives</span>
+            </button>
+            <button class="suggestion-chip" onclick="tsapiUseSuggestion(this.dataset.q)" data-q="Aide-moi à me préparer pour une conversation difficile">
+                <span class="suggestion-chip-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="15" y2="18"/></svg></span>
+                <span>Aide-moi à me préparer pour une conversation difficile</span>
+            </button>
+        </div>
+        
+        <div id="tsapiDynamicMessages">
+            {% if messages %}
+                {% for msg in messages %}
+                    <div class="message user-message">{{ msg.contenu_utilisateur }}</div>
+                    <div class="message bot-message">{{ msg.reponse_ia }}</div>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <div id="tsapiWritingIndicator" class="tsapi-writing-indicator">Tsapi AI est en train d'écrire...</div>
+    </div>
+
+    <div class="input-area">
+        <div class="file-preview-bar" id="filePreviewBar">
+            <span id="filePreviewName">Fichier sélectionné</span>
+            <span class="cancel-file" onclick="clearFile()">✕</span>
+        </div>
+
+        <div class="controls-row">
+            <button class="plus-btn" id="plusBtn" onclick="toggleOptionsMenu()" title="Ouvrir les options">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 11h-6V5c0-.55-.45-1-1-1s-1 .45-1 1v6H5c-.55 0-1 .45-1 1s.45 1 1 1h6v6c0 .55.45 1 1 1s1-.45 1-1v-6h6c.55 0 1-.45 1-1s-.45-1-1-1z"/></svg>
+            </button>
+
+            <div class="options-menu" id="optionsMenu">
+                <input type="file" id="galleryInput" accept="image/*,video/*" style="display: none;" onchange="handleGallerySelect(this)">
+                <input type="file" id="cameraInput" accept="image/*,video/*" capture="environment" style="display: none;" onchange="handleCameraSelect(this)">
+                <input type="file" id="fileInput" style="display: none;" onchange="handleFileSelect(this)">
+
+                <div class="options-menu-title">Ajouter à votre message</div>
+
+                <button class="menu-item" onclick="document.getElementById('galleryInput').click()">
+                    <div class="menu-item-icon icon-bg-gallery">
+                        <svg class="icon-gallery" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" fill="none"/>
+                            <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+                            <polyline points="21 15 16 10 5 21"/>
+                        </svg>
+                    </div>
+                    <div class="menu-item-text">
+                        <span class="menu-item-label">Photos et vidéos</span>
+                        <span class="menu-item-sub">Choisir depuis la galerie</span>
+                    </div>
+                </button>
+
+                <button class="menu-item" onclick="document.getElementById('cameraInput').click()">
+                    <div class="menu-item-icon icon-bg-camera">
+                        <svg class="icon-camera" viewBox="0 0 24 24" fill="currentColor"><path d="M12 15c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm9-8h-3.17L16 5H8L6.17 7H3c-1.1 0-2 .9-2 2v9c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 11H3V9h3.17l1.83-2h8l1.83 2H21v9z"/></svg>
+                    </div>
+                    <div class="menu-item-text">
+                        <span class="menu-item-label">Caméra</span>
+                        <span class="menu-item-sub">Prendre une photo ou vidéo</span>
+                    </div>
+                </button>
+
+                <button class="menu-item" onclick="toggleVoiceRecord()">
+                    <div class="menu-item-icon icon-bg-mic">
+                        <svg class="icon-mic" id="micIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+                    </div>
+                    <div class="menu-item-text">
+                        <span class="menu-item-label" id="micText">Enregistrer un audio</span>
+                        <span class="menu-item-sub">Message vocal</span>
+                    </div>
+                </button>
+
+                <button class="menu-item" onclick="document.getElementById('fileInput').click()">
+                    <div class="menu-item-icon icon-bg-file">
+                        <svg class="icon-file" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                    </div>
+                    <div class="menu-item-text">
+                        <span class="menu-item-label">Document</span>
+                        <span class="menu-item-sub">Envoyer un fichier</span>
+                    </div>
+                </button>
+
+                <div class="menu-divider"></div>
+
+                <button class="menu-item" onclick="handleImagineAction()">
+                    <div class="menu-item-icon icon-bg-imagine">
+                        <svg class="icon-imagine" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M6.34 17.66l2.83-2.83M14.83 9.17l2.83-2.83"/>
+                        </svg>
+                    </div>
+                    <div class="menu-item-text">
+                        <span class="menu-item-label">Imaginer <span class="menu-badge-ai">IA</span></span>
+                        <span class="menu-item-sub">Générer une image avec Tsapi AI</span>
+                    </div>
+                </button>
+            </div>
+
+            <div class="input-wrapper">
+                <input type="text" id="messageInput" placeholder="Aa" onkeypress="if(event.key === 'Enter') sendMessage()" oninput="toggleSendButton()">
+            </div>
+
+            <!-- POUCE BLEU par défaut -->
+            <button class="send-btn" id="thumbBtn" onclick="sendThumb()" title="👍">
+                <svg viewBox="0 0 36 36" fill="#0084ff" width="28" height="28" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Paume / base -->
+                    <rect x="4" y="16" width="6" height="14" rx="2" ry="2"/>
+                    <!-- Pouce levé -->
+                    <path d="M13 28 L13 15 C13 15 15 10 17 7 C18.5 4.5 21 5 21 8 C21 11 19.5 14 19.5 14 L28 14 C29.7 14 31 15.3 31 17 C31 17.8 30.7 18.5 30.2 19 C30.7 19.5 31 20.2 31 21 C31 22.3 30.1 23.4 28.9 23.8 C29.2 24.3 29.4 24.9 29.4 25.5 C29.4 27 28.2 28.2 26.7 28.3 C26.8 28.6 26.9 28.9 26.9 29.2 C26.9 30.7 25.7 32 24.2 32 L15 32 C13.9 32 13 31.1 13 30 Z"/>
+                </svg>
+            </button>
+            <!-- FLÈCHE ENVOI cachée par défaut -->
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="Envoyer" style="display:none;">
+                <svg viewBox="0 0 24 24" fill="#0084ff" width="26" height="26"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+        </div>
+        <div class="ai-disclaimer">Tsapi est une IA et peut se tromper.</div>
+    </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- AJOUT : FICHE D'INFORMATION DU PROFIL (ouverte en cliquant sur le nom ou le badge) -->
+<!-- ===================================================================== -->
+<div class="tsapi-info-overlay" id="tsapiInfoOverlay" onclick="tsapiCloseProfileInfo(event)">
+    <div class="tsapi-info-sheet" onclick="event.stopPropagation()">
+        <div class="tsapi-info-close-row">
+            <button onclick="tsapiCloseProfileInfo()" title="Fermer">✕</button>
+        </div>
+        <div class="tsapi-info-title">Tsapi AI</div>
+        <div class="tsapi-info-subtitle">Pour veiller à la sécurité de FaceNet, nous affichons des informations sur les personnes et leur profil.</div>
+
+        <div class="tsapi-info-card">
+            <svg class="tsapi-info-badge" viewBox="0 0 24 24">
+                <path fill="#1877F2" d="M23 12l-2.44-2.78.34-3.68-3.61-.82-1.89-3.18L12 3 8.6 1.54 6.71 4.72l-3.61.81.34 3.68L1 12l2.44 2.78-.34 3.69 3.61.82 1.89 3.18L12 21l3.4 1.46 1.89-3.18 3.61-.82-.34-3.68L23 12z"></path>
+                <path fill="white" d="M10.5 15.6L6.4 11.8L7.8 10.4L10.2 12.8L16.2 6.8L17.6 8.2L10.2 15.6Z"></path>
+            </svg>
+            <div>
+                <div class="tsapi-info-card-title">Tsapi AI a un abonnement Tsapi Verified</div>
+                <div class="tsapi-info-card-text">Les comptes avec un badge Vérifié ont été authentifiés. Il peut s'agir d'abonnés Tsapi Verified ou de personnes ou de marques notables.</div>
+                <button class="tsapi-info-btn" onclick="tsapiCloseProfileInfo()">En savoir plus</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // =========================================================================
+    // AJOUT : OUVERTURE/FERMETURE DE LA FICHE D'INFORMATION DU PROFIL
+    // =========================================================================
+    function tsapiOpenProfileInfo() {
+        document.getElementById('tsapiInfoOverlay').classList.add('show');
+    }
+
+    function tsapiCloseProfileInfo(event) {
+        document.getElementById('tsapiInfoOverlay').classList.remove('show');
+    }
+    // =========================================================================
+
+    function toggleSendButton() {
+        const input = document.getElementById('messageInput');
+        const thumbBtn = document.getElementById('thumbBtn');
+        const sendBtn = document.getElementById('sendBtn');
+        if (input.value.trim().length > 0) {
+            thumbBtn.style.display = 'none';
+            sendBtn.style.display = 'flex';
+        } else {
+            thumbBtn.style.display = 'flex';
+            sendBtn.style.display = 'none';
+        }
+    }
+
+    function sendThumb() {
+        // Envoie un 👍 comme message
+        const chatBox = document.getElementById('chatBox');
+        const userDiv = document.createElement('div');
+        userDiv.className = 'message user-message';
+        userDiv.innerText = '👍';
+        if(tsapiDiscussionActuelle === "nouvelle") { chatBox.appendChild(userDiv); } else { document.getElementById('tsapiDynamicMessages').appendChild(userDiv); }
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    let mediaRecorder;
+    let audioChunks = [];
+    let isRecording = false;
+    let audioBlob = null;
+    let activeMediaFile = null;
+    let hasReset = false;
+
+    // COPIE DE SAUVEGARDE DU CODE D'ORIGINE POUR L'HISTORIQUE INITIAL SQLITE
+    const tsapiAncienHistoriqueHTML = document.getElementById('tsapiDynamicMessages').innerHTML;
+
+    // Liste des messages de bienvenue aléatoires pour la nouvelle discussion
+    const motsBienvenueTsapiAI = [
+        "Nouvelle discussion lancée ! Comment puis-je t'assister pour ce nouveau sujet ? 🚀",
+        "Discussions réinitialisées. Je suis prêt à explorer une nouvelle idée avec toi ! 💡",
+        "C'est parti pour une nouvelle conversation ! Qu'as-tu en tête aujourd'hui ? 🔮",
+        "Nouvelle page blanche. Pose-moi ta question, je t'écoute ! ✨"
+    ];
+
+    // Variables pour mémoriser l'état de la discussion en cours
+    let tsapiDiscussionActuelle = "ancienne"; 
+
+    // Fonction interne pour le bruitage électronique "pa pa pa" à chaque caractère
+    function tsapiPlayTickSound() {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(580, audioCtx.currentTime); // Tonalité électronique
+            gainNode.gain.setValueAtTime(0.008, audioCtx.currentTime); // Volume ultra-léger et discret
+            gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.03);
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.03);
+        } catch (e) {}
+    }
+
+    // Fonction interne d'écriture progressive mot-à-mot/lettre-à-lettre
+    // AJOUT : paramètre onComplete (facultatif) appelé une fois l'écriture terminée, sans rien changer au comportement existant
+    function tsapiTypeEffect(element, fullText, delay = 20, onComplete) {
+        let currentIdx = 0;
+        element.innerText = "";
+        function stream() {
+            if (currentIdx < fullText.length) {
+                element.innerText += fullText.charAt(currentIdx);
+                currentIdx++;
+                tsapiPlayTickSound(); // Déclenche le petit bruit "pa pa pa" à la volée
+                const box = document.getElementById('chatBox');
+                box.scrollTop = box.scrollHeight;
+                setTimeout(stream, delay);
+            } else if (typeof onComplete === 'function') {
+                onComplete();
+            }
+        }
+        stream();
+    }
+
+    // =========================================================================
+    // AJOUT : BARRE D'ACTIONS SOUS CHAQUE REPONSE DE L'IA
+    // (copier / j'aime / je n'aime pas / recommencer / écouter / pause)
+    // =========================================================================
+    let tsapiSpeechState = { speakBtn: null, pauseBtn: null };
+
+    function tsapiResetSpeechUI() {
+        if (tsapiSpeechState.speakBtn) tsapiSpeechState.speakBtn.style.display = 'flex';
+        if (tsapiSpeechState.pauseBtn) tsapiSpeechState.pauseBtn.style.display = 'none';
+        tsapiSpeechState = { speakBtn: null, pauseBtn: null };
+    }
+
+    // Lecture à voix haute (bouton "suivre"/écouter le message)
+    function tsapiSpeak(speakBtn, pauseBtn, textEl) {
+        if (!('speechSynthesis' in window)) return;
+        const synth = window.speechSynthesis;
+
+        // Si ce même message est en pause, on reprend simplement la lecture
+        if (tsapiSpeechState.speakBtn === speakBtn && synth.paused) {
+            synth.resume();
+            speakBtn.style.display = 'none';
+            pauseBtn.style.display = 'flex';
+            return;
+        }
+
+        // On arrête toute autre lecture en cours avant de démarrer celle-ci
+        synth.cancel();
+        tsapiResetSpeechUI();
+
+        const text = (textEl.innerText || '').trim();
+        if (!text) return;
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'fr-FR';
+        utterance.onend = tsapiResetSpeechUI;
+        utterance.onerror = tsapiResetSpeechUI;
+
+        tsapiSpeechState = { speakBtn, pauseBtn };
+        synth.speak(utterance);
+        speakBtn.style.display = 'none';
+        pauseBtn.style.display = 'flex';
+    }
+
+    // Mise en pause de la lecture (bouton "pause")
+    function tsapiPauseSpeak(speakBtn, pauseBtn) {
+        if (!('speechSynthesis' in window)) return;
+        window.speechSynthesis.pause();
+        speakBtn.style.display = 'flex';
+        pauseBtn.style.display = 'none';
+    }
+
+    // Copier le message
+    function tsapiCopyMessage(btn, textEl) {
+        const text = textEl.innerText;
+        const restoreIcon = btn.innerHTML;
+        const finish = () => {
+            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+            setTimeout(() => { btn.innerHTML = restoreIcon; }, 1500);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(finish).catch(finish);
+        } else {
+            finish();
+        }
+    }
+
+    // J'aime
+    function tsapiLikeMessage(likeBtn) {
+        const dislikeBtn = likeBtn.parentElement.querySelector('.dislike-btn');
+        const wasActive = likeBtn.classList.contains('liked');
+        likeBtn.classList.toggle('liked');
+        if (!wasActive && dislikeBtn) dislikeBtn.classList.remove('disliked');
+    }
+
+    // Je n'aime pas
+    function tsapiDislikeMessage(dislikeBtn) {
+        const likeBtn = dislikeBtn.parentElement.querySelector('.like-btn');
+        const wasActive = dislikeBtn.classList.contains('disliked');
+        dislikeBtn.classList.toggle('disliked');
+        if (!wasActive && likeBtn) likeBtn.classList.remove('liked');
+    }
+
+    // Recommencer : renvoie le même message utilisateur pour obtenir une nouvelle réponse
+    function tsapiRetryMessage(userText) {
+        if (!userText) return;
+        const input = document.getElementById('messageInput');
+        input.value = userText;
+        toggleSendButton();
+        sendMessage();
+    }
+
+    // Construit et insère la barre d'actions juste après la bulle de réponse de l'IA
+    function tsapiAddBotActions(msgDiv, userText) {
+        // Évite les doublons si la fonction est appelée deux fois sur le même message
+        if (msgDiv.nextElementSibling && msgDiv.nextElementSibling.classList && msgDiv.nextElementSibling.classList.contains('bot-actions')) {
+            return msgDiv.nextElementSibling;
+        }
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'bot-actions';
+
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'action-btn copy-btn';
+        copyBtn.title = 'Copier';
+        copyBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+        copyBtn.onclick = () => tsapiCopyMessage(copyBtn, msgDiv);
+
+        const likeBtn = document.createElement('button');
+        likeBtn.className = 'action-btn like-btn';
+        likeBtn.title = "J'aime";
+        likeBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
+        likeBtn.onclick = () => tsapiLikeMessage(likeBtn);
+
+        const dislikeBtn = document.createElement('button');
+        dislikeBtn.className = 'action-btn dislike-btn';
+        dislikeBtn.title = "Je n'aime pas";
+        dislikeBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zM17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"/></svg>';
+        dislikeBtn.onclick = () => tsapiDislikeMessage(dislikeBtn);
+
+        const retryBtn = document.createElement('button');
+        retryBtn.className = 'action-btn retry-btn';
+        retryBtn.title = 'Recommencer';
+        retryBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>';
+        retryBtn.onclick = () => tsapiRetryMessage(userText);
+
+        const speakBtn = document.createElement('button');
+        speakBtn.className = 'action-btn speak-btn';
+        speakBtn.title = 'Écouter le message';
+        speakBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
+
+        const pauseBtn = document.createElement('button');
+        pauseBtn.className = 'action-btn pause-btn';
+        pauseBtn.title = 'Mettre en pause';
+        pauseBtn.style.display = 'none';
+        pauseBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+
+        speakBtn.onclick = () => tsapiSpeak(speakBtn, pauseBtn, msgDiv);
+        pauseBtn.onclick = () => tsapiPauseSpeak(speakBtn, pauseBtn);
+
+        actionsDiv.appendChild(copyBtn);
+        actionsDiv.appendChild(likeBtn);
+        actionsDiv.appendChild(dislikeBtn);
+        actionsDiv.appendChild(retryBtn);
+        actionsDiv.appendChild(speakBtn);
+        actionsDiv.appendChild(pauseBtn);
+
+        msgDiv.insertAdjacentElement('afterend', actionsDiv);
+        return actionsDiv;
+    }
+
+    // Ajoute la barre d'actions sur les messages déjà présents (historique rendu côté serveur)
+    function tsapiInitStaticActions(container) {
+        if (!container) return;
+        const bubbles = container.querySelectorAll('.bot-message');
+        bubbles.forEach(bubble => {
+            const prev = bubble.previousElementSibling;
+            const userText = (prev && prev.classList.contains('user-message')) ? prev.innerText : '';
+            tsapiAddBotActions(bubble, userText);
+        });
+    }
+    // =========================================================================
+
+    function toggleOptionsMenu() {
+        const menu = document.getElementById('optionsMenu');
+        const plusBtn = document.getElementById('plusBtn');
+        menu.classList.toggle('show');
+        plusBtn.classList.toggle('active');
+    }
+
+    // AJOUT : au clic sur une suggestion de la nouvelle discussion, on l'envoie directement
+    function tsapiUseSuggestion(text) {
+        if (!text) return;
+        const input = document.getElementById('messageInput');
+        input.value = text;
+        toggleSendButton();
+        sendMessage();
+    }
+
+    // =========================================================================
+    // AJOUT : DÉTECTION INTELLIGENTE DU SCROLL POUR CHANGER DE DISCUSSION
+    // =========================================================================
+    function handleChatScroll(chatBoxElement) {
+        const noticeTop = document.getElementById('tsapiNoticeTop');
+        const noticeBottom = document.getElementById('tsapiNoticeBottom');
+
+        // Événement 1 : L'utilisateur est tout en haut et scroll vers le haut
+        if (chatBoxElement.scrollTop === 0) {
+            noticeTop.style.display = 'block';
+            
+            // Si l'utilisateur force vers le haut et qu'on était sur l'ancienne discussion
+            if (tsapiDiscussionActuelle === "ancienne") {
+                tsapiDiscussionActuelle = "nouvelle";
+                noticeTop.style.display = 'none';
+                
+                // Masquer proprement l'ancien historique
+                document.getElementById('tsapiDynamicMessages').innerHTML = "";
+                
+                // AJOUT : masquer le message d'accueil et afficher le panneau de suggestions avec l'avatar animé
+                document.getElementById('tsapiWelcomeMessage').style.display = 'none';
+                document.getElementById('tsapiSuggestionsPanel').classList.add('show');
+            }
+        } else {
+            noticeTop.style.display = 'none';
+        }
+
+        // Événement 2 : L'utilisateur est tout en bas et veut descendre pour recharger l'ancienne discussion
+        const calculEspaceBas = chatBoxElement.scrollHeight - chatBoxElement.scrollTop - chatBoxElement.clientHeight;
+        if (calculEspaceBas <= 5 && tsapiDiscussionActuelle === "nouvelle") {
+            noticeBottom.style.display = 'block';
+            
+            // Revenir à l'ancienne discussion
+            tsapiDiscussionActuelle = "ancienne";
+            noticeBottom.style.display = 'none';
+            
+            // AJOUT : masquer le panneau de suggestions et réafficher le message d'accueil
+            document.getElementById('tsapiSuggestionsPanel').classList.remove('show');
+            const welcomeDivRetour = document.getElementById('tsapiWelcomeMessage');
+            welcomeDivRetour.style.display = '';
+            welcomeDivRetour.innerText = "Bonjour ! Comment puis-je t'aider aujourd'hui...";
+            
+            // Injecter instantanément tout l'ancien historique SQLite sauvegardé au départ
+            document.getElementById('tsapiDynamicMessages').innerHTML = tsapiAncienHistoriqueHTML;
+            
+            // AJOUT : réinsère la barre d'actions (copier/j'aime/je n'aime pas/recommencer/écouter/pause) sur l'historique restauré
+            tsapiInitStaticActions(document.getElementById('tsapiDynamicMessages'));
+            
+            // Recaler automatiquement le scroll vers le bas
+            chatBoxElement.scrollTop = chatBoxElement.scrollHeight;
+        } else {
+            noticeBottom.style.display = 'none';
+        }
+    }
+    // =========================================================================
+
+    // NOUVELLE FONCTION DE LECTURE AUDIO
+    function lireTexte(audioUrl) {
+        if (audioUrl) {
+            const audio = new Audio(audioUrl + "?t=" + new Date().getTime());
+            audio.play().catch(e => console.log("Lecture auto bloquée par le navigateur"));
+        }
+    }
+
+    // ACTION IMAGINER : Envoie la commande de génération d'image à l'API backend
+    async function handleImagineAction() {
+        toggleOptionsMenu();
+        const chatBox = document.getElementById('chatBox');
+        
+        // 1. Affiche le message de l'utilisateur
+        const userDiv = document.createElement('div');
+        userDiv.className = 'message user-message';
+        userDiv.innerText = "/imagine une image créative";
+        
+        // Injecter dans la zone active
+        if(tsapiDiscussionActuelle === "nouvelle") {
+            chatBox.appendChild(userDiv);
+        } else {
+            document.getElementById('tsapiDynamicMessages').appendChild(userDiv);
+        }
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // 2. Message d'attente de l'IA
+        const botLoadingDiv = document.createElement('div');
+        botLoadingDiv.className = 'message bot-message';
+        botLoadingDiv.innerText = "Tsapi AI est en train d'imaginer votre image... 🪄";
+        chatBox.appendChild(botLoadingDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // 3. Envoi au backend Tsapi API
+        const promptImage = prompt("Que veux-tu que j'imagine pour toi ?");
+        
+        // CORRECTION AJOUTÉE ICI :
+        const formData = new FormData(); 
+        formData.append('message', '/imagine ' + promptImage);
+
+        try {
+            const response = await fetch('/tsapi-ai', { method:'POST', body: formData });
+            const data = await response.json();
+            
+            chatBox.removeChild(botLoadingDiv); // Supprime le chargement
+
+            if (data.response) {
+                // Application de l'effet d'écriture progressive avec bruitage sur l'imagination
+                const msgDiv = document.createElement('div');
+                msgDiv.className = `message bot-message`;
+                if(tsapiDiscussionActuelle === "nouvelle") {
+                    chatBox.appendChild(msgDiv);
+                } else {
+                    document.getElementById('tsapiDynamicMessages').appendChild(msgDiv);
+                }
+                tsapiTypeEffect(msgDiv, data.response, 20, () => tsapiAddBotActions(msgDiv, '/imagine ' + promptImage));
+                lireTexte(data.audio_url);
+            } else {
+                appendMessage("J'ai imaginé l'image avec succès !", 'bot-message');
+            }
+        } catch (error) {
+            chatBox.removeChild(botLoadingDiv);
+            appendMessage("Une erreur est survenue pendant la création de l'image.", 'bot-message');
+        }
+    }
+
+    function handleGallerySelect(input) {
+        const filePreviewBar = document.getElementById('filePreviewBar');
+        const filePreviewName = document.getElementById('filePreviewName');
+        if (input.files && input.files[0]) {
+            filePreviewName.innerText = "🖼️ Média : " + input.files[0].name;
+            filePreviewBar.style.display = 'flex';
+            audioBlob = null; 
+            activeMediaFile = input.files[0];
+            document.getElementById('cameraInput').value = '';
+            document.getElementById('fileInput').value = '';
+            toggleOptionsMenu();
+        }
+    }
+
+    function handleCameraSelect(input) {
+        const filePreviewBar = document.getElementById('filePreviewBar');
+        const filePreviewName = document.getElementById('filePreviewName');
+        if (input.files && input.files[0]) {
+            const isVideo = input.files[0].type.startsWith('video/');
+            filePreviewName.innerText = isVideo ? "📹 Vidéo caméra prête" : "📸 Photo caméra prête";
+            filePreviewBar.style.display = 'flex';
+            audioBlob = null;
+            activeMediaFile = input.files[0];
+            document.getElementById('galleryInput').value = '';
+            document.getElementById('fileInput').value = '';
+            toggleOptionsMenu();
+        }
+    }
+
+    function handleFileSelect(input) {
+        const filePreviewBar = document.getElementById('filePreviewBar');
+        const filePreviewName = document.getElementById('filePreviewName');
+        if (input.files && input.files[0]) {
+            filePreviewName.innerText = "📄 Doc : " + input.files[0].name;
+            filePreviewBar.style.display = 'flex';
+            audioBlob = null; 
+            activeMediaFile = input.files[0];
+            document.getElementById('galleryInput').value = '';
+            document.getElementById('cameraInput').value = '';
+            toggleOptionsMenu();
+        }
+    }
+
+    function clearFile() {
+        document.getElementById('galleryInput').value = '';
+        document.getElementById('cameraInput').value = '';
+        document.getElementById('fileInput').value = '';
+        document.getElementById('filePreviewBar').style.display = 'none';
+        audioBlob = null;
+        activeMediaFile = null;
+    }
+
+    async function toggleVoiceRecord() {
+        const micIcon = document.getElementById('micIcon');
+        const micText = document.getElementById('micText');
+        
+        if (!isRecording) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+                mediaRecorder.onstop = () => {
+                    audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+                    document.getElementById('filePreviewName').innerText = "🎙️ Audio prêt";
+                    document.getElementById('filePreviewBar').style.display = 'flex';
+                    activeMediaFile = null;
+                };
+                mediaRecorder.start();
+                isRecording = true;
+                micIcon.classList.add('recording');
+                micText.innerText = "Enregistrement...";
+            } catch (err) {
+                alert("Impossible d'accéder au micro.");
+            }
+        } else {
+            mediaRecorder.stop();
+            isRecording = false;
+            micIcon.classList.remove('recording');
+            micText.innerText = "enregistrer un audio";
+            toggleOptionsMenu();
+        }
+    }
+
+    async function sendMessage() {
+        const input = document.getElementById('messageInput');
+        const chatBox = document.getElementById('chatBox');
+        const message = input.value.trim();
+        
+        let finalFile = audioBlob ? audioBlob : activeMediaFile;
+
+        if (!message && !finalFile) return;
+
+        // AJOUT : masquer le panneau de suggestions dès qu'un message est envoyé
+        const suggestionsPanel = document.getElementById('tsapiSuggestionsPanel');
+        if (suggestionsPanel) suggestionsPanel.classList.remove('show');
+
+        const formData = new FormData();
+        formData.append('message', message);
+
+        if (finalFile) {
+            if (audioBlob) {
+                formData.append('file', finalFile, 'vocal.mp3');
+            } else {
+                formData.append('file', finalFile);
+            }
+        }
+
+        const userDiv = document.createElement('div');
+        userDiv.className = 'message user-message';
+        
+        if (finalFile) {
+            if (finalFile.type && finalFile.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    userDiv.innerHTML = (message ? message + '<br><br>' : '') + `<img src="${e.target.result}" style="max-width:100%; border-radius:10px;">`;
+                    if(tsapiDiscussionActuelle === "nouvelle") { chatBox.appendChild(userDiv); } else { document.getElementById('tsapiDynamicMessages').appendChild(userDiv); }
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                };
+                reader.readAsDataURL(finalFile);
+            } else if (finalFile.type && finalFile.type.startsWith('video/')) {
+                userDiv.innerText = (message ? message + '\n' : '') + "📹 Vidéo chargée";
+                if(tsapiDiscussionActuelle === "nouvelle") { chatBox.appendChild(userDiv); } else { document.getElementById('tsapiDynamicMessages').appendChild(userDiv); }
+            } else if (audioBlob) {
+                userDiv.innerText = (message ? message + '\n' : '') + "🎙️ Message Vocal";
+                if(tsapiDiscussionActuelle === "nouvelle") { chatBox.appendChild(userDiv); } else { document.getElementById('tsapiDynamicMessages').appendChild(userDiv); }
+            } else {
+                userDiv.innerText = (message ? message + '\n' : '') + "📄 Fichier : " + finalFile.name;
+                if(tsapiDiscussionActuelle === "nouvelle") { chatBox.appendChild(userDiv); } else { document.getElementById('tsapiDynamicMessages').appendChild(userDiv); }
+            }
+        } else {
+            userDiv.innerText = message;
+            if(tsapiDiscussionActuelle === "nouvelle") { chatBox.appendChild(userDiv); } else { document.getElementById('tsapiDynamicMessages').appendChild(userDiv); }
+        }
+
+        const indicator = document.getElementById('tsapiWritingIndicator');
+        chatBox.appendChild(indicator);
+        indicator.style.display = 'block';
+
+        chatBox.scrollTop = chatBox.scrollHeight;
+        input.value = '';
+        clearFile();
+
+        try {
+            const response = await fetch('/tsapi-ai', { method: 'POST', body: formData });
+            const data = await response.json();
+            
+            indicator.style.display = 'none';
+
+            if (data.response) {
+                const msgDiv = document.createElement('div');
+                msgDiv.className = `message bot-message`;
+                
+                if(tsapiDiscussionActuelle === "nouvelle") { 
+                    chatBox.appendChild(msgDiv); 
+                } else { 
+                    document.getElementById('tsapiDynamicMessages').appendChild(msgDiv); 
+                }
+                
+                tsapiTypeEffect(msgDiv, data.response, 20, () => tsapiAddBotActions(msgDiv, message));
+                lireTexte(data.audio_url);
+            } else {
+                appendMessage("Erreur : " + data.error, 'bot-message');
+            }
+        } catch (error) {
+            indicator.style.display = 'none';
+            appendMessage("Impossible de joindre Tsapi AI.", 'bot-message');
+        }
+    }
+
+    function appendMessage(text, className) {
+        const chatBox = document.getElementById('chatBox');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${className}`;
+        msgDiv.innerText = text;
+        
+        if(tsapiDiscussionActuelle === "nouvelle") { 
+            chatBox.appendChild(msgDiv); 
+        } else { 
+            document.getElementById('tsapiDynamicMessages').appendChild(msgDiv); 
+        }
+        
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    window.onload = function() {
+        const chatBox = document.getElementById('chatBox');
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // AJOUT : affiche la barre d'actions sur les messages déjà présents au chargement de la page
+        tsapiInitStaticActions(document.getElementById('tsapiDynamicMessages'));
+    };
+</script>
+
+</body>
+</html>

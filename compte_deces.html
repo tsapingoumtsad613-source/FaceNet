@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include 'compte_style.html' %}
+<div class="cc-page">
+    <div class="cc-top">
+        <a href="{{ url_for('main.compte_desactivation') }}" class="cc-back" aria-label="Retour"><i class="fas fa-arrow-left"></i></a>
+        <h1>Signaler le décès d'un membre</h1>
+    </div>
+    <div class="cc-wrap">
+
+        <div id="zoneForm">
+        <div class="cc-progress">
+            <div class="cc-progress-top"><span id="ccStepLabel"></span><span id="ccStepName"></span></div>
+            <div class="cc-bar"><i id="ccBar"></i></div>
+        </div>
+        <div class="cc-card">
+            <!-- ÉTAPE 1 : la personne et le déclarant -->
+            <div class="cc-step" data-step="1">
+                <h2><span class="cc-ico gray"><i class="fas fa-user"></i></span> Qui est concerné ?</h2>
+                <p class="cc-desc">Nous sommes sincèrement désolés pour ta perte. Ces informations nous permettent de traiter la demande avec respect et sécurité.</p>
+                <label class="cc-label" for="cible">Nom d'utilisateur du profil de la personne décédée</label>
+                <input class="cc-input" id="cible" type="text" autocapitalize="none" autocomplete="off" placeholder="@nom_utilisateur">
+                <label class="cc-label" for="declarant_nom">Ton nom complet</label>
+                <input class="cc-input" id="declarant_nom" type="text" maxlength="150" autocomplete="name">
+                <label class="cc-label" for="lien">Ton lien avec la personne</label>
+                <select class="cc-select" id="lien"><option value="">Choisir…</option>{% for l in liens %}<option value="{{ l }}">{{ l }}</option>{% endfor %}</select>
+                <label class="cc-label" for="contact">Ton e-mail ou téléphone <span class="cc-hint">(pour te répondre)</span></label>
+                <input class="cc-input" id="contact" type="text" maxlength="150" autocomplete="email">
+            </div>
+
+            <!-- ÉTAPE 2 : la preuve -->
+            <div class="cc-step" data-step="2" hidden>
+                <h2><span class="cc-ico gray"><i class="fas fa-file-medical"></i></span> Preuve du décès</h2>
+                <p class="cc-desc">Envoie l'<strong>acte de décès</strong>, l'avis ou la banderole de deuil, ou tout document, photo ou vidéo qui prouve le décès. Tu peux filmer ou photographier directement.</p>
+                <label class="cc-label" for="preuve">Photo, vidéo ou PDF <span class="cc-hint">(40 Mo maximum)</span></label>
+                <input class="cc-input" id="preuve" type="file" accept="image/*,video/*,application/pdf">
+                <div id="apercu" class="cc-desc" style="margin-top:8px;"></div>
+                <label class="cc-label" for="date_deces">Date du décès <span class="cc-hint">(facultatif)</span></label>
+                <input class="cc-input" id="date_deces" type="date">
+                <div class="cc-alert info"><i class="fas fa-lock"></i><span>Ta preuve n'est visible que par notre équipe de vérification et n'est utilisée que pour cette demande.</span></div>
+            </div>
+
+            <!-- ÉTAPE 3 : devenir du profil -->
+            <div class="cc-step" data-step="3" hidden>
+                <h2><span class="cc-ico gray"><i class="fas fa-ribbon"></i></span> Que devient le profil ?</h2>
+                <p class="cc-desc">Choisis ce qui doit être fait une fois la demande validée par notre équipe.</p>
+                <label class="cc-choice"><input type="radio" name="souhait" value="commemoratif"><span><strong>Profil commémoratif</strong><br><small style="color:var(--cc-gray)">Le profil reste visible en souvenir. Plus personne ne peut s'y connecter.</small></span></label>
+                <label class="cc-choice"><input type="radio" name="souhait" value="suppression"><span><strong>Suppression du profil</strong><br><small style="color:var(--cc-gray)">Le profil est masqué puis supprimé définitivement après 7 jours.</small></span></label>
+                <label class="cc-label" for="personne_confiance">Personne de confiance à contacter <span class="cc-hint">(nom, lien, contact — facultatif)</span></label>
+                <input class="cc-input" id="personne_confiance" type="text" maxlength="300">
+                <label class="cc-label" for="instructions">Souhaits de la personne ou instructions <span class="cc-hint">(facultatif)</span></label>
+                <textarea class="cc-textarea" id="instructions" maxlength="2000"></textarea>
+                <label class="cc-choice" style="margin-top:14px"><input type="checkbox" id="certifie"><span>Je certifie que ces informations sont exactes. Je comprends qu'une fausse déclaration peut entraîner des poursuites.</span></label>
+            </div>
+
+            <div class="cc-alert err" id="ccErr" hidden role="alert"><i class="fas fa-exclamation-circle"></i><span></span></div>
+            <div class="cc-nav">
+                <button type="button" class="cc-btn ghost" id="ccBack"><i class="fas fa-arrow-left"></i> Retour</button>
+                <button type="button" class="cc-btn primary" id="ccNext">Continuer</button>
+            </div>
+        </div>
+        </div>
+
+        <div class="cc-card" id="zoneOk" hidden>
+            <h2><span class="cc-ico blue"><i class="fas fa-check"></i></span> Demande envoyée</h2>
+            <p class="cc-desc">Notre équipe examine ta demande. Numéro de suivi : <strong id="refOk"></strong>. Tu peux suivre son état sur cette page.</p>
+            <a class="cc-btn primary block" href="{{ url_for('main.compte_deces_page') }}">Voir mes demandes</a>
+        </div>
+
+        {% if mes_demandes %}
+        <div class="cc-card">
+            <h2>Mes demandes</h2>
+            {% for d in mes_demandes %}
+            <div style="display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--cc-border);font-size:14px;">
+                <div><strong>{{ d.ref }}</strong> · {{ d.nom }}<br><span style="color:var(--cc-gray);font-size:12.5px;">{{ d.date }}{% if d.statut == 'refuse' and d.motif %} · {{ d.motif }}{% endif %}</span></div>
+                <div><span class="cc-tag {{ 'wait' if d.statut == 'en_attente' else ('ok' if d.statut == 'valide' else 'no') }}">{{ "En cours d'examen" if d.statut == 'en_attente' else ('Validée' if d.statut == 'valide' else 'Refusée') }}</span></div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% include 'compte_js.html' %}
+<script>
+    (function () {
+        function v(id) { return (document.getElementById(id).value || '').trim(); }
+        function radio(n) { var r = document.querySelector('input[name=' + n + ']:checked'); return r ? r.value : null; }
+        document.getElementById('preuve').addEventListener('change', function () {
+            var f = this.files[0], a = document.getElementById('apercu');
+            a.textContent = f ? ('Fichier choisi : ' + f.name + ' (' + (f.size / 1048576).toFixed(1) + ' Mo)') : '';
+        });
+        ccWizard({
+            labels: ['La personne', 'La preuve', 'Le profil'],
+            submitLabel: '<i class="fas fa-paper-plane"></i> Envoyer la demande',
+            validate: function (i) {
+                if (i === 0) {
+                    if (!v('cible')) { return "Indique le nom d'utilisateur du profil."; }
+                    if (!v('declarant_nom')) { return 'Indique ton nom complet.'; }
+                    if (!v('lien')) { return 'Indique ton lien avec la personne.'; }
+                    if (!v('contact')) { return 'Indique un e-mail ou un téléphone pour te répondre.'; }
+                }
+                if (i === 1) {
+                    var f = document.getElementById('preuve').files[0];
+                    if (!f) { return 'Ajoute une preuve du décès.'; }
+                    if (f.size > 40 * 1048576) { return 'Fichier trop lourd (40 Mo maximum).'; }
+                }
+                if (i === 2) {
+                    if (!radio('souhait')) { return 'Choisis ce que devient le profil.'; }
+                    if (!document.getElementById('certifie').checked) { return 'Coche la certification pour envoyer.'; }
+                }
+                return null;
+            },
+            submit: function (btn, say) {
+                btn.disabled = true;
+                var fd = new FormData();
+                ['cible', 'declarant_nom', 'lien', 'contact', 'date_deces', 'personne_confiance', 'instructions'].forEach(function (k) { fd.append(k, v(k)); });
+                fd.append('souhait', radio('souhait')); fd.append('certifie', '1');
+                fd.append('preuve', document.getElementById('preuve').files[0]);
+                ccPost('/api/compte/deces', fd).then(function (r) {
+                    if (r.ok) {
+                        document.getElementById('zoneForm').hidden = true; document.getElementById('zoneOk').hidden = false;
+                        document.getElementById('refOk').textContent = r.data.ref; window.scrollTo({ top: 0, behavior: 'smooth' });
+                        return;
+                    }
+                    btn.disabled = false; say(r.data.error || 'Erreur.');
+                });
+            }
+        });
+    })();
+</script>
+{% endblock %}
