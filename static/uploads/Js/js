@@ -1,0 +1,89 @@
+// Attendre que la page soit complètement chargée
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("FaceNet : JavaScript prêt !");
+
+    // 1. Message de confirmation avant de supprimer un post (si tu ajoutes cette option)
+    const deleteButtons = document.querySelectorAll('.delete-btn');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            if (!confirm("Es-tu sûr de vouloir supprimer cette publication ?")) {
+                e.preventDefault(); // Annule l'action si l'utilisateur clique sur "Annuler"
+            }
+        });
+    });
+
+    // 2. Disparition automatique des messages flash (alertes) après 5 secondes
+    const alerts = document.querySelectorAll('.flash-message');
+    alerts.forEach(alert => {
+        setTimeout(() => {
+            alert.style.transition = "opacity 1s ease";
+            alert.style.opacity = "0";
+            setTimeout(() => alert.remove(), 1000);
+        }, 5000);
+    });
+
+    // 3. Petite animation sur le bouton d'inscription
+    const registerBtn = document.querySelector('button[type="submit"]');
+    if (registerBtn) {
+        registerBtn.addEventListener('mouseover', () => {
+            registerBtn.style.transform = "scale(1.05)";
+        });
+        registerBtn.addEventListener('mouseout', () => {
+            registerBtn.style.transform = "scale(1)";
+        });
+    }
+});
+
+// ===== REMPLACE la fonction bakeVideo() entière (lignes 1249 à 1261 de ton story.html) =====
+  function bakeVideo() {
+    return new Promise((res, rej) => {
+      const [W, H] = size(), c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+      const span = Math.max(1, trim.e - trim.s);
+      const v = document.createElement('video'); v.playsInline = true; v.preload = 'auto'; v.setAttribute('playsinline', ''); v.src = el.src;
+      let settled = false, rec = null, ac = null, raf = 0, guard = 0, started = false;
+      const cleanup = () => { clearTimeout(guard); cancelAnimationFrame(raf); try { v.pause(); } catch (e) {} try { if (ac) ac.close(); } catch (e) {} };
+      const fail = err => { if (settled) return; settled = true; cleanup(); try { if (rec && rec.state !== 'inactive') { rec.onstop = null; rec.stop(); } } catch (e) {} rej(err); };
+      // Filet de sécurité : si la préparation traîne, on abandonne au lieu de bloquer indéfiniment
+      guard = setTimeout(() => fail(new Error('Délai de préparation dépassé')), span * 2000 + 20000);
+
+      let tracks;
+      try { tracks = c.captureStream(30).getVideoTracks(); } catch (e) { return fail(e); }
+      if (!muted) {
+        try {
+          ac = new (window.AudioContext || window.webkitAudioContext)();
+          if (ac.state === 'suspended') ac.resume().catch(() => {});
+          const d = ac.createMediaStreamDestination(); ac.createMediaElementSource(v).connect(d);
+          tracks = tracks.concat(d.stream.getAudioTracks());
+        } catch (e) { console.warn(e); }
+      }
+      const mime = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'].find(m => { try { return MediaRecorder.isTypeSupported(m); } catch (e) { return false; } });
+      const ch = [];
+      try { rec = new MediaRecorder(new MediaStream(tracks), mime ? { mimeType: mime, videoBitsPerSecond: 3000000 } : undefined); } catch (e) { return fail(e); }
+      rec.ondataavailable = e => { if (e.data && e.data.size) ch.push(e.data); };
+      rec.onerror = () => fail(new Error('Enregistrement impossible'));
+      rec.onstop = () => {
+        if (settled) return; settled = true; cleanup();
+        if (!ch.length) return rej(new Error('Vidéo vide'));
+        const t = (rec.mimeType || mime || 'video/webm').split(';')[0];
+        res(new File([new Blob(ch, { type: t })], 'story.' + (t.indexOf('mp4') > -1 ? 'mp4' : 'webm'), { type: t }));
+      };
+
+      const tick = () => {
+        if (settled) return;
+        try { x.drawImage(v, 0, 0, W, H); paint(x, W, H); } catch (e) {}
+        const pc = Math.min(99, Math.max(0, Math.round((v.currentTime - trim.s) / span * 100)));
+        const m = document.querySelector('#waBusy .msg'); if (m) m.textContent = 'Préparation de la story… ' + pc + '%';
+        if (v.currentTime >= trim.e - .03 || v.ended) { if (rec.state !== 'inactive') rec.stop(); return; }
+        raf = requestAnimationFrame(tick);
+      };
+      const go = () => {
+        if (started || settled) return; started = true;
+        try { rec.start(250); } catch (e) { return fail(e); }
+        const pr = v.play(); if (pr && pr.catch) pr.catch(err => fail(err));
+        tick();
+      };
+      v.onseeked = go;
+      v.onloadedmetadata = () => { try { if (Math.abs(v.currentTime - trim.s) < .01) go(); else v.currentTime = trim.s; } catch (e) { fail(e); } };
+      v.onerror = () => fail(new Error('Lecture vidéo impossible'));
+    });
+  }
