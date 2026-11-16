@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anniversaires - FaceNet</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<style>
+ body{background:#f0f2f5;font-family:system-ui,Segoe UI,Arial,sans-serif;margin:0}
+ .container{max-width:640px;margin:0 auto;padding:16px}
+ h1{font-size:22px;margin:8px 0 16px}
+ .section-anniv{background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+ .section-anniv h2{font-size:16px;margin:0 0 10px}
+ .today-birthdays{background:linear-gradient(135deg,#ff6a88,#ff99ac);color:#fff}
+ .anniv-list{list-style:none;margin:0;padding:0}
+ .anniv-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(0,0,0,.06)}
+ .anniv-item:first-child{border-top:0}
+ .anniv-item img{width:42px;height:42px;border-radius:50%;object-fit:cover}
+ .user-name{flex:1}
+ .anniv-date{color:#65676b;font-size:13px}
+ .btn-profile,.btn-voeux,.btn-back{border-radius:8px;padding:7px 12px;font-size:13px;text-decoration:none;font-weight:600}
+ .btn-profile{background:#e4e6eb;color:#050505}
+ .btn-voeux{background:#fff;color:#e0245e}
+ .btn-back{background:#1877f2;color:#fff;display:inline-block}
+ .no-data{color:#65676b;margin:4px 0}
+ .today-birthdays .no-data{color:#fff}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🎉 Anniversaires de vos amis</h1>
+
+  <div class="section-anniv today-birthdays">
+    <h2>C'est leur anniversaire aujourd'hui ! 🎂</h2>
+    {% if anniversaires_du_jour %}
+    <ul class="anniv-list">
+      {% for user in anniversaires_du_jour %}
+      <li class="anniv-item">
+        <img src="{{ url_for('static', filename='uploads/' ~ (user.avatar or 'default_avatar.png')) }}" alt="" onerror="this.style.display='none'">
+        <span class="user-name"><strong>{{ user.nom_complet }}</strong></span>
+        <a href="{{ url_for('anniv.voeux', user_id=user.id) }}" class="btn-voeux">🎁 Souhaiter</a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="no-data">Aucun anniversaire aujourd'hui.</p>{% endif %}
+  </div>
+
+  <div class="section-anniv">
+    <h2>Plus tard ce mois-ci ({{ mois_actuel }}) 📅</h2>
+    {% if anniversaires_du_mois %}
+    <ul class="anniv-list">
+      {% for user in anniversaires_du_mois %}
+      <li class="anniv-item">
+        <span class="user-name"><strong>{{ user.nom_complet }}</strong>
+          <span class="anniv-date"> — le {{ user.date_naissance.strftime('%d/%m') }}</span></span>
+        <a href="{{ url_for('main.profil_par_id', user_id=user.id) }}" class="btn-profile">Profil</a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="no-data">Aucun autre anniversaire ce mois-ci.</p>{% endif %}
+  </div>
+
+  <div class="section-anniv">
+    <h2>Prochains anniversaires 🎈</h2>
+    {% if prochains_anniversaires %}
+    <ul class="anniv-list">
+      {% for user in prochains_anniversaires %}
+      <li class="anniv-item">
+        <span class="user-name"><strong>{{ user.nom_complet }}</strong>
+          <span class="anniv-date"> — le {{ user.date_naissance.strftime('%d/%m') }} (dans {{ user.jours_restants }} j)</span></span>
+        <a href="{{ url_for('main.profil_par_id', user_id=user.id) }}" class="btn-profile">Profil</a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="no-data">Aucun anniversaire à venir.</p>{% endif %}
+  </div>
+
+  <a href="{{ url_for('main.feed') }}" class="btn-back">← Retour au fil d'actualité</a>
+</div>
+</body>
+</html>

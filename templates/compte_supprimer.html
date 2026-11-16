@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include 'compte_style.html' %}
+<div class="cc-page">
+    <div class="cc-top">
+        <a href="{{ url_for('main.compte_desactivation') }}" class="cc-back" aria-label="Retour"><i class="fas fa-arrow-left"></i></a>
+        <h1>Supprimer mon compte</h1>
+    </div>
+    <div class="cc-wrap">
+    {% if est_pdg %}
+        <div class="cc-card"><div class="cc-alert warn"><i class="fas fa-lock"></i><span>Ce compte administrateur ne peut pas être supprimé depuis cette page.</span></div></div>
+    {% else %}
+        <div class="cc-progress">
+            <div class="cc-progress-top"><span id="ccStepLabel"></span><span id="ccStepName"></span></div>
+            <div class="cc-bar"><i id="ccBar"></i></div>
+        </div>
+
+        <div class="cc-card">
+            <!-- ÉTAPE 1 : les raisons -->
+            <div class="cc-step" data-step="1">
+                <h2><span class="cc-ico red"><i class="fas fa-comment-dots"></i></span> Pourquoi veux-tu partir ?</h2>
+                <p class="cc-desc">Choisis <strong>au moins 3 raisons</strong>. Tes réponses nous aident à corriger ce qui ne va pas.</p>
+                <div class="cc-counter" id="compteur">0 / 3 raisons minimum</div>
+                <div>
+                    {% for code, libelle in motifs %}
+                    <label class="cc-choice"><input type="checkbox" name="motif" value="{{ code }}" data-label="{{ libelle }}"><span>{{ libelle }}</span></label>
+                    {% endfor %}
+                </div>
+                <label class="cc-label" for="commentaire">Veux-tu nous en dire plus ? <span class="cc-hint">(facultatif)</span></label>
+                <textarea class="cc-textarea" id="commentaire" maxlength="1000"></textarea>
+            </div>
+
+            <!-- ÉTAPE 2 : questions importantes -->
+            <div class="cc-step" data-step="2" hidden>
+                <h2><span class="cc-ico red"><i class="fas fa-clipboard-check"></i></span> Avant de continuer</h2>
+                <p class="cc-desc">Quelques questions importantes pour éviter toute erreur.</p>
+
+                <div class="cc-q">1. Quelle est ta raison principale ?</div>
+                <div id="listePrincipal"></div>
+
+                <div class="cc-q">2. As-tu téléchargé une copie de tes données (photos, publications) ?</div>
+                <label class="cc-choice"><input type="radio" name="q_donnees" value="oui"><span>Oui, c'est fait</span></label>
+                <label class="cc-choice"><input type="radio" name="q_donnees" value="pas_encore"><span>Pas encore, mais je vais le faire avant la fin des 7 jours</span></label>
+                <label class="cc-choice"><input type="radio" name="q_donnees" value="non_besoin"><span>Je n'en ai pas besoin</span></label>
+
+                <div class="cc-q">3. As-tu pensé à la désactivation temporaire, qui ne supprime rien ?</div>
+                <label class="cc-choice"><input type="radio" name="q_desactiver" value="oui_prefere_supprimer"><span>Oui, mais je préfère supprimer</span></label>
+                <label class="cc-choice"><input type="radio" name="q_desactiver" value="non"><span>Non, je n'y avais pas pensé</span></label>
+                <p class="cc-desc" style="margin:6px 0 0;"><a href="{{ url_for('main.compte_desactiver_page') }}" style="color:var(--cc-blue);font-weight:700;">Voir la désactivation temporaire</a></p>
+
+                <div class="cc-q">4. Penses-tu revenir un jour sur FaceNet ?</div>
+                <label class="cc-choice"><input type="radio" name="q_revenir" value="jamais"><span>Non, jamais</span></label>
+                <label class="cc-choice"><input type="radio" name="q_revenir" value="peut_etre"><span>Peut-être plus tard</span></label>
+                <label class="cc-choice"><input type="radio" name="q_revenir" value="oui"><span>Oui, probablement</span></label>
+
+                <div class="cc-q">5. As-tu un abonnement, un boost ou un paiement en cours ?</div>
+                <label class="cc-choice"><input type="radio" name="q_paiements" value="non"><span>Non, aucun</span></label>
+                <label class="cc-choice"><input type="radio" name="q_paiements" value="oui_je_renonce"><span>Oui, et je renonce à ce qui reste (aucun remboursement)</span></label>
+
+                <div class="cc-q">6. Veux-tu que notre équipe te contacte pour résoudre un problème avant ton départ ?</div>
+                <label class="cc-choice"><input type="radio" name="q_contact" value="oui"><span>Oui, contactez-moi</span></label>
+                <label class="cc-choice"><input type="radio" name="q_contact" value="non"><span>Non merci</span></label>
+
+                <div class="cc-q">7. Confirme que tu as bien compris :</div>
+                <label class="cc-choice"><input type="checkbox" name="accuse" value="a_definitif"><span>Mon profil, mes publications, photos, stories, messages et amis seront définitivement supprimés après {{ jours }} jours.</span></label>
+                <label class="cc-choice"><input type="checkbox" name="accuse" value="a_irreversible"><span>Après ce délai, aucune récupération ne sera possible, même avec l'aide de l'assistance.</span></label>
+                <label class="cc-choice"><input type="checkbox" name="accuse" value="a_pages"><span>Les pages, groupes ou annonces dont je suis le seul administrateur seront supprimés.</span></label>
+                <label class="cc-choice"><input type="checkbox" name="accuse" value="a_masque"><span>Mon profil sera masqué immédiatement et je serai déconnecté(e) tout de suite.</span></label>
+                <label class="cc-choice"><input type="checkbox" name="accuse" value="a_annuler"><span>Je sais que je peux annuler pendant {{ jours }} jours en me reconnectant, avant la fin du compte à rebours.</span></label>
+            </div>
+
+            <!-- ÉTAPE 3 : confirmation finale -->
+            <div class="cc-step" data-step="3" hidden>
+                <h2><span class="cc-ico red"><i class="fas fa-exclamation-triangle"></i></span> Confirmation finale</h2>
+                <div class="cc-alert err"><i class="fas fa-exclamation-circle"></i><span>Dans <strong>{{ jours }} jours</strong>, ton compte et toutes tes données seront définitivement effacés. Tu seras déconnecté(e) dès maintenant.</span></div>
+                <label class="cc-label" for="mdp">Mot de passe</label>
+                <input class="cc-input" type="password" id="mdp" autocomplete="current-password" placeholder="Ton mot de passe">
+                <label class="cc-label" for="confirmation">Tape <strong>SUPPRIMER</strong> pour confirmer</label>
+                <input class="cc-input" type="text" id="confirmation" autocomplete="off" autocapitalize="characters" placeholder="SUPPRIMER">
+            </div>
+
+            <div class="cc-alert err" id="ccErr" hidden role="alert"><i class="fas fa-exclamation-circle"></i><span></span></div>
+            <div class="cc-nav">
+                <button type="button" class="cc-btn ghost" id="ccBack"><i class="fas fa-arrow-left"></i> Retour</button>
+                <button type="button" class="cc-btn primary" id="ccNext">Continuer</button>
+            </div>
+        </div>
+    {% endif %}
+    </div>
+</div>
+{% if not est_pdg %}
+{% include 'compte_js.html' %}
+<script>
+    (function () {
+        var MIN = 3;
+        function coches() { return [].slice.call(document.querySelectorAll('input[name=motif]:checked')); }
+        function radio(n) { var r = document.querySelector('input[name=' + n + ']:checked'); return r ? r.value : null; }
+        function majCompteur() {
+            var n = coches().length, c = document.getElementById('compteur');
+            c.textContent = n + ' / ' + MIN + ' raisons minimum' + (n >= MIN ? ' ✓' : '');
+            c.className = 'cc-counter' + (n >= MIN ? ' ok' : '');
+        }
+        document.querySelectorAll('input[name=motif]').forEach(function (i) { i.addEventListener('change', majCompteur); });
+        majCompteur();
+
+        function remplirPrincipal() {
+            var sel = coches(), box = document.getElementById('listePrincipal'), ancien = radio('q_principal');
+            box.innerHTML = sel.map(function (c) {
+                return '<label class="cc-choice"><input type="radio" name="q_principal" value="' + ccEsc(c.value) + '"' + (ancien === c.value ? ' checked' : '') + '><span>' + ccEsc(c.getAttribute('data-label')) + '</span></label>';
+            }).join('');
+        }
+
+        ccWizard({
+            labels: ['Tes raisons', 'Questions importantes', 'Confirmation'],
+            submitLabel: '<i class="fas fa-trash-alt"></i> Supprimer mon compte',
+            submitClass: 'danger',
+            onShow: function (i) { if (i === 1) { remplirPrincipal(); } },
+            validate: function (i) {
+                if (i === 0 && coches().length < MIN) { return 'Choisis au moins ' + MIN + ' raisons pour continuer.'; }
+                if (i === 1) {
+                    if (!radio('q_principal')) { return 'Question 1 : indique ta raison principale.'; }
+                    var qs = ['q_donnees', 'q_desactiver', 'q_revenir', 'q_paiements', 'q_contact'];
+                    for (var k = 0; k < qs.length; k++) { if (!radio(qs[k])) { return 'Question ' + (k + 2) + ' : choisis une réponse.'; } }
+                    if (document.querySelectorAll('input[name=accuse]:checked').length < 5) { return 'Question 7 : coche les 5 confirmations.'; }
+                }
+                if (i === 2) {
+                    if (!document.getElementById('mdp').value) { return 'Saisis ton mot de passe.'; }
+                    if (document.getElementById('confirmation').value.trim() !== 'SUPPRIMER') { return 'Tape exactement SUPPRIMER pour confirmer.'; }
+                }
+                return null;
+            },
+            submit: function (btn, say) {
+                btn.disabled = true;
+                ccGarderProfilAppareil().then(function () { return ccPost('/api/compte/supprimer', {
+                    motifs: coches().map(function (x) { return x.value; }),
+                    principal: radio('q_principal'),
+                    reponses: { donnees: radio('q_donnees'), desactiver: radio('q_desactiver'), revenir: radio('q_revenir'), paiements: radio('q_paiements'), contact: radio('q_contact') },
+                    accuses: [].map.call(document.querySelectorAll('input[name=accuse]:checked'), function (x) { return x.value; }),
+                    commentaire: document.getElementById('commentaire').value,
+                    password: document.getElementById('mdp').value,
+                    confirmation: document.getElementById('confirmation').value
+                }); }).then(function (r) {
+                    if (r.ok) { location.href = r.data.redirect; return; }
+                    btn.disabled = false;
+                    if (r.data.step && r.data.step - 1 !== 2) { ccGoto(r.data.step - 1); }
+                    say(r.data.error || 'Erreur.');
+                });
+            }
+        });
+    })();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="certification-main-container" style="max-width: 650px; margin: 40px auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+    
+    <div style="background: white; padding: 30px; border-radius: 12px; border: 1px solid #ced4da; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        
+        <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #f0f2f5; padding-bottom: 20px;">
+            <div style="display: inline-block; position: relative; margin-bottom: 10px;">
+                <div style="width: 50px; height: 50px; background-color: #0866FF; border-radius: 50%; display: flex; justify-content: center; align-items: center;">
+                    <div style="width: 25px; height: 12px; border-left: 5px solid white; border-bottom: 5px solid white; transform: rotate(-45deg); margin-top: -5px;"></div>
+                </div>
+            </div>
+            <h1 style="color: #1c1e21; margin: 0; font-size: 26px; font-weight: 800;">Formulaires de Certification</h1>
+            <p style="color: #65676b; margin-top: 5px; font-size: 15px;">Affichez votre authenticité avec le Badge Bleu officiel de FaceNet.</p>
+        </div>
+
+        <form action="{{ url_for('main.traiter_certification') }}" method="POST">
+            <div style="margin-bottom: 25px;">
+                <label style="display: block; font-weight: bold; margin-bottom: 8px; color: #1c1e21;">1. Choisissez votre niveau de Badge Bleu :</label>
+                <select name="type_badge" id="badge_selector" onchange="updateAvantages()" style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #ced4da; font-size: 16px; background-color: #f8f9fa;">
+                    <option value="standard">Abonnement Standard — 4 500 CFA / mois</option>
+                    <option value="premium">Abonnement Premium — 12 000 CFA / mois</option>
+                    <option value="max">Abonnement Max (Avancé) — 78 000 CFA / mois</option>
+                    <option value="max_plus">Forfait Max Plus (Membre Ultra) — 112 000 CFA / mois</option>
+                </select>
+            </div>
+
+            <div style="background-color: #f7f8fa; padding: 20px; border-radius: 8px; border-left: 4px solid #0866FF; margin-bottom: 25px;">
+                <h4 id="badge_title" style="margin: 0 0 10px 0; color: #0866FF; font-size: 16px;">Badge Bleu FaceNet - Option STANDARD</h4>
+                <ul id="avantages_list" style="margin: 0; padding-left: 20px; font-size: 14px; color: #4b4f56; line-height: 1.6;">
+                    <li>Badge vérifié✔</li>
+                    <li>Protection contre l'ursupation d'identité✔</li>
+                    <li>Stickers exclusifs✔</li>
+                    <li>Assistance amélioré✔</li>
+                </ul>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-weight: bold; margin-bottom: 10px; color: #1c1e21;">2. Sélectionnez un moyen de paiement :</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <button type="button" onclick="togglePaymentFields('momo')" style="padding: 12px; border: 1px solid #ced4da; border-radius: 6px; background: white; font-weight: bold; cursor: pointer;">MTN MoMo</button>
+                    <button type="button" onclick="togglePaymentFields('orange')" style="padding: 12px; border: 1px solid #ced4da; border-radius: 6px; background: white; font-weight: bold; cursor: pointer;">Orange Money</button>
+                </div>
+            </div>
+
+            <div id="form_mobile_money" style="display:none; background: #fffcf0; padding: 15px; border: 1px solid #ffeeba; border-radius: 6px; margin-bottom: 20px;">
+                <h5 id="momo_title" style="margin: 0 0 10px 0;">🟡 Numéro Mobile Money</h5>
+                <input type="tel" name="phone" placeholder="Ex: 6xxxxxx" style="width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 4px;">
+            </div>
+
+            <button type="submit" style="width: 100%; background: #0866FF; color: white; border: none; padding: 14px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.2s;">
+                Confirmer mon adhésion et activer mon badge
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const selector = document.getElementById('badge_selector');
+    const listZone = document.getElementById('avantages_list');
+    const badgeTitle = document.getElementById('badge_title');
+
+    const avantagesContent = {
+        standard: "<li>Badge Vérifié✔</li><li>Protection contre l'ursupation d'identité✔</li><li>Stickers exclusifs✔</li><li>Assistance amélioré✔</li>",
+        premium: "<li>Badge Vérifié✔</li><li>Protection contre l'ursupation d'identité✔</li><li>Liens de profil mis à niveau✔</li><li>Profil mis à niveau✔</li><li>Profil à la une✔</li><li>Stickers excludifs✔</li><li>Assistance amélioré✔</li>",
+        max: "<li>Badge Vérifié✔</li><li>Protection contre l'ursupation d'identité✔</li><li>Accès exclusifs à la monétisation✔</li><li>Vendeur certifié Marketplace✔</li><li>Thèmes de discussion personnalisé✔</li><li>Chat avec le conseil client(e)✔</li>",
+        max_plus: "<li>Badge Vérifié✔</li><li>Protection contre l'ursupation d'identité✔</li><li>Réponse par vocal sur les commentaires✔</li><li>Vendeur certifié Marketplace✔</li><li>Réponse aux signalements en moin de 5 minutes✔</li><li>Chat avec le service client(e)✔</li><li>Post de publication à la une✔</li>",
+    };
+
+    function updateAvantages() {
+        const val = selector.value;
+        listZone.innerHTML = avantagesContent[val];
+        badgeTitle.innerText = "Badge Bleu FaceNet - Option " + val.replace('_', ' ').toUpperCase();
+    }
+
+    function togglePaymentFields(mode) {
+        const fMomo = document.getElementById('form_mobile_money');
+        const momoTitle = document.getElementById('momo_title');
+        fMomo.style.display = 'block';
+
+        if (mode === 'momo') {
+            momoTitle.innerText = "🟡 Paiement par MTN Mobile Money";
+            momoTitle.style.color = "#cc9a06";
+        } else if (mode === 'orange') {
+            momoTitle.innerText = "🟠 Paiement par Orange Money";
+            momoTitle.style.color = "#ff6600";
+        }
+    }
+</script>
+{% endblock %}  

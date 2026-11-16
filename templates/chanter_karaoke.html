@@ -1,0 +1,956 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Studio Karaoké | FaceNet</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .ks, .ks * { box-sizing: border-box; }
+        .ks {
+            --acc: #fe2c55; --bg: #0e0e10; --mut: #8e8e93; --line: #232327; --gold: #D4AF37;
+            position: fixed; inset: 0; z-index: 9000;
+            background: #000; color: #fff;
+            display: flex; flex-direction: column;
+            font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent; user-select: none;
+        }
+        .ks button { font-family: inherit; color: inherit; background: none; border: none; cursor: pointer; padding: 0; }
+
+        /* ---------- Aperçu ---------- */
+        .ks-stage { position: relative; height: 38dvh; min-height: 230px; background: #000; flex-shrink: 0; display: flex; flex-direction: column; transition: height .25s ease; }
+        .ks.mod .ks-stage { height: 46dvh; }
+        .ks-view { position: relative; flex: 1; min-height: 0; display: flex; justify-content: center; }
+        .ks-preview { position: relative; height: 100%; aspect-ratio: 3 / 4; max-width: 100%; overflow: hidden; background: linear-gradient(160deg, #eab8dc, #c77dbd); }
+        .ks-media { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; }
+        .ks-disc { display: none; position: absolute; top: 14%; left: 50%; width: 46%; aspect-ratio: 1; margin-left: -23%; border-radius: 50%; background: radial-gradient(circle, #e8426a 0 18%, #151515 19% 100%); box-shadow: 0 8px 24px rgba(0,0,0,.5); animation: ksSpin 6s linear infinite; }
+        .ks-preview[data-tpl="vinyl"] .ks-disc { display: block; }
+        @keyframes ksSpin { to { transform: rotate(360deg); } }
+        .ks-lyrics { position: absolute; left: 8%; right: 8%; bottom: 64px; text-align: center; font-weight: 700; font-size: 17px; line-height: 1.25; text-shadow: 0 1px 6px rgba(0,0,0,.55); min-height: 22px; transition: color .2s; }
+        .ks-pill { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; background: rgba(40,40,44,.72); backdrop-filter: blur(6px); border-radius: 12px; padding: 9px 14px; font-size: 14px; white-space: nowrap; cursor: pointer; color: #fff; }
+        .ks-pill input { display: none; }
+        .ks-circle { position: absolute; top: max(14px, env(safe-area-inset-top)); width: 44px; height: 44px; border-radius: 50%; background: rgba(40,40,44,.75); border: 1px solid rgba(255,255,255,.25); display: flex; align-items: center; justify-content: center; font-size: 19px; color: #fff; text-decoration: none; z-index: 3; }
+        .ks-close { left: 14px; }
+        .ks-help { right: 14px; border-radius: 50%; }
+        .ks-search-btn { right: 66px; }
+
+        .ks-player { height: 46px; display: flex; align-items: center; gap: 12px; padding: 0 16px; background: #000; flex-shrink: 0; }
+        .ks-pp { width: 26px; font-size: 20px; color: #fff; text-align: center; }
+        .ks-seek { flex: 1; -webkit-appearance: none; appearance: none; height: 3px; border-radius: 2px; background: linear-gradient(to right, #fff 0%, #fff 0%, #5a5a5e 0%, #5a5a5e 100%); outline: none; }
+        .ks-seek::-webkit-slider-thumb { -webkit-appearance: none; width: 11px; height: 11px; border-radius: 50%; background: #fff; }
+        .ks-seek::-moz-range-thumb { width: 11px; height: 11px; border: none; border-radius: 50%; background: #fff; }
+        .ks-time { font-size: 12px; color: var(--mut); font-variant-numeric: tabular-nums; min-width: 82px; text-align: right; }
+        .ks-time b { color: #fff; font-weight: 400; }
+
+        #kpLoading { display: none; position: absolute; inset: 0; z-index: 2; background: rgba(0,0,0,.65); align-items: center; justify-content: center; flex-direction: column; gap: 8px; text-align: center; padding: 24px; font-size: 14px; color: #e5e5e7; }
+        #kpLoading.open { display: flex; }
+        #kpLoading i { font-size: 24px; color: var(--acc); }
+        #kpLoading small { color: var(--mut); }
+
+        /* ---------- Panneau ---------- */
+        .ks-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--bg); border-top: 1px solid var(--line); }
+        .ks-tabs { display: flex; flex-shrink: 0; padding-top: 6px; }
+        .ks-tab { flex: 1; text-align: center; font-size: 19px; color: var(--mut); padding: 14px 0 12px; position: relative; }
+        .ks-tab.on { color: #fff; }
+        .ks-tab.on::after { content: ''; position: absolute; left: 50%; bottom: 4px; width: 36px; height: 3px; margin-left: -18px; border-radius: 2px; background: var(--acc); }
+        .ks-body { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-bottom: 12px; }
+        .ks-body[hidden] { display: none; }
+
+        .ks-tools { display: flex; overflow-x: auto; padding: 14px 0 6px; scrollbar-width: none; }
+        .ks-tools::-webkit-scrollbar { display: none; }
+        .ks-tool { flex: 0 0 22vw; min-width: 82px; display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 13.5px; color: #b9b9be; position: relative; padding-top: 10px; }
+        .ks-tool i { font-size: 25px; color: #e8e8ea; }
+        .ks-tool.on i, .ks-tool.on { color: var(--acc); }
+        .ks-tool .pro { position: absolute; top: -4px; left: 50%; margin-left: 2px; }
+        .pro { background: linear-gradient(90deg, #a855f7, #ec4899); color: #fff; font-size: 10px; font-weight: 800; padding: 1px 7px; border-radius: 8px; letter-spacing: .3px; }
+
+        .ks-slider { padding: 10px 28px 0; }
+        .ks-slider .row { display: flex; justify-content: space-between; font-size: 16px; color: var(--mut); margin-bottom: 10px; }
+        .ks-slider .row b { color: #fff; font-weight: 400; }
+        .ks-range { width: 100%; -webkit-appearance: none; appearance: none; height: 3px; border-radius: 2px; outline: none; background: linear-gradient(to right, var(--acc) 100%, #3a3a3e 100%); }
+        .ks-range::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.5); }
+        .ks-range::-moz-range-thumb { width: 26px; height: 26px; border: none; border-radius: 50%; background: #fff; }
+
+        .ks-fxtabs { display: flex; gap: 22px; overflow-x: auto; padding: 22px 20px 12px; scrollbar-width: none; }
+        .ks-fxtabs::-webkit-scrollbar { display: none; }
+        .ks-fxtab { font-size: 17px; color: var(--mut); white-space: nowrap; }
+        .ks-fxtab.on { color: #fff; }
+
+        .ks-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 10px; padding: 4px 14px; touch-action: pan-y; }
+        .fx { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; }
+        .fx-img { position: relative; width: 100%; aspect-ratio: 1; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 26px; color: rgba(255,255,255,.92); overflow: hidden; border: 3px solid transparent; }
+        .fx.on .fx-img { border-color: var(--acc); }
+        .fx-img .pro { position: absolute; top: 0; right: 0; border-radius: 0 6px 0 8px; }
+        .fx > span { font-size: 13.5px; color: var(--mut); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .fx.on > span { color: #fff; }
+
+        .ks-dots { display: flex; justify-content: center; gap: 8px; padding: 14px 0 4px; }
+        .ks-dots i { display: block; width: 6px; height: 6px; border-radius: 3px; background: #4a4a4e; }
+        .ks-dots i.on { width: 24px; background: var(--acc); }
+
+        /* Modèles */
+        .ks-tpl-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 10px; padding: 14px; }
+        .tp { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; }
+        .tp-img { position: relative; width: 100%; aspect-ratio: 3 / 4.2; border-radius: 8px; overflow: hidden; border: 3px solid transparent; display: flex; flex-direction: column; justify-content: flex-end; padding: 8px 6px; font-size: 8px; line-height: 1.25; text-align: center; }
+        .tp-img i.big { position: absolute; top: 40%; left: 50%; transform: translate(-50%,-50%); font-size: 20px; opacity: .85; }
+        .tp-img .pro { position: absolute; top: 0; right: 0; border-radius: 0 6px 0 8px; }
+        .tp.on .tp-img { border-color: var(--acc); }
+        .tp > span { font-size: 13.5px; color: var(--mut); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tp.on > span { color: #fff; }
+        .ks-cats { display: flex; gap: 26px; overflow-x: auto; padding: 14px 20px 4px; scrollbar-width: none; position: sticky; top: 0; background: var(--bg); z-index: 1; }
+        .ks-cats::-webkit-scrollbar { display: none; }
+        .ks-cats button { font-size: 15.5px; color: var(--mut); white-space: nowrap; }
+        .ks-cats button.on { color: #fff; }
+
+        /* ---------- Barre du bas ---------- */
+        .ks-bottom { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); background: var(--bg); border-top: 1px solid var(--line); }
+        .ks-side { width: 96px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 14px; color: #b9b9be; }
+        .ks-side i { font-size: 24px; color: #f1f1f3; }
+        .ks-side.rec i { color: var(--acc); animation: ksPulse 1.1s infinite; }
+        @keyframes ksPulse { 0% { opacity: 1; } 50% { opacity: .35; } 100% { opacity: 1; } }
+        .ks-next { flex: 1; max-width: 290px; height: 46px; border-radius: 26px; background: var(--acc); color: #fff; font-size: 19px; font-weight: 800; }
+        .ks-next:active { filter: brightness(.9); }
+
+        /* ---------- Feuilles (sheets) ---------- */
+        .ks-ov { display: none; position: absolute; inset: 0; z-index: 20; background: rgba(0,0,0,.6); align-items: flex-end; }
+        .ks-ov.open { display: flex; }
+        .ks-sheet { width: 100%; max-height: 88dvh; overflow-y: auto; background: #1a1a1d; border-radius: 18px 18px 0 0; padding: 18px 18px calc(22px + env(safe-area-inset-bottom)); animation: ksUp .22s ease; }
+        .ks-sheet.tall { height: 88dvh; display: flex; flex-direction: column; }
+        @keyframes ksUp { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+        .ks-sh-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+        .ks-sh-head h3 { margin: 0; font-size: 18px; }
+        .ks-sh-x { width: 34px; height: 34px; border-radius: 50%; background: #2a2a2e !important; font-size: 15px; }
+        .ks-hint { font-size: 13px; color: var(--mut); line-height: 1.5; margin: 0 0 14px; }
+        .ks-btn2 { display: block; width: 100%; padding: 13px; border-radius: 12px; background: #2a2a2e !important; font-size: 15px; font-weight: 600; margin-top: 10px; }
+        .ks-btn2.acc { background: var(--acc) !important; }
+        .ks-sh-slider { margin-bottom: 18px; }
+        .ks-sh-slider .row { display: flex; justify-content: space-between; font-size: 14px; color: var(--mut); margin-bottom: 10px; }
+        .ks-sh-slider .row b { color: #fff; font-weight: 600; }
+
+        .ks-searchbox { display: flex; align-items: center; gap: 10px; background: #2a2a2e; border-radius: 12px; padding: 0 14px; margin-bottom: 12px; flex-shrink: 0; }
+        .ks-searchbox input { flex: 1; height: 46px; background: none; border: none; outline: none; color: #fff; font-size: 16px; }
+        .ks-results { flex: 1; overflow-y: auto; min-height: 0; }
+        .ks-song { display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 1px solid #262629; cursor: pointer; }
+        .ks-song .cv { width: 52px; height: 52px; border-radius: 10px; background: linear-gradient(135deg, #fe2c55, #7c3aed); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; overflow: hidden; }
+        .ks-song .cv img { width: 100%; height: 100%; object-fit: cover; }
+        .ks-song .inf { flex: 1; min-width: 0; }
+        .ks-song .t { font-size: 15.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ks-song .a { font-size: 13px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ks-song .tag { font-size: 11px; color: #4ade80; margin-top: 2px; }
+        .ks-song .d { font-size: 13px; color: var(--mut); font-variant-numeric: tabular-nums; }
+        .ks-empty { text-align: center; color: var(--mut); padding: 36px 16px; font-size: 14px; line-height: 1.5; }
+        .ks-empty i { display: block; font-size: 26px; margin-bottom: 10px; }
+
+        .ks-draft { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid #262629; }
+        .ks-draft .inf { flex: 1; min-width: 0; }
+        .ks-draft .t { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ks-draft .a { font-size: 12.5px; color: var(--mut); }
+        .ks-draft button { padding: 8px 12px; border-radius: 10px; background: #2a2a2e; font-size: 13px; }
+
+        .ks-toast { position: absolute; left: 50%; bottom: 100px; transform: translateX(-50%); background: rgba(40,40,44,.96); padding: 11px 16px; border-radius: 12px; font-size: 14px; z-index: 40; display: none; max-width: 86%; text-align: center; }
+
+        /* ---------- Récap (publication inchangée) ---------- */
+        .kp-recap { display: none; position: absolute; inset: 0; z-index: 30; background: rgba(0,0,0,.7); align-items: center; justify-content: center; padding: 20px; }
+        .kp-recap.open { display: flex; }
+        .kp-recap-card { background: linear-gradient(135deg, #0866FF 0%, #003bb3 100%); color: #fff; border-radius: 14px; padding: 22px 20px; text-align: center; width: 100%; max-width: 440px; position: relative; }
+        .kp-recap-card audio { width: 100%; margin: 12px 0; }
+        .kp-recap-x { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,.2) !important; }
+        .kp-actions-row { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+        .kp-action-btn { flex: 1; min-width: 130px; background: #fff !important; border: 1px solid #e4e6eb; padding: 12px; border-radius: 10px; font-weight: 600; font-size: 13.5px; color: #1c1e21 !important; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .kp-action-btn.primary { background: #0866FF !important; color: #fff !important; border-color: #0866FF; }
+
+        /* ---------- Modale d'achat (inchangée) ---------- */
+        .kp-purchase-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); backdrop-filter: blur(4px); z-index: 10000; align-items: center; justify-content: center; padding: 20px; }
+        .kp-purchase-overlay.open { display: flex; }
+        .kp-purchase-box { background: #fff; color: #1c1e21; border-radius: 18px; padding: 26px 22px 22px; max-width: 420px; width: 100%; text-align: center; position: relative; }
+        .kp-purchase-close { position: absolute; top: 12px; right: 12px; background: #F0F2F5; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; color: #1c1e21; font-size: 15px; }
+        .kp-purchase-icon { width: 64px; height: 64px; margin: 0 auto 14px; background: linear-gradient(135deg, #D4AF37, #b8860b); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 28px; box-shadow: 0 8px 20px rgba(212,175,55,.4); }
+        .kp-purchase-box h3 { margin: 0 0 8px; font-size: 19px; font-weight: 800; }
+        .kp-purchase-box p { margin: 0 0 16px; font-size: 13.5px; color: #65676B; line-height: 1.5; }
+        .kp-purchase-price { font-size: 32px; font-weight: 900; color: #D4AF37; margin: 10px 0 20px; }
+        .kp-purchase-price small { font-size: 14px; font-weight: 600; }
+        .kp-purchase-actions { display: flex; gap: 10px; }
+        .kp-purchase-btn { flex: 1; padding: 13px; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; border: none; }
+        .kp-purchase-cancel { background: #F0F2F5; color: #1c1e21; }
+        .kp-purchase-confirm { background: linear-gradient(135deg, #D4AF37, #b8860b); color: #fff; box-shadow: 0 4px 12px rgba(212,175,55,.4); }
+    </style>
+</head>
+<body>
+
+<div class="ks" id="ks">
+
+    <!-- ============= APERÇU ============= -->
+    <section class="ks-stage">
+        <div class="ks-view">
+            <div class="ks-preview" id="ksPreview" data-tpl="defaut">
+                <img class="ks-media" id="ksImg" alt="">
+                <video class="ks-media" id="ksVid" muted loop playsinline></video>
+                <div class="ks-disc"></div>
+                <div class="ks-lyrics" id="ksLyrics"></div>
+                <label class="ks-pill">
+                    <i class="far fa-image"></i> Sélectionner un Média
+                    <input type="file" id="ksMediaInput" accept="image/*,video/*">
+                </label>
+            </div>
+            <div id="kpLoading"></div>
+        </div>
+
+        <a href="{{ url_for('main.chanter_karaoke') }}" class="ks-circle ks-close" title="Fermer"><i class="fas fa-xmark"></i></a>
+        <button class="ks-circle ks-search-btn" id="ksSearchBtn" title="Rechercher une chanson"><i class="fas fa-magnifying-glass"></i></button>
+        <button class="ks-circle ks-help" id="ksHelpBtn" title="Aide"><i class="fas fa-circle-exclamation"></i></button>
+
+        <div class="ks-player">
+            <button class="ks-pp" id="kpPlay" title="Jouer / Pause"><i class="fas fa-play"></i></button>
+            <input type="range" class="ks-seek" id="ksSeek" min="0" max="1000" value="0">
+            <div class="ks-time"><b id="kpTimeCurrent">00:00</b>/<span id="kpTimeTotal">00:00</span></div>
+        </div>
+        <audio id="kpAudio" preload="auto" style="display:none"></audio>
+    </section>
+
+    <!-- ============= PANNEAU ============= -->
+    <section class="ks-panel">
+        <div class="ks-tabs">
+            <button class="ks-tab on" data-tab="modifier">Modifier</button>
+            <button class="ks-tab" data-tab="modeles">Modèles</button>
+        </div>
+
+        <div class="ks-body" id="ksTabModifier">
+            <div class="ks-tools" id="ksTools"></div>
+
+            <div class="ks-slider">
+                <div class="row"><span>Voix</span><b id="ksVoixVal">100</b></div>
+                <input type="range" class="ks-range" id="ksVoix" min="0" max="100" value="100">
+            </div>
+            <div class="ks-slider">
+                <div class="row"><span>Musique</span><b id="ksMusVal">100</b></div>
+                <input type="range" class="ks-range" id="ksMus" min="0" max="100" value="100">
+            </div>
+
+            <div class="ks-fxtabs" id="ksFxTabs">
+                <button class="ks-fxtab on" data-fx="reco">Recommander</button>
+                <button class="ks-fxtab" data-fx="pro">Effets PRO</button>
+                <button class="ks-fxtab" data-fx="free">Effets Gratuits</button>
+                <button class="ks-fxtab" data-fx="playfx">PlayFX</button>
+            </div>
+            <div class="ks-grid" id="ksGrid"></div>
+            <div class="ks-dots" id="ksDots"></div>
+        </div>
+
+        <div class="ks-body" id="ksTabModeles" hidden>
+            <div class="ks-tpl-grid" id="ksTplMain"></div>
+            <div class="ks-cats" id="ksCats">
+                <button class="on">Jour de la Terre</button>
+                <button>Noël</button>
+                <button>Le Jour de T…</button>
+                <button>Halloween</button>
+            </div>
+            <div class="ks-tpl-grid" id="ksTplSpecial"></div>
+        </div>
+    </section>
+
+    <!-- ============= BARRE DU BAS ============= -->
+    <footer class="ks-bottom">
+        <button class="ks-side" id="ksRec"><i class="fas fa-microphone"></i><span id="ksRecLabel">Enregistrer</span></button>
+        <button class="ks-next" id="ksNext">Suivant</button>
+        <button class="ks-side" id="ksDrafts"><i class="far fa-circle-down"></i><span>Brouillons</span></button>
+    </footer>
+
+    <!-- Feuille générique -->
+    <div class="ks-ov" id="ksOv"><div class="ks-sheet" id="ksSheet"></div></div>
+
+    <!-- Récap (publication : téléchargement / partage) -->
+    <div class="kp-recap" id="kpRecap">
+        <div class="kp-recap-card">
+            <button class="kp-recap-x" id="kpRecapX"><i class="fas fa-times"></i></button>
+            <div style="font-size: 34px; margin-bottom: 6px;">🎉</div>
+            <h3 style="margin: 0 0 6px; color: #fff;">Votre prestation est prête !</h3>
+            <p style="margin: 0; font-size: 13px; opacity: 0.9;">Écoutez le résultat et partagez-le si vous voulez.</p>
+            <audio id="kpRecapAudio" controls></audio>
+            <div class="kp-actions-row">
+                <button class="kp-action-btn primary" id="kpDownload"><i class="fas fa-download"></i> Télécharger</button>
+                <button class="kp-action-btn" id="kpShare"><i class="fas fa-share"></i> Partager</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="ks-toast" id="ksToast"></div>
+</div>
+
+<!-- ============= MODALE ACHAT (effets, modèles, outils PRO) ============= -->
+<div class="kp-purchase-overlay" id="kpPurchaseOverlay">
+    <div class="kp-purchase-box">
+        <button class="kp-purchase-close" onclick="fermerModaleAchat()"><i class="fas fa-times"></i></button>
+        <div class="kp-purchase-icon"><i class="fas fa-crown"></i></div>
+        <h3 id="kpPurchaseTitre">Débloquer cet élément</h3>
+        <p id="kpPurchaseDesc">Cet élément est premium. Débloquez-le une fois et utilisez-le à volonté.</p>
+        <div class="kp-purchase-price" id="kpPurchasePrix">500 <small>FCFA</small></div>
+        <div class="kp-purchase-actions">
+            <button class="kp-purchase-btn kp-purchase-cancel" onclick="fermerModaleAchat()">Annuler</button>
+            <button class="kp-purchase-btn kp-purchase-confirm" onclick="confirmerAchat()"><i class="fas fa-lock-open"></i> Payer maintenant</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const esc = v => String(v == null ? '' : v).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+    const fmt = s => { if (!isFinite(s) || s < 0) s = 0; return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
+
+    /* ============================ ÉTAT ============================ */
+    const params = new URLSearchParams(window.location.search);
+    let instrumentalUrl = params.get('instrumental') || '';
+    const sourceAudioUrl = params.get('audio') || params.get('song') || params.get('source') || '';
+    let titre = params.get('titre') || 'Sans titre';
+    let chanson = null;
+    let paroles = [];
+    let dureeAttendue = 0;
+    let vocalSourceUrl = '';
+    let separationEnCours = false;
+
+    const audio = $('kpAudio'), kpPlay = $('kpPlay'), seek = $('ksSeek');
+    const kpLoading = $('kpLoading'), kpRecap = $('kpRecap'), kpRecapAudio = $('kpRecapAudio');
+    const kpDownload = $('kpDownload'), kpShare = $('kpShare');
+
+    let voixVol = 100, musVol = 100;
+    let latenceMs = 0, debruitage = false, eqBass = 0, eqTreble = 0;
+    let trimDebut = 0, trimFin = 0;
+    let retourMicOn = true;
+
+    function toast(msg) {
+        const t = $('ksToast'); t.textContent = msg; t.style.display = 'block';
+        clearTimeout(toast._t); toast._t = setTimeout(() => { t.style.display = 'none'; }, 2600);
+    }
+    function majRange(el) {
+        const p = (el.value - el.min) / (el.max - el.min) * 100;
+        el.style.background = 'linear-gradient(to right, var(--acc) ' + p + '%, #3a3a3e ' + p + '%)';
+    }
+    function majSeek() {
+        const p = seek.value / 10;
+        seek.style.background = 'linear-gradient(to right, #fff ' + p + '%, #5a5a5e ' + p + '%)';
+    }
+
+    /* ============================ ONGLETS ============================ */
+    document.querySelectorAll('.ks-tab').forEach(b => b.addEventListener('click', () => {
+        document.querySelectorAll('.ks-tab').forEach(x => x.classList.toggle('on', x === b));
+        const mod = b.dataset.tab === 'modeles';
+        $('ksTabModifier').hidden = mod; $('ksTabModeles').hidden = !mod;
+        $('ks').classList.toggle('mod', mod);
+    }));
+
+    /* ============================ CHARGEMENT / SÉPARATION ============================ */
+    function afficherLoading(html) { kpLoading.innerHTML = html; kpLoading.classList.add('open'); }
+
+    async function separerChansonSiNecessaire() {
+        if (instrumentalUrl) { chargerInstrumental(instrumentalUrl, 0); return; }
+        if (!sourceAudioUrl) { ouvrirRecherche(); return; }
+        separationEnCours = true;
+        afficherLoading('<i class="fas fa-spinner fa-spin"></i><div>Séparation de la voix et de l\'instrumental en cours…</div><small>Le traitement est effectué sur le serveur.</small>');
+        try {
+            const rep = await fetch('/karaoke/api/separate', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ source_url: sourceAudioUrl, title: titre })
+            });
+            const data = await rep.json();
+            if (!rep.ok || !data.ok || !data.instrumental_url) throw new Error(data.error || 'Séparation impossible');
+            instrumentalUrl = data.instrumental_url; vocalSourceUrl = data.vocal_url || '';
+            chargerInstrumental(instrumentalUrl, 0);
+        } catch (err) {
+            console.error(err);
+            afficherLoading('<i class="fas fa-triangle-exclamation" style="color:#f87171"></i><div>Impossible de séparer la chanson.</div><small>' + esc(err.message || 'Erreur serveur') + '</small>');
+        } finally { separationEnCours = false; }
+    }
+
+    function chargerInstrumental(url, attendue) {
+        dureeAttendue = attendue || 0;
+        audio.pause();
+        audio.src = url; audio.load();
+        afficherLoading('<i class="fas fa-spinner fa-spin"></i><div>Chargement de l\'instrumental…</div>');
+        audio.onloadedmetadata = () => {
+            // Une chanson doit être COMPLÈTE : on refuse une piste nettement plus courte que prévu.
+            if (dureeAttendue && audio.duration < dureeAttendue * 0.97) {
+                audio.removeAttribute('src'); audio.load(); instrumentalUrl = '';
+                afficherLoading('<i class="fas fa-triangle-exclamation" style="color:#f87171"></i><div>Cette piste est incomplète.</div><small>Seules les chansons complètes (du début à la fin) sont acceptées.</small>');
+                setTimeout(() => { kpLoading.classList.remove('open'); ouvrirRecherche(); }, 2200);
+                return;
+            }
+            audio.currentTime = 0;
+            kpLoading.classList.remove('open');
+            $('kpTimeTotal').textContent = fmt(audio.duration);
+            appliquerVolumeMusique();
+            majParoles();
+        };
+        audio.onerror = () => afficherLoading('<i class="fas fa-triangle-exclamation" style="color:#f87171"></i><div>Impossible de charger l\'instrumental.</div>');
+    }
+
+    function majParoles() {
+        const el = $('ksLyrics');
+        if (!paroles.length) { el.textContent = titre === 'Sans titre' ? '' : titre; return; }
+        let ligne = '';
+        for (const l of paroles) { if (l.t <= audio.currentTime) ligne = l.text; else break; }
+        el.textContent = ligne;
+    }
+
+    /* ============================ LECTEUR ============================ */
+    kpPlay.addEventListener('click', async () => {
+        if (!audio.src || separationEnCours) { if (!audio.src) ouvrirRecherche(); return; }
+        if (audio.paused) { try { await audio.play(); } catch (_) {} } else audio.pause();
+    });
+    audio.addEventListener('play', () => { kpPlay.innerHTML = '<i class="fas fa-pause"></i>'; });
+    audio.addEventListener('pause', () => { kpPlay.innerHTML = '<i class="fas fa-play"></i>'; });
+    audio.addEventListener('ended', () => {
+        kpPlay.innerHTML = '<i class="fas fa-play"></i>';
+        if (enregistrementEnCours) arreterEnregistrement();
+    });
+    let seekDrag = false;
+    audio.addEventListener('timeupdate', () => {
+        $('kpTimeCurrent').textContent = fmt(audio.currentTime);
+        if (!seekDrag && audio.duration) { seek.value = Math.round(audio.currentTime / audio.duration * 1000); majSeek(); }
+        majParoles();
+        if (enregistrementEnCours && contexteAudio && contexteAudio.state === 'suspended') contexteAudio.resume();
+    });
+    seek.addEventListener('input', () => { seekDrag = true; majSeek(); if (audio.duration) audio.currentTime = seek.value / 1000 * audio.duration; });
+    seek.addEventListener('change', () => { seekDrag = false; });
+
+    /* ============================ VOLUMES ============================ */
+    function appliquerVolumeMusique() { audio.volume = Math.max(0, Math.min(1, musVol / 100)); }
+    function appliquerVolumeVoix() { if (gainMicro) gainMicro.gain.value = retourMicOn ? (voixVol / 100) * 0.9 : 0; }
+    $('ksVoix').addEventListener('input', e => { voixVol = +e.target.value; $('ksVoixVal').textContent = voixVol; majRange(e.target); appliquerVolumeVoix(); });
+    $('ksMus').addEventListener('input', e => { musVol = +e.target.value; $('ksMusVal').textContent = musVol; majRange(e.target); appliquerVolumeMusique(); });
+
+    /* ============================ OUTILS ============================ */
+    const OUTILS = [
+        { id: 'reenreg', nom: 'Réenreg Extrait', icon: 'fa-pen-to-square', pro: true },
+        { id: 'latence', nom: 'Latence', icon: 'fa-chart-simple' },
+        { id: 'debruitage', nom: 'Débruitage', icon: 'fa-wave-square' },
+        { id: 'egaliseur', nom: 'Égaliseur', icon: 'fa-diagram-project' },
+        { id: 'decouper', nom: 'Découper', icon: 'fa-crop-simple' },
+        { id: 'retour', nom: 'Retour micro', icon: 'fa-headphones' }
+    ];
+    function rendreOutils() {
+        const box = $('ksTools'); box.innerHTML = '';
+        OUTILS.forEach(o => {
+            const b = document.createElement('button');
+            b.className = 'ks-tool' + ((o.id === 'debruitage' && debruitage) || (o.id === 'retour' && retourMicOn) ? ' on' : '');
+            b.innerHTML = (o.pro && !outilDebloque(o.id) ? '<span class="pro">PRO</span>' : '') + '<i class="fas ' + o.icon + '"></i><span>' + esc(o.nom) + '</span>';
+            b.addEventListener('click', () => actionOutil(o));
+            box.appendChild(b);
+        });
+    }
+    function outilDebloque(id) { return effetsDebloques().indexOf('outil_' + id) !== -1; }
+    function actionOutil(o) {
+        if (o.pro && !outilDebloque(o.id)) { ouvrirModaleAchat({ id: 'outil_' + o.id, nom: o.nom, desc: 'Outil premium' }); return; }
+        if (o.id === 'reenreg') {
+            if (!audio.src) return toast('Choisis d\'abord une chanson.');
+            demarrerEnregistrement(false); toast('Réenregistrement depuis la position actuelle.');
+        } else if (o.id === 'latence') {
+            ouvrirSheet('Latence', '<p class="ks-hint">Décale ta voix si elle te semble en avance ou en retard sur la musique.</p>' +
+                '<div class="ks-sh-slider"><div class="row"><span>Décalage</span><b id="shLatVal">' + latenceMs + ' ms</b></div><input type="range" class="ks-range" id="shLat" min="-300" max="300" step="10" value="' + latenceMs + '"></div>' +
+                '<button class="ks-btn2 acc" data-close>Terminer</button>');
+            const r = $('shLat'); majRange(r);
+            r.addEventListener('input', () => { latenceMs = +r.value; $('shLatVal').textContent = latenceMs + ' ms'; majRange(r); });
+        } else if (o.id === 'debruitage') {
+            debruitage = !debruitage; rendreOutils(); toast('Débruitage ' + (debruitage ? 'activé' : 'désactivé'));
+        } else if (o.id === 'egaliseur') {
+            ouvrirSheet('Égaliseur', '<div class="ks-sh-slider"><div class="row"><span>Graves</span><b id="shBV">' + eqBass + ' dB</b></div><input type="range" class="ks-range" id="shB" min="-10" max="10" value="' + eqBass + '"></div>' +
+                '<div class="ks-sh-slider"><div class="row"><span>Aigus</span><b id="shTV">' + eqTreble + ' dB</b></div><input type="range" class="ks-range" id="shT" min="-10" max="10" value="' + eqTreble + '"></div>' +
+                '<button class="ks-btn2 acc" data-close>Terminer</button>');
+            [['shB', 'shBV', v => { eqBass = v; }], ['shT', 'shTV', v => { eqTreble = v; }]].forEach(([i, l, set]) => {
+                const r = $(i); majRange(r);
+                r.addEventListener('input', () => { set(+r.value); $(l).textContent = r.value + ' dB'; majRange(r); reappliquerEffet(); });
+            });
+        } else if (o.id === 'decouper') {
+            const d = audio.duration || 0;
+            if (!d) return toast('Choisis d\'abord une chanson.');
+            if (!trimFin) trimFin = d;
+            ouvrirSheet('Découper', '<p class="ks-hint">Garde uniquement une partie de ta prise vocale.</p>' +
+                '<div class="ks-sh-slider"><div class="row"><span>Début</span><b id="shDV">' + fmt(trimDebut) + '</b></div><input type="range" class="ks-range" id="shD" min="0" max="' + Math.floor(d) + '" value="' + Math.floor(trimDebut) + '"></div>' +
+                '<div class="ks-sh-slider"><div class="row"><span>Fin</span><b id="shFV">' + fmt(trimFin) + '</b></div><input type="range" class="ks-range" id="shF" min="0" max="' + Math.floor(d) + '" value="' + Math.floor(trimFin) + '"></div>' +
+                '<button class="ks-btn2 acc" data-close>Terminer</button>');
+            const rd = $('shD'), rf = $('shF'); majRange(rd); majRange(rf);
+            rd.addEventListener('input', () => { trimDebut = Math.min(+rd.value, trimFin - 1); $('shDV').textContent = fmt(trimDebut); majRange(rd); });
+            rf.addEventListener('input', () => { trimFin = Math.max(+rf.value, trimDebut + 1); $('shFV').textContent = fmt(trimFin); majRange(rf); });
+        } else if (o.id === 'retour') {
+            retourMicOn = !retourMicOn; appliquerVolumeVoix(); rendreOutils(); toast('Retour micro : ' + (retourMicOn ? 'ON' : 'OFF'));
+        }
+    }
+
+    /* ============================ EFFETS DE VOIX ============================ */
+    // [id, nom, icône, couleur1, couleur2, pro, playfx, preset]
+    const D = [
+        ['none', 'Aucun', 'fa-minus', '#2a2a2e', '#2a2a2e', 0, 1, {}],
+        ['auto_tune', 'Autotune', 'fa-wave-square', '#1e1b4b', '#6366f1', 0, 0, { autoTune: 0.7, compression: 0.3 }],
+        ['echo', 'Écho', 'fa-circle-dot', '#1e0b36', '#c026d3', 0, 0, { delay: 0.45, reverb: 0.2 }],
+        ['personnalise', 'Personnalisé', 'fa-sliders', '#3b82f6', '#a855f7', 0, 0, { bass: 1, treble: 1 }],
+        ['karaoke', 'Karaoké', 'fa-microphone-lines', '#4c1d95', '#ec4899', 0, 0, { reverb: 0.35, delay: 0.15, treble: 2 }],
+        ['super_perso', 'Super Personnalisé', 'fa-sliders', '#44403c', '#a16207', 1, 0, { reverb: 0.5, bass: 2, treble: 3, compression: 0.4 }],
+        ['studio', 'Studio', 'fa-headphones', '#064e3b', '#22d3ee', 0, 0, { reverb: 0.2, bass: 3, treble: 1 }],
+        ['fete', 'Fête', 'fa-champagne-glasses', '#581c87', '#f472b6', 0, 0, { reverb: 0.3, delay: 0.25, chorus: 0.3, treble: 2 }],
+
+        ['theatre', 'Théâtre', 'fa-masks-theater', '#7f1d1d', '#f59e0b', 1, 0, { reverb: 0.7, treble: 1 }],
+        ['opera', 'Maison De L\'Opéra', 'fa-building-columns', '#78350f', '#d6d3d1', 1, 0, { reverb: 0.85, bass: 1 }],
+        ['vallee', 'Vallée', 'fa-mountain', '#14532d', '#38bdf8', 1, 0, { delay: 0.5, reverb: 0.6 }],
+        ['brillant', 'Brillant', 'fa-gem', '#f472b6', '#fecdd3', 1, 0, { treble: 5, reverb: 0.3, chorus: 0.3 }],
+        ['champ_ouvert', 'Champ Ouvert', 'fa-wheat-awn', '#ca8a04', '#fde68a', 1, 0, { delay: 0.35, reverb: 0.4 }],
+        ['pop', 'Pop', 'fa-guitar', '#991b1b', '#fb7185', 0, 0, { bass: 2, treble: 4, reverb: 0.15 }],
+        ['chaud', 'Chaud', 'fa-sun', '#f97316', '#fde047', 0, 0, { bass: 4, treble: -1, reverb: 0.2 }],
+        ['garage', 'Garage', 'fa-warehouse', '#111827', '#f59e0b', 1, 0, { reverb: 0.45, delay: 0.1, drive: 0.1 }],
+
+        ['couloir', 'Couloir', 'fa-door-open', '#52525b', '#e4e4e7', 1, 0, { delay: 0.3, reverb: 0.5 }],
+        ['salle_repetition', 'Salle De Répétition', 'fa-drum', '#292524', '#a8a29e', 1, 0, { reverb: 0.25, compression: 0.3, bass: 1 }],
+        ['salle_bain', 'Salle De Bain', 'fa-bath', '#9ca3af', '#f3f4f6', 1, 0, { reverb: 0.6, delay: 0.08, treble: 2 }],
+        ['hall', 'Hall', 'fa-landmark', '#7f1d1d', '#dc2626', 0, 0, { reverb: 0.5 }],
+        ['fascinant', 'Fascinant', 'fa-cubes', '#ec4899', '#f9a8d4', 0, 0, { chorus: 0.5, reverb: 0.4, treble: 2 }],
+        ['onirique', 'Onirique', 'fa-cloud-moon', '#7c3aed', '#f0abfc', 0, 0, { reverb: 0.8, chorus: 0.5, delay: 0.2 }],
+        ['serre', 'Serré', 'fa-compress', '#1e1b4b', '#f43f5e', 1, 0, { reverb: 0.08, compression: 0.6 }],
+        ['super_reverb', 'Super Réverbération', 'fa-volume-high', '#78350f', '#f97316', 1, 0, { reverb: 1.0 }],
+
+        ['superstar', 'Superstar', 'fa-star', '#7f1d1d', '#fb7185', 1, 0, { reverb: 0.45, bass: 3, treble: 3, compression: 0.5 }],
+        ['concert', 'Concert', 'fa-microphone', '#451a03', '#fbbf24', 1, 0, { reverb: 0.5, delay: 0.2 }],
+        ['pays_reves', 'Pays Des Rêves', 'fa-cloud', '#1d4ed8', '#e0f2fe', 1, 0, { reverb: 0.9, chorus: 0.6, treble: 2 }],
+        ['hifi', 'Hi-Fi', 'fa-radio', '#1e3a8a', '#3b82f6', 1, 0, { treble: 4, bass: 2, compression: 0.3 }],
+        ['eglise', 'Église', 'fa-church', '#78350f', '#fcd34d', 1, 0, { reverb: 1.0, delay: 0.15 }],
+        ['telephone', 'Téléphone', 'fa-phone', '#374151', '#9ca3af', 1, 0, { telephone: true }],
+        ['corridor', 'Corridor', 'fa-road', '#0f172a', '#94a3b8', 1, 0, { delay: 0.4, reverb: 0.55 }],
+        ['ecureuil', 'Écureuil', 'fa-paw', '#facc15', '#fde047', 0, 1, { pitch: 1.5, treble: 6 }],
+
+        ['monster', 'Monstre', 'fa-dragon', '#0f172a', '#0e7490', 0, 1, { pitch: 0.6, drive: 0.6, bass: 5 }],
+        ['alien', 'Extraterrestre', 'fa-user-astronaut', '#14532d', '#22d3ee', 0, 1, { pitch: 1.4, chorus: 0.5, mod: true }],
+        ['cassette', 'Cassette', 'fa-tape', '#e5e7eb', '#16a34a', 0, 1, { bass: 2, treble: -3, drive: 0.15, chorus: 0.2 }],
+        ['vinyle', 'Vinyle', 'fa-compact-disc', '#d6d3d1', '#7f1d1d', 0, 0, { bass: 2, treble: -2, drive: 0.1, reverb: 0.1 }],
+        ['psy', 'PSY', 'fa-hurricane', '#6366f1', '#ec4899', 0, 0, { chorus: 0.7, delay: 0.3, drive: 0.2 }],
+        ['double', 'Doubler', 'fa-clone', '#020617', '#a855f7', 0, 1, { double: 0.5, chorus: 0.5, delay: 0.05 }]
+    ];
+    const EFFETS = D.map(a => ({ id: a[0], nom: a[1], icon: a[2], c1: a[3], c2: a[4], pro: !!a[5], playfx: !!a[6], preset: a[7] }));
+    const PAR_PAGE = 8;
+    const PRIX_PREMIUM = 500;
+    let ongletFx = 'reco', pageFx = 0, effetActif = 'none';
+
+    function effetsDebloques() { try { return JSON.parse(localStorage.getItem('fn_karaoke_effets') || '[]'); } catch (e) { return []; } }
+    function estDebloque(item) { return !item.pro || effetsDebloques().indexOf(item.id) !== -1; }
+
+    function listeFx() {
+        if (ongletFx === 'pro') return EFFETS.filter(e => e.id === 'none' || e.pro);
+        if (ongletFx === 'free') return EFFETS.filter(e => e.id === 'none' || !e.pro);
+        if (ongletFx === 'playfx') return EFFETS.filter(e => e.playfx);
+        return EFFETS;
+    }
+    function rendreEffets() {
+        const liste = listeFx();
+        const nbPages = Math.max(1, Math.ceil(liste.length / PAR_PAGE));
+        if (pageFx >= nbPages) pageFx = nbPages - 1;
+        const grid = $('ksGrid'); grid.innerHTML = '';
+        liste.slice(pageFx * PAR_PAGE, pageFx * PAR_PAGE + PAR_PAGE).forEach(e => {
+            const d = document.createElement('div');
+            d.className = 'fx' + (e.id === effetActif ? ' on' : '');
+            d.innerHTML = '<div class="fx-img" style="background:linear-gradient(135deg,' + e.c1 + ',' + e.c2 + ')"><i class="fas ' + e.icon + '"></i>' + (e.pro && !estDebloque(e) ? '<span class="pro">PRO</span>' : '') + '</div><span>' + esc(e.nom) + '</span>';
+            d.addEventListener('click', () => choisirEffet(e));
+            grid.appendChild(d);
+        });
+        const dots = $('ksDots'); dots.innerHTML = '';
+        if (nbPages > 1) for (let p = 0; p < nbPages; p++) { const i = document.createElement('i'); if (p === pageFx) i.className = 'on'; dots.appendChild(i); }
+    }
+    $('ksFxTabs').addEventListener('click', e => {
+        const b = e.target.closest('.ks-fxtab'); if (!b) return;
+        ongletFx = b.dataset.fx; pageFx = 0;
+        document.querySelectorAll('.ks-fxtab').forEach(x => x.classList.toggle('on', x === b));
+        rendreEffets();
+    });
+    (function () {
+        const g = $('ksGrid'); let x0 = null;
+        g.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
+        g.addEventListener('touchend', e => {
+            if (x0 === null) return;
+            const dx = e.changedTouches[0].clientX - x0; x0 = null;
+            if (Math.abs(dx) < 50) return;
+            const nb = Math.ceil(listeFx().length / PAR_PAGE);
+            pageFx = Math.max(0, Math.min(nb - 1, pageFx + (dx < 0 ? 1 : -1)));
+            rendreEffets();
+        });
+    })();
+
+    function choisirEffet(e) {
+        if (!estDebloque(e)) { ouvrirModaleAchat(e); return; }
+        effetActif = e.id; appliquerEffetVoix(e); rendreEffets();
+    }
+
+    /* ============================ MODÈLES ============================ */
+    // [id, nom, fond, couleur texte, pro, icône]
+    const T_MAIN = [
+        ['defaut', 'Par Défaut', 'linear-gradient(160deg,#eab8dc,#c77dbd)', '#fff', 0, 'fa-minus'],
+        ['film', 'Film', 'linear-gradient(180deg,#0b1020,#2a3b5a)', '#fff', 0, 'fa-film'],
+        ['vinyl', 'Tourne-disque', 'linear-gradient(160deg,#3b0d2a,#d6336c)', '#fff', 0, 'fa-record-vinyl'],
+        ['simple', 'Lecteur Simple', 'linear-gradient(180deg,#ffffff,#e5e7eb)', '#111', 0, 'fa-circle-play'],
+        ['piano', 'Piano', 'linear-gradient(160deg,#1c1208,#7c5a2c)', '#fff', 0, 'fa-music'],
+        ['pure', 'Pure', 'linear-gradient(160deg,#0f766e,#164e63)', '#fff', 0, 'fa-droplet'],
+        ['lumineux', 'Lumineux', 'linear-gradient(160deg,#052e16,#4d7c0f)', '#ecfccb', 0, 'fa-lightbulb'],
+        ['retrouvailles', 'Retrouvailles', 'linear-gradient(180deg,#312e81,#f97316)', '#fff', 0, 'fa-sun']
+    ];
+    const T_SPEC = [
+        ['galop', 'Au Galop Vers…', 'linear-gradient(160deg,#b91c1c,#ef4444)', '#fff', 0, 'fa-horse'],
+        ['amour', 'Amour', 'linear-gradient(160deg,#1a0a14,#7f1d1d)', '#fff', 1, 'fa-heart'],
+        ['carnaval', 'Carnaval', 'linear-gradient(160deg,#581c87,#16a34a)', '#fff', 1, 'fa-masks-theater'],
+        ['maison', 'La Maison d\'…', 'linear-gradient(160deg,#ea580c,#fb923c)', '#fff', 0, 'fa-house'],
+        ['an2025', '2025', 'linear-gradient(160deg,#1e3a8a,#7c3aed)', '#fff', 0, 'fa-champagne-glasses'],
+        ['soleil', 'Soleil', 'linear-gradient(160deg,#1c1917,#4d7c0f)', '#fff', 1, 'fa-sun'],
+        ['karaoke', 'Karaoké', 'linear-gradient(160deg,#0f172a,#1e40af)', '#fff', 1, 'fa-microphone-lines'],
+        ['anniv', '9e Anniversaire', 'linear-gradient(160deg,#0369a1,#14b8a6)', '#fff', 1, 'fa-cake-candles'],
+        ['chasse', 'Chasse aux…', 'linear-gradient(160deg,#f9a8d4,#a7f3d0)', '#111', 1, 'fa-egg'],
+        ['speciaux', 'Modèles Spéciaux', 'linear-gradient(160deg,#bbf7d0,#fde68a)', '#111', 1, 'fa-wand-magic-sparkles']
+    ];
+    const TOUS_MODELES = T_MAIN.concat(T_SPEC).map(a => ({ id: a[0], nom: a[1], fond: a[2], fg: a[3], pro: !!a[4], icon: a[5] }));
+    let modeleActif = 'defaut', fondPerso = false;
+
+    function modeleDebloque(t) { return !t.pro || effetsDebloques().indexOf('modele_' + t.id) !== -1; }
+    function rendreModeles() {
+        [['ksTplMain', T_MAIN], ['ksTplSpecial', T_SPEC]].forEach(([id, arr]) => {
+            const box = $(id); box.innerHTML = '';
+            arr.map(a => TOUS_MODELES.find(t => t.id === a[0])).forEach(t => {
+                const d = document.createElement('div');
+                d.className = 'tp' + (t.id === modeleActif ? ' on' : '');
+                d.innerHTML = '<div class="tp-img" style="background:' + t.fond + ';color:' + t.fg + '"><i class="fas ' + t.icon + ' big"></i>' + (t.pro && !modeleDebloque(t) ? '<span class="pro">PRO</span>' : '') + '<b>Titre</b>Artiste</div><span>' + esc(t.nom) + '</span>';
+                d.addEventListener('click', () => choisirModele(t));
+                box.appendChild(d);
+            });
+        });
+    }
+    function choisirModele(t) {
+        if (!modeleDebloque(t)) { ouvrirModaleAchat({ id: 'modele_' + t.id, nom: t.nom, desc: 'Modèle premium' }); return; }
+        modeleActif = t.id; appliquerModele(); rendreModeles();
+    }
+    function appliquerModele() {
+        const t = TOUS_MODELES.find(x => x.id === modeleActif) || TOUS_MODELES[0];
+        const p = $('ksPreview');
+        p.dataset.tpl = t.id;
+        if (!fondPerso) p.style.background = t.fond;
+        $('ksLyrics').style.color = t.fg;
+    }
+    $('ksCats').addEventListener('click', e => {
+        const b = e.target.closest('button'); if (!b) return;
+        document.querySelectorAll('#ksCats button').forEach(x => x.classList.toggle('on', x === b));
+        $('ksTplSpecial').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    let urlMedia = '';
+    $('ksMediaInput').addEventListener('change', e => {
+        const f = e.target.files && e.target.files[0]; if (!f) return;
+        if (urlMedia) URL.revokeObjectURL(urlMedia);
+        urlMedia = URL.createObjectURL(f);
+        const img = $('ksImg'), vid = $('ksVid');
+        img.style.display = 'none'; vid.style.display = 'none'; vid.pause();
+        if (f.type.indexOf('video') === 0) { vid.src = urlMedia; vid.style.display = 'block'; vid.play().catch(() => {}); }
+        else { img.src = urlMedia; img.style.display = 'block'; }
+        fondPerso = true; $('ksLyrics').style.color = '#fff';
+        e.target.value = '';
+    });
+
+    /* ============================ MODALE ACHAT (inchangée) ============================ */
+    let elementEnAttenteAchat = null;
+    function ouvrirModaleAchat(el) {
+        elementEnAttenteAchat = el;
+        $('kpPurchaseTitre').textContent = 'Débloquer « ' + el.nom + ' »';
+        $('kpPurchaseDesc').textContent = (el.desc || 'Contenu premium') + '. Paiement unique, utilisation illimitée.';
+        $('kpPurchasePrix').innerHTML = PRIX_PREMIUM + ' <small>FCFA</small>';
+        $('kpPurchaseOverlay').classList.add('open');
+    }
+    function fermerModaleAchat() { $('kpPurchaseOverlay').classList.remove('open'); elementEnAttenteAchat = null; }
+    function confirmerAchat() {
+        if (!elementEnAttenteAchat) return;
+        const id = elementEnAttenteAchat.id;
+        const motif = (id.indexOf('modele_') === 0 || id.indexOf('outil_') === 0) ? id : 'effet_voix_' + id;
+        const p = new URLSearchParams({ amount: PRIX_PREMIUM, motif: motif, externalId: 'karaoke_' + id + '_' + Date.now() });
+        window.location.href = '/paiement/karaoke?' + p.toString();
+    }
+    window.fermerModaleAchat = fermerModaleAchat; window.confirmerAchat = confirmerAchat;
+
+    /* ============================ WEB AUDIO : monitoring du micro ============================ */
+    let fluxMicro = null, contexteAudio = null, sourceMicro = null, gainMicro = null;
+    let noeudsEffet = [];
+
+    async function demarrerMicro() {
+        if (fluxMicro) return;
+        try {
+            fluxMicro = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
+            contexteAudio = new (window.AudioContext || window.webkitAudioContext)();
+            await contexteAudio.resume();
+            sourceMicro = contexteAudio.createMediaStreamSource(fluxMicro);
+            gainMicro = contexteAudio.createGain(); gainMicro.gain.value = retourMicOn ? (voixVol / 100) * 0.9 : 0;
+            gainMicro.connect(contexteAudio.destination);
+            appliquerEffetVoix(EFFETS.find(e => e.id === effetActif) || EFFETS[0]);
+        } catch (err) { fluxMicro = null; alert('Impossible d\'accéder au micro. Autorisez l\'accès dans votre navigateur.'); }
+    }
+    function reappliquerEffet() { appliquerEffetVoix(EFFETS.find(e => e.id === effetActif) || EFFETS[0]); }
+
+    function appliquerEffetVoix(effet) {
+        if (!contexteAudio || !sourceMicro || !gainMicro) return;
+        try { sourceMicro.disconnect(); } catch (_) {}
+        noeudsEffet.forEach(n => { try { n.disconnect(); } catch (_) {} });
+        noeudsEffet = [];
+        const ctx = contexteAudio, p = effet.preset || {};
+        let input = sourceMicro;
+        const garder = n => { noeudsEffet.push(n); return n; };
+
+        if (p.telephone) {
+            const bp = garder(ctx.createBiquadFilter()); bp.type = 'bandpass'; bp.frequency.value = 1500; bp.Q.value = 0.8;
+            input.connect(bp); input = bp;
+        }
+        const bass = (p.bass || 0) + eqBass, treble = (p.treble || 0) + eqTreble;
+        if (bass || treble) {
+            const lo = garder(ctx.createBiquadFilter()); lo.type = 'lowshelf'; lo.frequency.value = 180; lo.gain.value = bass;
+            const hi = garder(ctx.createBiquadFilter()); hi.type = 'highshelf'; hi.frequency.value = 3500; hi.gain.value = treble;
+            input.connect(lo); lo.connect(hi); input = hi;
+        }
+        if (p.compression) {
+            const c = garder(ctx.createDynamicsCompressor()); c.threshold.value = -24; c.ratio.value = 1.5 + p.compression * 5; c.attack.value = 0.003; c.release.value = 0.15;
+            input.connect(c); input = c;
+        }
+        if (p.drive) {
+            const sh = garder(ctx.createWaveShaper()); const amount = 1 + p.drive * 20; const curve = new Float32Array(44100);
+            for (let i = 0; i < curve.length; i++) { const x = i * 2 / curve.length - 1; curve[i] = ((3 + amount) * x * 20 * Math.PI / 180) / (Math.PI + amount * Math.abs(x)); }
+            sh.curve = curve; sh.oversample = '4x'; input.connect(sh); input = sh;
+        }
+        input.connect(gainMicro);
+        if (p.reverb > 0) {
+            const conv = garder(ctx.createConvolver()); conv.buffer = creerImpulsion(ctx, p.reverb);
+            const wet = garder(ctx.createGain()); wet.gain.value = Math.min(0.75, p.reverb);
+            input.connect(conv); conv.connect(wet); wet.connect(gainMicro);
+        }
+        if (p.delay > 0) {
+            const dl = garder(ctx.createDelay(1)); dl.delayTime.value = 0.22;
+            const fb = garder(ctx.createGain()); fb.gain.value = Math.min(0.65, p.delay);
+            const wet = garder(ctx.createGain()); wet.gain.value = Math.min(0.55, p.delay);
+            input.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(wet); wet.connect(gainMicro);
+        }
+        if (p.chorus > 0) {
+            const d1 = garder(ctx.createDelay(0.05)), d2 = garder(ctx.createDelay(0.05)), w = garder(ctx.createGain());
+            d1.delayTime.value = 0.018; d2.delayTime.value = 0.031; w.gain.value = 0.25 * p.chorus;
+            input.connect(d1); input.connect(d2); d1.connect(w); d2.connect(w); w.connect(gainMicro);
+        }
+    }
+    function creerImpulsion(ctx, intensite) {
+        const n = Math.floor(ctx.sampleRate * (0.6 + intensite * 1.5));
+        const buf = ctx.createBuffer(2, n, ctx.sampleRate);
+        for (let c = 0; c < 2; c++) { const ch = buf.getChannelData(c); for (let i = 0; i < n; i++) ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 1.8); }
+        return buf;
+    }
+
+    /* ============================ ENREGISTREMENT ============================ */
+    let recorder = null, chunks = [], enregistrementEnCours = false, blobEnregistre = null;
+    let tempsDebutEnregistrement = 0, positionDebut = 0, publierApresArret = false;
+
+    function majBoutonRec() {
+        const b = $('ksRec'), l = $('ksRecLabel'), i = b.querySelector('i');
+        b.classList.toggle('rec', enregistrementEnCours);
+        if (enregistrementEnCours) { l.textContent = 'Arrêter'; i.className = 'fas fa-stop'; }
+        else if (blobEnregistre) { l.textContent = 'Réenregistrer'; i.className = 'fas fa-rotate-right'; }
+        else { l.textContent = 'Enregistrer'; i.className = 'fas fa-microphone'; }
+    }
+    async function demarrerEnregistrement(depuisDebut) {
+        await demarrerMicro();
+        if (!fluxMicro) return;
+        if (!audio.src) { toast('Choisis d\'abord une chanson.'); ouvrirRecherche(); return; }
+        if (depuisDebut || audio.paused) audio.currentTime = 0;
+        positionDebut = audio.currentTime; tempsDebutEnregistrement = performance.now(); chunks = []; blobEnregistre = null;
+        try { recorder = new MediaRecorder(fluxMicro, { mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm' }); }
+        catch (e) { alert('Votre navigateur ne supporte pas l\'enregistrement audio.'); return; }
+        recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.onstop = async () => {
+            blobEnregistre = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+            majBoutonRec();
+            if (publierApresArret) { publierApresArret = false; await finaliserPrestation(); }
+            else toast('Prise enregistrée. Ajuste les effets puis touche Suivant.');
+        };
+        if (contexteAudio && contexteAudio.state === 'suspended') await contexteAudio.resume();
+        recorder.start(250); enregistrementEnCours = true; majBoutonRec();
+        try { await audio.play(); } catch (_) {}
+    }
+    function arreterEnregistrement() {
+        if (!enregistrementEnCours || !recorder) return;
+        try { recorder.stop(); } catch (_) {}
+        enregistrementEnCours = false; majBoutonRec(); audio.pause();
+    }
+    $('ksRec').addEventListener('click', () => {
+        if (enregistrementEnCours) arreterEnregistrement();
+        else demarrerEnregistrement(!!blobEnregistre);
+    });
+
+    $('ksNext').addEventListener('click', async () => {
+        if (enregistrementEnCours) { publierApresArret = true; arreterEnregistrement(); return; }
+        if (!blobEnregistre) { toast('Enregistre ta voix avant de continuer.'); return; }
+        await finaliserPrestation();
+    });
+
+    /* ============================ MIXAGE + PUBLICATION (logique conservée) ============================ */
+    let mixJob = null;
+    async function finaliserPrestation() {
+        const eff = EFFETS.find(e => e.id === effetActif) || EFFETS[0];
+        const fd = new FormData();
+        fd.append('voice', blobEnregistre, 'voice.webm');
+        fd.append('instrumental_url', instrumentalUrl);
+        fd.append('offset', String(Math.max(0, positionDebut)));
+        fd.append('duration', String(Math.max(0, (performance.now() - tempsDebutEnregistrement) / 1000)));
+        fd.append('effect', effetActif);
+        fd.append('effect_params', JSON.stringify(eff.preset || {}));
+        fd.append('title', titre);
+        fd.append('voice_volume', String(voixVol));
+        fd.append('music_volume', String(musVol));
+        fd.append('latency_ms', String(latenceMs));
+        fd.append('denoise', debruitage ? '1' : '0');
+        fd.append('eq_bass', String(eqBass));
+        fd.append('eq_treble', String(eqTreble));
+        fd.append('trim_start', String(trimDebut));
+        fd.append('trim_end', String(trimFin));
+        afficherLoading('<i class="fas fa-spinner fa-spin"></i><div>Mixage de ta voix avec l\'instrumental…</div><small>Application du traitement audio.</small>');
+        try {
+            const rep = await fetch('/karaoke/api/mix', { method: 'POST', body: fd });
+            const data = await rep.json();
+            if (!rep.ok || !data.ok || !data.audio_url) throw new Error(data.error || 'Mixage impossible');
+            mixJob = data; afficherRecapUrl(data.audio_url, data.download_url || data.audio_url, data.share_url || data.audio_url);
+        } catch (err) {
+            console.error(err);
+            afficherRecap(blobEnregistre);
+            alert('Le mixage serveur a échoué. La prise micro est conservée. Vérifie que FFmpeg et le moteur karaoké sont installés côté serveur.');
+        } finally { kpLoading.classList.remove('open'); }
+    }
+    function afficherRecapUrl(audioUrl, downloadUrl, shareUrl) {
+        kpRecapAudio.src = audioUrl; kpRecap.classList.add('open');
+        kpDownload.onclick = () => { const a = document.createElement('a'); a.href = downloadUrl; a.download = 'ma-prestation-' + Date.now() + '.mp3'; a.target = '_blank'; document.body.appendChild(a); a.click(); a.remove(); };
+        kpShare.onclick = async () => {
+            if (navigator.share) { try { await navigator.share({ title: 'Ma prestation karaoké', text: 'Écoutez ma version de « ' + titre + ' » sur FaceNet !', url: shareUrl }); return; } catch (_) {} }
+            try { await navigator.clipboard.writeText(shareUrl); alert('Lien de partage copié.'); } catch (_) { window.open(shareUrl, '_blank'); }
+        };
+    }
+    function afficherRecap(blob) {
+        const url = URL.createObjectURL(blob); kpRecapAudio.src = url; kpRecap.classList.add('open');
+        kpDownload.onclick = () => { const a = document.createElement('a'); a.href = url; a.download = 'ma-prestation-' + Date.now() + '.webm'; document.body.appendChild(a); a.click(); a.remove(); };
+        kpShare.onclick = async () => {
+            if (!navigator.share) { alert('Le partage n\'est pas disponible sur ce navigateur.'); return; }
+            try { await navigator.share({ files: [new File([blob], 'ma-prestation.webm', { type: 'audio/webm' })], title: 'Ma prestation karaoké', text: 'Écoutez ma version de « ' + titre + ' » sur FaceNet !' }); } catch (_) {}
+        };
+    }
+    $('kpRecapX').addEventListener('click', () => { kpRecap.classList.remove('open'); kpRecapAudio.pause(); });
+
+    /* ============================ FEUILLES ============================ */
+    function ouvrirSheet(titreSheet, html, tall) {
+        const s = $('ksSheet');
+        s.className = 'ks-sheet' + (tall ? ' tall' : '');
+        s.innerHTML = '<div class="ks-sh-head"><h3>' + esc(titreSheet) + '</h3><button class="ks-sh-x" data-close><i class="fas fa-xmark"></i></button></div>' + html;
+        $('ksOv').classList.add('open');
+    }
+    function fermerSheet() { $('ksOv').classList.remove('open'); $('ksSheet').innerHTML = ''; }
+    $('ksOv').addEventListener('click', e => { if (e.target === $('ksOv') || e.target.closest('[data-close]')) fermerSheet(); });
+
+    $('ksHelpBtn').addEventListener('click', () => {
+        ouvrirSheet('Aide', '<p class="ks-hint"><i class="fas fa-lightbulb" style="color:#f7b928"></i> Mets un casque pour éviter que le micro ne capte l\'instrumental.</p>' +
+            '<p class="ks-hint">1. Cherche une chanson (loupe en haut à droite).<br>2. Touche Enregistrer et chante.<br>3. Choisis tes effets, puis touche Suivant pour mixer et partager.</p>' +
+            '<button class="ks-btn2" data-close>Fermer</button>');
+    });
+
+    /* ============================ RECHERCHE DE CHANSONS ============================ */
+    $('ksSearchBtn').addEventListener('click', ouvrirRecherche);
+    let rechercheTimer = null, rechercheSeq = 0;
+
+    function ouvrirRecherche() {
+        ouvrirSheet('Choisir une chanson',
+            '<div class="ks-searchbox"><i class="fas fa-magnifying-glass" style="color:#8e8e93"></i><input id="ksQ" type="search" placeholder="Titre ou artiste" autocomplete="off"></div>' +
+            '<div class="ks-results" id="ksRes"></div>', true);
+        const q = $('ksQ');
+        q.addEventListener('input', () => { clearTimeout(rechercheTimer); rechercheTimer = setTimeout(() => lancerRecherche(q.value.trim()), 350); });
+        lancerRecherche('');
+        setTimeout(() => q.focus(), 250);
+    }
+    async function lancerRecherche(texte) {
+        const res = $('ksRes'); if (!res) return;
+        const seq = ++rechercheSeq;
+        res.innerHTML = '<div class="ks-empty"><i class="fas fa-spinner fa-spin"></i>Recherche…</div>';
+        try {
+            const rep = await fetch('/karaoke/api/search?q=' + encodeURIComponent(texte) + '&full=1&instrumental=1');
+            const data = await rep.json();
+            if (!rep.ok || !data.ok) throw new Error(data.error || 'Recherche impossible');
+            if (seq !== rechercheSeq || !$('ksRes')) return;
+            // On ne garde que les chansons complètes, sans voix.
+            const liste = (data.results || []).filter(r => r && r.instrumental_url && r.complete !== false && r.vocals_removed !== false);
+            if (!liste.length) { res.innerHTML = '<div class="ks-empty"><i class="fas fa-music"></i>Aucune chanson trouvée' + (texte ? ' pour « ' + esc(texte) + ' »' : '') + '.</div>'; return; }
+            res.innerHTML = '';
+            liste.forEach(r => {
+                const d = document.createElement('div'); d.className = 'ks-song';
+                d.innerHTML = '<div class="cv">' + (r.cover ? '<img src="' + esc(r.cover) + '" alt="">' : '<i class="fas fa-music"></i>') + '</div>' +
+                    '<div class="inf"><div class="t">' + esc(r.title || 'Sans titre') + '</div><div class="a">' + esc(r.artist || '') + '</div><div class="tag"><i class="fas fa-circle-check"></i> Complète · sans voix</div></div>' +
+                    '<div class="d">' + (r.duration ? fmt(r.duration) : '') + '</div>';
+                d.addEventListener('click', () => choisirChanson(r));
+                res.appendChild(d);
+            });
+        } catch (err) {
+            if (seq !== rechercheSeq || !$('ksRes')) return;
+            res.innerHTML = '<div class="ks-empty"><i class="fas fa-triangle-exclamation" style="color:#f87171"></i>Recherche indisponible.<br><small>' + esc(err.message || 'Erreur serveur') + '</small></div>';
+        }
+    }
+    function choisirChanson(r) {
+        fermerSheet();
+        chanson = r; titre = r.title || 'Sans titre';
+        paroles = Array.isArray(r.lyrics) ? r.lyrics.filter(l => l && typeof l.t === 'number').sort((a, b) => a.t - b.t) : [];
+        instrumentalUrl = r.instrumental_url;
+        blobEnregistre = null; majBoutonRec();
+        seek.value = 0; majSeek(); $('kpTimeCurrent').textContent = fmt(0);
+        chargerInstrumental(instrumentalUrl, +r.duration || 0);
+        $('ksLyrics').textContent = titre;
+    }
+
+    /* ============================ BROUILLONS ============================ */
+    const CLE_BROUILLONS = 'fn_karaoke_brouillons';
+    function lireBrouillons() { try { return JSON.parse(localStorage.getItem(CLE_BROUILLONS) || '[]'); } catch (e) { return []; } }
+    function ecrireBrouillons(l) { try { localStorage.setItem(CLE_BROUILLONS, JSON.stringify(l.slice(0, 20))); } catch (e) { toast('Stockage plein.'); } }
+    $('ksDrafts').addEventListener('click', ouvrirBrouillons);
+
+    function ouvrirBrouillons() {
+        const liste = lireBrouillons();
+        let html = '<p class="ks-hint">Un brouillon garde la chanson et tes réglages (effet, volumes, modèle). La prise vocale n\'est pas conservée.</p>' +
+            '<button class="ks-btn2 acc" id="ksSaveDraft"' + (instrumentalUrl ? '' : ' disabled style="opacity:.5"') + '>Enregistrer un brouillon</button><div style="margin-top:12px" id="ksDraftList">';
+        if (!liste.length) html += '<div class="ks-empty"><i class="far fa-folder-open"></i>Aucun brouillon.</div>';
+        liste.forEach((b, i) => {
+            html += '<div class="ks-draft"><div class="inf"><div class="t">' + esc(b.titre) + '</div><div class="a">' + esc(new Date(b.ts).toLocaleString('fr-FR')) + '</div></div>' +
+                '<button data-open="' + i + '">Ouvrir</button><button data-del="' + i + '"><i class="fas fa-trash"></i></button></div>';
+        });
+        html += '</div>';
+        ouvrirSheet('Brouillons', html);
+        const sv = $('ksSaveDraft');
+        if (sv) sv.addEventListener('click', () => {
+            if (!instrumentalUrl) return;
+            const l = lireBrouillons();
+            l.unshift({ ts: Date.now(), titre: titre, chanson: chanson, instrumentalUrl: instrumentalUrl, effet: effetActif, voix: voixVol, musique: musVol, modele: modeleActif, latence: latenceMs, eqB: eqBass, eqT: eqTreble });
+            ecrireBrouillons(l); ouvrirBrouillons(); toast('Brouillon enregistré.');
+        });
+        $('ksDraftList').addEventListener('click', e => {
+            const o = e.target.closest('[data-open]'), d = e.target.closest('[data-del]');
+            const l = lireBrouillons();
+            if (d) { l.splice(+d.dataset.del, 1); ecrireBrouillons(l); ouvrirBrouillons(); return; }
+            if (o) chargerBrouillon(l[+o.dataset.open]);
+        });
+    }
+    function chargerBrouillon(b) {
+        if (!b) return;
+        fermerSheet();
+        effetActif = b.effet || 'none'; voixVol = b.voix; musVol = b.musique; modeleActif = b.modele || 'defaut';
+        latenceMs = b.latence || 0; eqBass = b.eqB || 0; eqTreble = b.eqT || 0;
+        $('ksVoix').value = voixVol; $('ksMus').value = musVol; $('ksVoixVal').textContent = voixVol; $('ksMusVal').textContent = musVol;
+        majRange($('ksVoix')); majRange($('ksMus'));
+        rendreEffets(); rendreModeles(); appliquerModele(); reappliquerEffet();
+        if (b.chanson && b.chanson.instrumental_url) choisirChanson(b.chanson);
+        else { titre = b.titre; instrumentalUrl = b.instrumentalUrl; chargerInstrumental(instrumentalUrl, 0); }
+    }
+
+    /* ============================ INIT ============================ */
+    $('ksLyrics').textContent = titre === 'Sans titre' ? '' : titre;
+    majRange($('ksVoix')); majRange($('ksMus')); majSeek();
+    rendreOutils(); rendreEffets(); rendreModeles(); appliquerModele(); majBoutonRec();
+    separerChansonSiNecessaire();
+})();
+</script>
+
+</body>
+</html>
+{% endblock %}

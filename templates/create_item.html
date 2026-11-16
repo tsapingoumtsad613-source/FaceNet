@@ -1,0 +1,447 @@
+{% extends "base.html" %}
+
+{% block content %} 
+<div class="fn-create-container">
+    <div class="fn-create-card">
+        <div class="fn-create-header">
+            <div class="fn-create-icon">🛍️</div>
+            <h2>Créer une nouvelle annonce</h2>
+            <p>Vendez des articles à votre communauté sur la Marketplace de FaceNet.</p>
+        </div>
+
+        <form action="{{ url_for('main.create_item') }}" method="POST" enctype="multipart/form-data" class="fn-create-form" id="fnCreateForm">
+
+            <div class="fn-form-group">
+                <label for="title">Que vendez-vous ? <span class="fn-req">*</span></label>
+                <input type="text" id="title" name="title" placeholder="Ex: Feux d'artifices industriels" maxlength="80" required>
+                <span class="fn-hint"><span id="titleCount">0</span>/80 caractères</span>
+            </div>
+
+            <div class="fn-form-group">
+                <label for="description">Description <span class="fn-req">*</span></label>
+                <textarea id="description" name="description" rows="4" maxlength="1000" placeholder="Décrivez l'état, les caractéristiques, la raison de la vente, etc." required></textarea>
+                <span class="fn-hint"><span id="descCount">0</span>/1000 caractères</span>
+            </div>
+
+            <div class="fn-form-group">
+                <label for="price">Prix (FCFA) <span class="fn-req">*</span></label>
+                <div class="fn-price-wrap">
+                    <input type="number" id="price" name="price" placeholder="Ex: 15000" min="0" required>
+                    <span class="fn-price-suffix">FCFA</span>
+                </div>
+                <label class="fn-checkbox-label">
+                    <input type="checkbox" id="negociable" name="negociable" value="oui">
+                    <span>Prix négociable</span>
+                </label>
+            </div>
+
+            <div class="fn-form-group">
+                <label for="city">Région / Lieu de vente <span class="fn-req">*</span></label>
+                <select id="city" name="city" required>
+                    <option value="" disabled selected>Choisir une région</option>
+                    <option value="Ouest">Ouest (Bafoussam)</option>
+                    <option value="Littoral">Littoral (Douala)</option>
+                    <option value="Centre">Centre (Yaoundé)</option>
+                    <option value="Adamaoua">Adamaoua (Ngaoundéré)</option>
+                    <option value="Est">Est (Bertoua)</option>
+                    <option value="Extreme-Nord">Extrême-Nord (Maroua)</option>
+                    <option value="Nord">Nord (Garoua)</option>
+                    <option value="Nord-Ouest">Nord-Ouest (Bamenda)</option>
+                    <option value="Sud">Sud (Ebolowa)</option>
+                    <option value="Sud-Ouest">Sud-Ouest (Buea)</option>
+                </select>
+            </div>
+
+            <div class="fn-form-group">
+                <label for="category">Catégorie <span class="fn-req">*</span></label>
+                <select id="category" name="category" required>
+                    <option value="" disabled selected>Choisir une catégorie</option>
+                    <option value="Vehicules">Véhicules</option>
+                    <option value="Immobilier">Immobilier à louer</option>
+                    <option value="Electronique">Électronique</option>
+                    <option value="Mode">Mode</option>
+                    <option value="Maison">Maison et jardin</option>
+                    <option value="Loisirs">Loisirs</option>
+                    <option value="Famille">Famille</option>
+                    <option value="Autre">Autre</option>
+                </select>
+            </div>
+
+            <div class="fn-section-title">Détails supplémentaires</div>
+
+            <div class="fn-form-row">
+                <div class="fn-form-group">
+                    <label for="condition">État du produit</label>
+                    <select id="condition" name="condition">
+                        <option value="Neuf">Neuf</option>
+                        <option value="Comme neuf">Comme neuf</option>
+                        <option value="Bon etat" selected>Occasion - bon état</option>
+                        <option value="Etat moyen">Occasion - état moyen</option>
+                    </select>
+                </div>
+
+                <div class="fn-form-group">
+                    <label for="quantity">Quantité disponible</label>
+                    <input type="number" id="quantity" name="quantity" min="1" value="1">
+                </div>
+            </div>
+
+            <div class="fn-form-group">
+                <label for="contact_phone">Numéro de contact (optionnel)</label>
+                <input type="tel" id="contact_phone" name="contact_phone" placeholder="Ex: 6 77 12 34 56">
+                <span class="fn-hint fn-hint-left">Laissez vide pour utiliser les infos de votre profil</span>
+            </div>
+
+            <div class="fn-form-group fn-checkbox-group">
+                <label class="fn-checkbox-label">
+                    <input type="checkbox" id="delivery" name="delivery" value="oui">
+                    <span>Livraison possible</span>
+                </label>
+                <label class="fn-checkbox-label">
+                    <input type="checkbox" id="handmade" name="handmade" value="oui">
+                    <span>Fait main / artisanal</span>
+                </label>
+            </div>
+
+            <div class="fn-form-group">
+                <label>Photos de l'article <span class="fn-req">*</span></label>
+
+                <div class="fn-upload-box" id="fnUploadBox">
+                    <div class="fn-upload-icon">📷</div>
+                    <span class="fn-upload-title">Glissez vos photos ici</span>
+                    <span class="fn-upload-sub">ou cliquez pour parcourir — jusqu'à 6 images (JPG, PNG)</span>
+                    <input type="file" id="fnImageInput" name="images" accept="image/*" multiple>
+                </div>
+
+                <div class="fn-preview-grid" id="fnPreviewGrid"></div>
+                <span class="fn-hint" id="fnPhotoCount">0/6 photo(s) ajoutée(s)</span>
+            </div>
+
+            <button type="submit" class="fn-submit-btn" id="fnSubmitBtn">
+                <span class="fn-submit-label">Mettre en vente</span>
+            </button>
+        </form>
+    </div>
+</div>
+
+<style>
+    .fn-create-container { display: flex; justify-content: center; padding: 30px 20px; background-color: #f0f2f5; }
+
+    .fn-create-card {
+        background: white;
+        padding: 32px;
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06);
+        width: 100%;
+        max-width: 550px;
+    }
+
+    .fn-create-header { text-align: center; margin-bottom: 28px; }
+    .fn-create-icon { font-size: 30px; margin-bottom: 6px; }
+    .fn-create-header h2 { margin: 0; font-size: 24px; color: #1c1e21; font-weight: 700; }
+    .fn-create-header p { color: #65676b; margin-top: 6px; font-size: 14px; }
+
+    .fn-form-group { margin-bottom: 22px; }
+    .fn-form-group label { display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21; font-size: 14px; }
+    .fn-req { color: #e41e3f; }
+
+    .fn-form-group input[type="text"],
+    .fn-form-group input[type="number"],
+    .fn-form-group select {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid #dddfe2;
+        border-radius: 8px;
+        font-size: 15px;
+        box-sizing: border-box;
+        font-family: inherit;
+        background: #fff;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .fn-form-group input:focus,
+    .fn-form-group select:focus {
+        outline: none;
+        border-color: #1877f2;
+        box-shadow: 0 0 0 3px rgba(24,119,242,0.15);
+    }
+
+    .fn-hint { display: block; margin-top: 6px; font-size: 12px; color: #8a8d91; text-align: right; }
+    .fn-hint-left { text-align: left; }
+
+    .fn-form-group textarea {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid #dddfe2;
+        border-radius: 8px;
+        font-size: 15px;
+        box-sizing: border-box;
+        font-family: inherit;
+        background: #fff;
+        resize: vertical;
+        min-height: 90px;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .fn-form-group textarea:focus {
+        outline: none;
+        border-color: #1877f2;
+        box-shadow: 0 0 0 3px rgba(24,119,242,0.15);
+    }
+
+    .fn-section-title {
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #8a8d91;
+        margin: 4px 0 16px;
+        padding-top: 6px;
+        border-top: 1px solid #eee;
+    }
+
+    .fn-form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+    @media (max-width: 480px) {
+        .fn-form-row { grid-template-columns: 1fr; }
+    }
+
+    .fn-checkbox-group { display: flex; flex-direction: column; gap: 10px; margin-top: -6px; }
+    .fn-checkbox-label {
+        display: flex; align-items: center; gap: 8px;
+        font-weight: 500; font-size: 14px; color: #1c1e21;
+        cursor: pointer; margin-top: 10px;
+    }
+    .fn-checkbox-label input[type="checkbox"] {
+        width: 17px; height: 17px; accent-color: #1877f2; cursor: pointer;
+    }
+
+    .fn-price-wrap { position: relative; }
+    .fn-price-wrap input { padding-right: 60px; }
+    .fn-price-suffix {
+        position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+        color: #8a8d91; font-size: 13px; font-weight: 600; pointer-events: none;
+    }
+
+    .fn-upload-box {
+        border: 2px dashed #1877f2;
+        border-radius: 10px;
+        padding: 30px 20px;
+        text-align: center;
+        position: relative;
+        background: #f7f8fa;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .fn-upload-box:hover, .fn-upload-box.fn-dragover {
+        background: #eef4ff;
+        border-color: #145dbf;
+    }
+
+    .fn-upload-icon { font-size: 28px; }
+    .fn-upload-title { color: #1877f2; font-weight: 700; font-size: 15px; }
+    .fn-upload-sub { color: #8a8d91; font-size: 12px; }
+
+    .fn-upload-box input {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        opacity: 0; cursor: pointer;
+    }
+
+    .fn-preview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+        gap: 10px;
+        margin-top: 14px;
+    }
+
+    .fn-preview-item {
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+        aspect-ratio: 1 / 1;
+        background: #eee;
+        border: 1px solid #dddfe2;
+    }
+
+    .fn-preview-item img {
+        width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+
+    .fn-preview-remove {
+        position: absolute; top: 4px; right: 4px;
+        width: 22px; height: 22px;
+        background: rgba(0,0,0,0.6);
+        color: #fff;
+        border: none;
+        border-radius: 50%;
+        font-size: 13px;
+        line-height: 1;
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .fn-preview-remove:hover { background: rgba(228,30,63,0.9); }
+
+    .fn-preview-main-badge {
+        position: absolute; bottom: 0; left: 0; right: 0;
+        background: rgba(24,119,242,0.85);
+        color: #fff;
+        font-size: 10px;
+        font-weight: 700;
+        text-align: center;
+        padding: 2px 0;
+    }
+
+    .fn-submit-btn {
+        width: 100%;
+        background: linear-gradient(180deg, #1877f2, #145dbf);
+        color: white;
+        padding: 14px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: filter 0.15s ease, transform 0.05s ease;
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .fn-submit-btn:hover { filter: brightness(1.05); }
+    .fn-submit-btn:active { transform: scale(0.99); }
+    .fn-submit-btn:disabled { opacity: 0.7; cursor: not-allowed; filter: none; }
+
+    .fn-spinner {
+        width: 16px; height: 16px;
+        border: 2px solid rgba(255,255,255,0.5);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: fn-spin 0.7s linear infinite;
+    }
+    @keyframes fn-spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 480px) {
+        .fn-create-card { padding: 22px; border-radius: 0; box-shadow: none; }
+        .fn-create-container { padding: 0; }
+    }
+</style>
+
+<script>
+(function () {
+    const MAX_IMAGES = 6;
+    const uploadBox   = document.getElementById('fnUploadBox');
+    const fileInput   = document.getElementById('fnImageInput');
+    const previewGrid = document.getElementById('fnPreviewGrid');
+    const photoCount  = document.getElementById('fnPhotoCount');
+    const titleInput  = document.getElementById('title');
+    const titleCount  = document.getElementById('titleCount');
+    const descInput   = document.getElementById('description');
+    const descCount   = document.getElementById('descCount');
+    const form        = document.getElementById('fnCreateForm');
+    const submitBtn   = document.getElementById('fnSubmitBtn');
+
+    // Compteur de caractères du titre
+    if (titleInput && titleCount) {
+        titleInput.addEventListener('input', () => {
+            titleCount.textContent = titleInput.value.length;
+        });
+    }
+
+    // Compteur de caractères de la description
+    if (descInput && descCount) {
+        descInput.addEventListener('input', () => {
+            descCount.textContent = descInput.value.length;
+        });
+    }
+
+    // On garde la liste réelle des fichiers ici, pour pouvoir ajouter/retirer
+    // des images sans perdre celles déjà sélectionnées (limite native des inputs file).
+    let currentFiles = [];
+
+    function syncInputFiles() {
+        const dataTransfer = new DataTransfer();
+        currentFiles.forEach(file => dataTransfer.items.add(file));
+        fileInput.files = dataTransfer.files;
+        photoCount.textContent = currentFiles.length + '/' + MAX_IMAGES + ' photo(s) ajoutée(s)';
+    }
+
+    function renderPreviews() {
+        previewGrid.innerHTML = '';
+        currentFiles.forEach((file, index) => {
+            const url = URL.createObjectURL(file);
+            const item = document.createElement('div');
+            item.className = 'fn-preview-item';
+
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = 'Aperçu photo ' + (index + 1);
+            item.appendChild(img);
+
+            if (index === 0) {
+                const badge = document.createElement('div');
+                badge.className = 'fn-preview-main-badge';
+                badge.textContent = 'Photo principale';
+                item.appendChild(badge);
+            }
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'fn-preview-remove';
+            removeBtn.setAttribute('aria-label', 'Retirer cette photo');
+            removeBtn.textContent = '×';
+            removeBtn.addEventListener('click', () => {
+                currentFiles.splice(index, 1);
+                syncInputFiles();
+                renderPreviews();
+            });
+            item.appendChild(removeBtn);
+
+            previewGrid.appendChild(item);
+        });
+    }
+
+    function addFiles(fileList) {
+        const incoming = Array.from(fileList).filter(f => f.type.startsWith('image/'));
+        const room = MAX_IMAGES - currentFiles.length;
+        if (room <= 0) return;
+        currentFiles = currentFiles.concat(incoming.slice(0, room));
+        syncInputFiles();
+        renderPreviews();
+    }
+
+    fileInput.addEventListener('change', (e) => {
+        addFiles(e.target.files);
+    });
+
+    // Glisser-déposer
+    ['dragenter', 'dragover'].forEach(evt => {
+        uploadBox.addEventListener(evt, (e) => {
+            e.preventDefault();
+            uploadBox.classList.add('fn-dragover');
+        });
+    });
+    ['dragleave', 'drop'].forEach(evt => {
+        uploadBox.addEventListener(evt, (e) => {
+            e.preventDefault();
+            uploadBox.classList.remove('fn-dragover');
+        });
+    });
+    uploadBox.addEventListener('drop', (e) => {
+        if (e.dataTransfer && e.dataTransfer.files) {
+            addFiles(e.dataTransfer.files);
+        }
+    });
+
+    // Petit indicateur de chargement à l'envoi, sans bloquer une validation HTML5 échouée
+    form.addEventListener('submit', () => {
+        if (!form.checkValidity()) return;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="fn-spinner"></span><span class="fn-submit-label">Publication en cours...</span>';
+    });
+})();
+</script>
+{% endblock %}

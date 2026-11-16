@@ -1,0 +1,435 @@
+{# ══════════════════════════════════════════════════════════════════
+   _repost_actions.html — bouton « Republier » commun au fil (feed.html + _feed_card_macro.html)
+   et au profil (profile.html). Ce fichier est INCLUS (une ligne) dans feed.html et profile.html.
+
+   • Un seul appui = republication immédiate, SANS texte obligatoire ; pendant l'envoi les flèches tournent.
+   • Tout le monde peut laisser un mot (facultatif, sans limite de longueur) : après la republication, une bulle
+     « Ajouter ce que vous pensez… » avec la photo de profil apparaît sur la publication (le texte est propre à chaque
+     publication et change instantanément) ; toucher la bulle ouvre la feuille pour écrire / modifier le mot.
+     Un nouvel appui sur « Republié » ANNULE la republication.
+   • Les republications sont stockées dans la même table que reel.html (/api/reel/<id>/republier…) :
+     republier depuis le fil ou le profil s'affiche donc dans Reels, et inversement.
+   • « Marie et Paul ont republié » s'affiche sous la publication, comme la ligne des amis qui ont aimé.
+   • Les boutons commenter / aimer / partager / republier sont réduits (plus compacts).
+   ══════════════════════════════════════════════════════════════════ #}
+<style>
+/* ── Flèches qui tournent pendant la republication ── */
+@keyframes fnRpSpin { to { transform: rotate(360deg); } }
+.fn-rp-btn i { display: inline-block; transform-origin: 50% 50%; }
+.fn-rp-btn.fn-rp-spin { pointer-events: none; }
+.fn-rp-btn.fn-rp-spin i { animation: fnRpSpin .7s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .fn-rp-btn.fn-rp-spin i { animation: none; opacity: .45; } }
+
+/* ── Boutons réduits : FIL ── */
+html body .post-actions-bar { gap: 5px; padding: 6px 8px 10px; }
+html body .post-actions-bar .post-action-button { min-height: 40px; padding: 4px 2px 5px; font-size: 11.5px; gap: 2px; border-radius: 11px; }
+html body .post-actions-bar .post-action-button i { font-size: 14px; }
+html body .post-actions-bar .post-action-button .fn-reac-btnicon { width: 17px; height: 17px; }
+@media (max-width: 400px) {
+    html body .post-actions-bar { gap: 4px; padding: 6px 6px 10px; }
+    html body .post-actions-bar .post-action-button { font-size: 10.5px; padding: 4px 1px 5px; }
+}
+/* ── Boutons réduits : PROFIL ── */
+html body .post-card-actions { gap: 5px; padding: 6px 8px 10px; }
+html body .post-card-actions .post-card-action-btn { min-height: 40px; padding: 4px 2px 5px; font-size: 11.5px; gap: 2px; border-radius: 11px; }
+html body .post-card-actions .post-card-action-btn i { font-size: 14px; }
+@media (max-width: 400px) {
+    html body .post-card-actions { gap: 4px; padding: 6px 6px 10px; }
+    html body .post-card-actions .post-card-action-btn { font-size: 10.5px; padding: 4px 1px 5px; }
+}
+
+/* ── Bouton « Republié » : même relief bleu clair que « Aimé » ── */
+html body .post-actions-bar .post-action-button.fn-rp-btn.reposted,
+html body .post-card-actions .post-card-action-btn.fn-rp-btn.reposted {
+    color: #1877f2; border-color: rgba(24,119,242,.45);
+    background: linear-gradient(180deg, #f6faff 0%, #e2efff 49%, #cfe4ff 51%, #bcd8ff 100%);
+}
+html[data-fn-theme="dark"] body .post-actions-bar .post-action-button.fn-rp-btn.reposted,
+html[data-fn-theme="dark"] .post-actions-bar .post-action-button.fn-rp-btn.reposted,
+body.dark-mode .post-card-actions .post-card-action-btn.fn-rp-btn.reposted {
+    color: #4aa0ff !important; border-color: #14233b;
+    background: linear-gradient(180deg, #3d5c8c 0%, #314f7c 49%, #2a4570 51%, #233a60 100%);
+}
+
+/* ── Ligne « X a republié » (même style que la ligne des amis qui ont aimé) ── */
+.friends-reposted-line { display: none; align-items: center; gap: 6px; padding: 4px 16px; font-size: 12px; color: #65676b; }
+.friends-reposted-line.fr-note { cursor: pointer; }
+.friends-reposted-line.open { align-items: flex-start; }
+.friends-reposted-line.open .fr-text { white-space: normal; overflow: visible; }
+.friends-reposted-line.visible { display: flex; }
+.friends-reposted-line .fr-ico { flex-shrink: 0; font-size: 12px; color: #1877f2; }
+.friends-reposted-line .fr-avatars { display: flex; flex-shrink: 0; }
+.friends-reposted-line .fr-avatars img { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; margin-left: -8px; background: #e4e6eb; }
+.friends-reposted-line .fr-avatars img:first-child { margin-left: 0; }
+.friends-reposted-line .fr-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.friends-reposted-line .fr-text strong { color: #050505; font-weight: 600; }
+html[data-fn-theme="dark"] .friends-reposted-line, body.dark-mode .friends-reposted-line { color: #b0b3b8; border-color: #3e4042; }
+html[data-fn-theme="dark"] .friends-reposted-line .fr-text strong, body.dark-mode .friends-reposted-line .fr-text strong { color: #e4e6eb; }
+html[data-fn-theme="dark"] .friends-reposted-line .fr-avatars img, body.dark-mode .friends-reposted-line .fr-avatars img { border-color: #242526; }
+.fn-rp-count b { font-weight: inherit; }
+.fn-rp-count { cursor: pointer; }
+
+/* ── Feuille « Ajouter un mot » ── */
+.fn-rp-backdrop { position: fixed; inset: 0; z-index: 99990; background: rgba(0,0,0,.45); opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+.fn-rp-backdrop.open { opacity: 1; pointer-events: auto; }
+.fn-rp-sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 99991; max-width: 560px; margin: 0 auto; max-height: 88vh; overflow-y: auto; background: #fff; color: #050505; border-radius: 18px 18px 0 0; padding: 8px 16px calc(16px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -8px 30px rgba(0,0,0,.25); transform: translateY(105%); transition: transform .25s ease; }
+.fn-rp-sheet.open { transform: translateY(0); }
+.fn-rp-handle { width: 40px; height: 4px; border-radius: 4px; background: #ccd0d5; margin: 4px auto 10px; }
+.fn-rp-head { display: flex; align-items: center; justify-content: space-between; font-size: 16px; font-weight: 800; margin-bottom: 10px; }
+.fn-rp-x { border: 0; background: #e4e6eb; width: 32px; height: 32px; border-radius: 50%; font-size: 15px; cursor: pointer; color: inherit; }
+.fn-rp-me { display: flex; align-items: center; gap: 10px; padding: 4px 0 10px; }
+.fn-rp-me img { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 2px solid #1877f2; background: #e4e6eb; flex-shrink: 0; }
+.fn-rp-me strong { display: block; font-size: 14.5px; font-weight: 800; }
+.fn-rp-me small { display: block; font-size: 12px; color: #65676b; margin-top: 2px; }
+.fn-rp-sheet textarea { width: 100%; box-sizing: border-box; min-height: 110px; max-height: 45vh; resize: vertical; border: 1px solid #ccd0d5; border-radius: 12px; padding: 12px; font-size: 16px; font-family: inherit; line-height: 1.4; color: #050505; background: #fff; outline: none; }
+.fn-rp-sheet textarea:focus { border-color: #1877f2; }
+.fn-rp-n { text-align: right; font-size: 12px; color: #65676b; font-weight: 600; margin: 4px 2px 10px; }
+.fn-rp-go { width: 100%; border: 0; border-radius: 12px; padding: 13px; font-size: 15px; font-weight: 800; background: #1877f2; color: #fff; cursor: pointer; }
+.fn-rp-go:disabled { opacity: .6; }
+.fn-rp-undo { width: 100%; margin-top: 8px; border: 0; border-radius: 12px; padding: 12px; font-size: 14.5px; font-weight: 700; background: #e4e6eb; color: #d93025; cursor: pointer; }
+html[data-fn-theme="dark"] .fn-rp-sheet, body.dark-mode .fn-rp-sheet { background: #242526; color: #e4e6eb; }
+html[data-fn-theme="dark"] .fn-rp-sheet textarea, body.dark-mode .fn-rp-sheet textarea { background: #18191a; color: #e4e6eb; border-color: #4e4f50; }
+html[data-fn-theme="dark"] .fn-rp-x, html[data-fn-theme="dark"] .fn-rp-undo, body.dark-mode .fn-rp-x, body.dark-mode .fn-rp-undo { background: #3a3b3c; }
+html[data-fn-theme="dark"] .fn-rp-handle, body.dark-mode .fn-rp-handle { background: #4e4f50; }
+
+/* ── Bulle « Ajouter ce que vous pensez… » (photo de profil + petit mot propre à CETTE publication) ── */
+.fn-rp-anchor { position: relative; height: 0; z-index: 6; }
+.fn-rp-anchor.fn-rp-flow { height: auto; padding: 8px 12px 4px; }
+.fn-rp-note { position: absolute; left: 12px; bottom: 10px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; max-width: calc(100% - 40px); cursor: pointer; -webkit-tap-highlight-color: transparent; outline: none; }
+.fn-rp-anchor.fn-rp-flow .fn-rp-note { position: relative; left: 0; bottom: 0; }
+.fn-rp-note.fn-rp-in { animation: fnRpNoteIn .32s ease both; }
+@keyframes fnRpNoteIn { from { opacity: 0; transform: translateY(10px) scale(.92); } to { opacity: 1; transform: none; } }
+.fn-rp-note .fn-rp-bub { position: relative; max-width: 100%; padding: 9px 14px; border-radius: 18px; background: #fff; color: #6b6e75; font-size: 14px; line-height: 1.3; box-shadow: 0 4px 14px rgba(0,0,0,.28); }
+.fn-rp-note .fn-rp-bub.has { color: #1c1e21; font-weight: 600; }
+.fn-rp-note .fn-rp-bub::after { content: ''; position: absolute; left: 22px; bottom: -6px; width: 14px; height: 14px; background: #fff; border-radius: 3px; transform: rotate(45deg); }
+.fn-rp-note .fn-rp-bub-t { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; text-align: center; }
+.fn-rp-note .fn-rp-av { position: relative; width: 42px; height: 42px; margin-left: 8px; }
+.fn-rp-note .fn-rp-av img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 2px solid #fff; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+.fn-rp-note .fn-rp-av i { position: absolute; right: -6px; bottom: -4px; width: 20px; height: 20px; border-radius: 50%; background: #7c4dff; color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; }
+.fn-rp-note:focus-visible .fn-rp-bub { box-shadow: 0 0 0 3px rgba(24,119,242,.7), 0 4px 14px rgba(0,0,0,.28); }
+@media (prefers-reduced-motion: reduce) { .fn-rp-note.fn-rp-in { animation: none; } }
+
+/* ── Petit message en bas de l'écran ── */
+.fn-rp-toast { position: fixed; left: 50%; bottom: 86px; transform: translateX(-50%) translateY(12px); z-index: 99999; max-width: 88vw; padding: 10px 16px; border-radius: 22px; background: rgba(28,30,33,.94); color: #fff; font-size: 13.5px; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; }
+.fn-rp-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+.fn-rp-toast button { margin-left: 12px; border: 0; background: transparent; color: #6cb4ff; font-size: 13.5px; font-weight: 800; cursor: pointer; padding: 0; }
+</style>
+
+{% if current_user is defined and current_user.is_authenticated %}
+<div class="fn-rp-backdrop" id="fn-rp-backdrop"></div>
+<div class="fn-rp-sheet" id="fn-rp-sheet" role="dialog" aria-modal="true" aria-labelledby="fn-rp-title">
+    <div class="fn-rp-handle"></div>
+    <div class="fn-rp-head"><span id="fn-rp-title">Republier</span><button type="button" class="fn-rp-x" id="fn-rp-close" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="fn-rp-me">
+        <img id="fn-rp-me-img" alt="" src="{{ url_for('static', filename='uploads/' + (current_user.avatar or 'default_avatar.png')) }}">
+        <div><strong>{{ current_user.nom_complet }}</strong><small>Le mot est facultatif et n'a pas de limite de longueur.</small></div>
+    </div>
+    <textarea id="fn-rp-note" rows="4" placeholder="Ajoutez un mot, un commentaire… (facultatif)" aria-label="Mot ou commentaire (facultatif, sans limite)"></textarea>
+    <div class="fn-rp-n" id="fn-rp-n">0 caractère</div>
+    <button type="button" class="fn-rp-go" id="fn-rp-go">Republier</button>
+    <button type="button" class="fn-rp-undo" id="fn-rp-undo" hidden>Annuler la republication</button>
+</div>
+{% endif %}
+
+{# AJOUT : feuille « Qui a republié ? » + abréviations K / M / Md #}
+{% include '_repost_liste.html' %}
+
+<script>
+(function () {
+    'use strict';
+    if (window.fnRepost) return;
+
+    var etat = {};        // id de publication → { mine, commentaire, total, amis[], amis_total }
+    var vu = {};          // ids déjà demandés au serveur
+    var occupe = {};      // ids dont un envoi est en cours
+
+    function api(url, corps) {
+        var o = { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } };
+        if (corps !== undefined) {
+            o.method = 'POST';
+            o.headers['Content-Type'] = 'application/json';
+            o.body = JSON.stringify(corps);
+        }
+        return fetch(url, o).then(function (r) {
+            return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d || {} }; });
+        });
+    }
+
+    var toastEl = null, toastTimer = null;
+    function toast(msg, actionLabel, action) {
+        try {
+            if (!toastEl) {
+                toastEl = document.createElement('div');
+                toastEl.className = 'fn-rp-toast';
+                toastEl.setAttribute('role', 'status');
+                document.body.appendChild(toastEl);
+            }
+            toastEl.textContent = msg;
+            if (actionLabel && action) {
+                var bt = document.createElement('button');
+                bt.type = 'button';
+                bt.textContent = actionLabel;
+                bt.addEventListener('click', function () { toastEl.classList.remove('show'); action(); });
+                toastEl.appendChild(bt);
+            }
+            toastEl.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, actionLabel ? 5000 : 2200);
+        } catch (e) {}
+    }
+
+    /* ── Ligne « Marie et Paul ont republié » ── */
+    function ligneAmis(id, e) {
+        var box = document.getElementById('friends-reposted-' + id);
+        if (!box) return;
+        var amis = e.amis || [];
+        var total = e.amis_total || amis.length;
+        if (!total || !amis.length) { box.classList.remove('visible'); box.innerHTML = ''; return; }
+        var noms = amis.map(function (a) { return a.nom; });
+        var fort, reste;
+        if (total <= 1 || noms.length < 2) {
+            fort = noms[0]; reste = ' a republié';
+            if (amis[0].note) reste += ' · « ' + amis[0].note + ' »';
+        } else if (total === 2) {
+            fort = noms[0] + ' et ' + noms[1]; reste = ' ont republié';
+        } else {
+            var autres = total - 2;
+            fort = noms[0] + ', ' + noms[1] + ' et ' + autres + ' autre' + (autres > 1 ? 's' : '') + ' ami' + (autres > 1 ? 's' : '');
+            reste = ' ont republié';
+        }
+        box.innerHTML = '';
+        var ico = document.createElement('i');
+        ico.className = 'fa-solid fa-retweet fr-ico';
+        ico.setAttribute('aria-hidden', 'true');
+        var av = document.createElement('span');
+        av.className = 'fr-avatars';
+        amis.slice(0, 3).forEach(function (a) {
+            var img = document.createElement('img');
+            img.src = a.avatar; img.alt = ''; img.loading = 'lazy';
+            av.appendChild(img);
+        });
+        var txt = document.createElement('span');
+        txt.className = 'fr-text';
+        var s = document.createElement('strong');
+        s.textContent = fort;
+        txt.appendChild(s);
+        txt.appendChild(document.createTextNode(reste));
+        box.appendChild(ico); box.appendChild(av); box.appendChild(txt);
+        box.classList.remove('open');
+        box.classList.add('fr-note');
+        box.onclick = function () { if (window.fnRepostListe) fnRepostListe.ouvrir(id); };   // un appui : la liste de tous ceux qui ont republié, avec leurs mots
+        box.classList.add('visible');
+    }
+
+    /* ── Bulle « Ajouter ce que vous pensez… » : posée au bas du média (ou sous le texte), juste au-dessus des compteurs ── */
+    function aDuMedia(hote) {
+        if (!hote) return false;
+        var m = Array.prototype.slice.call(hote.querySelectorAll('video, img'));
+        if (hote.tagName === 'IMG' || hote.tagName === 'VIDEO') m.push(hote);   // le média peut être directement avant les compteurs (profil)
+        for (var i = 0; i < m.length; i++) { if (!/avatar|emoji/i.test(m[i].className || '')) return true; }
+        return false;
+    }
+    function placerBulle(carte) {
+        var anc = carte.querySelector('.fn-rp-anchor');
+        if (!anc) return;
+        var prec = anc.previousElementSibling;
+        anc.classList.toggle('fn-rp-flow', !(aDuMedia(prec) && prec.offsetHeight >= 160));   // pas de média : la bulle reste sous le texte
+    }
+    function bulle(id) {
+        var moi = el('fn-rp-me-img');
+        document.querySelectorAll('#publication-' + id).forEach(function (carte) {
+            var e = etat[id] || {};
+            var anc = carte.querySelector('.fn-rp-anchor');
+            if (!e.mine || !moi) { if (anc) anc.remove(); return; }
+            var stats = carte.querySelector('.post-stats, .post-card-stats');
+            if (!stats || !stats.parentNode) return;
+            var neuve = !anc;
+            if (neuve) {
+                anc = document.createElement('div');
+                anc.className = 'fn-rp-anchor';
+                stats.parentNode.insertBefore(anc, stats);
+            }
+            var mot = (e.commentaire || '').trim();
+            var n = anc.querySelector('.fn-rp-note');
+            if (!n) { n = document.createElement('div'); n.className = 'fn-rp-note' + (neuve ? ' fn-rp-in' : ''); anc.appendChild(n); }
+            n.setAttribute('role', 'button'); n.setAttribute('tabindex', '0');
+            n.setAttribute('aria-label', mot ? 'Modifier le mot de votre republication' : 'Ajouter un mot à votre republication');
+            n.innerHTML = '';
+            var b = document.createElement('div'); b.className = 'fn-rp-bub' + (mot ? ' has' : '');
+            var t = document.createElement('span'); t.className = 'fn-rp-bub-t'; t.textContent = mot || 'Ajouter ce que vous pensez…';
+            b.appendChild(t);
+            var av = document.createElement('div'); av.className = 'fn-rp-av';
+            var im = document.createElement('img'); im.alt = ''; im.src = moi.src;
+            var ic = document.createElement('i'); ic.className = 'fa-solid fa-retweet'; ic.setAttribute('aria-hidden', 'true');
+            av.appendChild(im); av.appendChild(ic);
+            n.appendChild(b); n.appendChild(av);
+            n.onclick = function (ev) { ev.stopPropagation(); ouvrirFeuille(id); };
+            n.onkeydown = function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); ouvrirFeuille(id); } };
+            placerBulle(carte);
+        });
+    }
+    /* un média qui finit de charger peut changer la hauteur : on replace la bulle */
+    ['load', 'loadedmetadata'].forEach(function (nom) {
+        document.addEventListener(nom, function (ev) {
+            var t = ev.target;
+            if (!t || !t.closest || (t.tagName !== 'IMG' && t.tagName !== 'VIDEO')) return;
+            var c = t.closest('[id^="publication-"]');
+            if (c && c.querySelector('.fn-rp-anchor')) placerBulle(c);
+        }, true);
+    });
+
+    /* ── Applique l'état d'une publication à tous ses boutons / compteurs ── */
+    function appliquer(id) {
+        var e = etat[id];
+        if (!e) return;
+        document.querySelectorAll('.fn-rp-btn[data-pub-id="' + id + '"]').forEach(function (b) {
+            b.classList.toggle('reposted', !!e.mine);
+            b.setAttribute('aria-pressed', e.mine ? 'true' : 'false');
+            b.setAttribute('aria-label', e.mine ? 'Annuler la republication' : 'Republier');
+            var l = b.querySelector('.fn-rp-label');
+            if (l) l.textContent = e.mine ? 'Republié' : 'Republier';
+        });
+        var c = document.getElementById('repost-count-' + id);
+        if (c) {
+            var n = e.total || 0;
+            c.style.display = n > 0 ? '' : 'none';
+            var b = c.querySelector('b');
+            if (b) b.textContent = window.fnFmtCount ? fnFmtCount(n) : n;
+            c.title = n + ' republication' + (n > 1 ? 's' : '');
+        }
+        ligneAmis(id, e);
+        bulle(id);
+    }
+
+    /* ── Demande l'état des publications visibles (50 à la fois) ── */
+    function hydrater() {
+        var ids = [];
+        document.querySelectorAll('.fn-rp-btn[data-pub-id]').forEach(function (b) {
+            var id = b.getAttribute('data-pub-id');
+            if (!/^\d+$/.test(id)) return;
+            if (etat[id]) {
+                // carte recréée par le défilement infini : on réapplique l'état connu
+                if (b.classList.contains('reposted') !== !!etat[id].mine) appliquer(id);
+                return;
+            }
+            if (!vu[id]) { vu[id] = true; ids.push(id); }
+        });
+        for (var i = 0; i < ids.length; i += 50) {
+            (function (lot) {
+                api('/api/reels/republications/etat?ids=' + lot.join(',')).then(function (r) {
+                    if (!r.ok || !r.d.etat) { lot.forEach(function (id) { vu[id] = false; }); return; }
+                    Object.keys(r.d.etat).forEach(function (id) { etat[id] = r.d.etat[id]; appliquer(id); });
+                }).catch(function () { lot.forEach(function (id) { vu[id] = false; }); });
+            })(ids.slice(i, i + 50));
+        }
+    }
+
+    /* ── Clic : 1er appui = republier sans texte (les flèches tournent) ; 2e appui = annule la republication.
+          Le mot s'ajoute en touchant la bulle. ── */
+    function clic(id, btn) {
+        id = String(id);
+        if (!btn || occupe[id] || btn.classList.contains('fn-rp-spin')) return;
+        var e = etat[id] || { mine: false, commentaire: '', total: 0, amis: [], amis_total: 0 };
+        if (e.mine) { envoyer(id, btn, e, true); return; }
+        envoyer(id, btn, e, false);
+    }
+
+    /* Envoie la republication (annule = false) ou l'annulation (annule = true) ; les flèches tournent */
+    function envoyer(id, btn, e, annule, note, avant) {
+        occupe[id] = true;
+        btn.classList.add('fn-rp-spin');
+        var url = '/api/reel/' + id + (annule ? '/republier/annuler' : '/republier');
+        var corps = annule ? {} : (note === undefined ? { commentaire: '', rapide: true } : { commentaire: note });
+        var attente = new Promise(function (ok) { setTimeout(ok, 700); });   // on laisse les flèches faire au moins un tour
+        Promise.all([api(url, corps), attente]).then(function (res) {
+            var r = res[0];
+            occupe[id] = false;
+            btn.classList.remove('fn-rp-spin');
+            if (!r.ok || !r.d.success) { if (avant !== undefined) { e.commentaire = avant; appliquer(id); } toast(r.d.error || 'Action impossible pour le moment.'); return; }
+            e.mine = !annule;
+            e.total = r.d.total;
+            e.commentaire = annule ? '' : (r.d.commentaire || e.commentaire || '');
+            etat[id] = e;
+            vu[id] = true;
+            appliquer(id);
+            try { if (navigator.vibrate) navigator.vibrate(20); } catch (x) {}
+            if (annule) toast('Republication annulée');
+            else if (note !== undefined) toast(note ? 'Republié avec votre mot' : 'Publication republiée');
+            else toast(r.d.cree === false ? 'Déjà republié' : 'Publication republiée', 'Ajouter un mot', function () { ouvrirFeuille(id); });
+        }).catch(function () {
+            occupe[id] = false;
+            btn.classList.remove('fn-rp-spin');
+            if (avant !== undefined) { e.commentaire = avant; appliquer(id); }
+            toast('Connexion impossible. Réessayez.');
+        });
+    }
+
+    /* ── Feuille « Ajouter un mot » (facultatif, sans limite de longueur) ── */
+    var courant = null;
+    function el(i) { return document.getElementById(i); }
+    function compteur() {
+        var t = el('fn-rp-note'), n = el('fn-rp-n');
+        if (t && n) { var l = t.value.length; n.textContent = l + ' caractère' + (l > 1 ? 's' : ''); }
+    }
+    function ouvrirFeuille(id) {
+        id = String(id);
+        if (!el('fn-rp-sheet')) return;
+        courant = id;
+        var e = etat[id] || {};
+        el('fn-rp-note').value = e.mine ? (e.commentaire || '') : '';
+        compteur();
+        el('fn-rp-title').textContent = e.mine ? 'Modifier la republication' : 'Republier';
+        el('fn-rp-go').textContent = e.mine ? 'Enregistrer' : 'Republier';
+        el('fn-rp-undo').hidden = !e.mine;
+        el('fn-rp-backdrop').classList.add('open');
+        el('fn-rp-sheet').classList.add('open');
+        setTimeout(function () { try { if (el('fn-rp-sheet').classList.contains('open')) el('fn-rp-note').focus(); } catch (x) {} }, 280);
+    }
+    function fermerFeuille() {
+        courant = null;
+        if (!el('fn-rp-sheet')) return;
+        el('fn-rp-backdrop').classList.remove('open');
+        el('fn-rp-sheet').classList.remove('open');
+        try { el('fn-rp-note').blur(); } catch (x) {}
+    }
+    function boutonDe(id) { return document.querySelector('.fn-rp-btn[data-pub-id="' + id + '"]'); }
+    function validerFeuille() {
+        if (courant == null) return;
+        var id = courant, btn = boutonDe(id);
+        if (!btn || occupe[id]) return;
+        var e = etat[id] || { mine: false, commentaire: '', total: 0, amis: [], amis_total: 0 };
+        var note = el('fn-rp-note').value.trim();
+        fermerFeuille();
+        var avant = e.commentaire || '';
+        if (e.mine) { e.commentaire = note; etat[id] = e; appliquer(id); }   // la bulle change tout de suite
+        envoyer(id, btn, e, false, note, e.mine ? avant : undefined);
+    }
+    function annulerDepuisFeuille() {
+        if (courant == null) return;
+        var id = courant, btn = boutonDe(id);
+        if (!btn || occupe[id]) return;
+        var e = etat[id] || { mine: true, commentaire: '', total: 0, amis: [], amis_total: 0 };
+        fermerFeuille();
+        envoyer(id, btn, e, true);
+    }
+    if (el('fn-rp-sheet')) {
+        el('fn-rp-backdrop').addEventListener('click', fermerFeuille);
+        el('fn-rp-close').addEventListener('click', fermerFeuille);
+        el('fn-rp-go').addEventListener('click', validerFeuille);
+        el('fn-rp-undo').addEventListener('click', annulerDepuisFeuille);
+        el('fn-rp-note').addEventListener('input', compteur);
+        document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && el('fn-rp-sheet').classList.contains('open')) fermerFeuille(); });
+    }
+
+    window.fnRepost = { clic: clic, hydrater: hydrater, etat: etat, ouvrirFeuille: ouvrirFeuille };
+
+    hydrater();
+    document.addEventListener('DOMContentLoaded', hydrater);
+    // cartes ajoutées plus tard (défilement infini, nouvelle publication)
+    if ('MutationObserver' in window) {
+        var minuteur = null;
+        new MutationObserver(function () { clearTimeout(minuteur); minuteur = setTimeout(hydrater, 250); })
+            .observe(document.body, { childList: true, subtree: true });
+    }
+})();
+</script>

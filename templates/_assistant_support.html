@@ -1,0 +1,126 @@
+{# ══ Assistant de support FaceNet — AUCUN stockage : conversation en mémoire de la page uniquement ══ #}
+<style>
+#fnasst{position:fixed;inset:0;z-index:100001;background:var(--surface,#fff);color:var(--text,#050505);display:none;flex-direction:column;font-family:inherit}
+#fnasst.on{display:flex}
+.fnasst-top{display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px;border-bottom:1px solid var(--border,#e4e6eb);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.fnasst-mark{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#1877f2,#a855f7);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.fnasst-top b{flex:1;font-size:17px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fnasst-ib{border:0;background:transparent;color:#1877f2;font-size:20px;width:38px;height:38px;border-radius:50%;cursor:pointer}
+.fnasst-ib:hover{background:var(--bg,#f0f2f5)}
+.fnasst-body{flex:1;overflow-y:auto;padding:18px 16px;display:flex;flex-direction:column;gap:10px}
+.fnasst-hello{text-align:center;margin:auto 0;padding:10px 4px}
+.fnasst-hello .fnasst-mark{width:72px;height:72px;font-size:34px;margin:0 auto 16px}
+.fnasst-hello h2{font-size:21px;line-height:1.25;margin:0 0 8px}
+.fnasst-hello p{font-size:14.5px;color:var(--grey,#65676b);line-height:1.5;margin:0 0 16px}
+.fnasst-chip{display:block;width:100%;text-align:left;border:0;background:var(--bg,#f0f2f5);color:inherit;border-radius:14px;padding:14px 16px;margin:0 0 10px;font:inherit;font-size:15px;cursor:pointer}
+.fnasst-chip:hover{filter:brightness(.97)}
+.fnasst-m{max-width:88%;padding:10px 14px;border-radius:18px;font-size:15px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+.fnasst-m.u{align-self:flex-end;background:#1877f2;color:#fff;border-bottom-right-radius:5px}
+.fnasst-m.a{align-self:flex-start;background:var(--bg,#f0f2f5);border-bottom-left-radius:5px}
+.fnasst-foot{padding:6px 14px calc(12px + env(safe-area-inset-bottom,0px))}
+.fnasst-cgu{font-size:12.5px;color:var(--grey,#65676b);text-align:center;margin:0 0 8px}
+.fnasst-cgu a{color:#1877f2;font-weight:700;text-decoration:none}
+.fnasst-in{display:flex;align-items:flex-end;gap:8px;background:var(--bg,#f0f2f5);border-radius:22px;padding:8px 8px 8px 16px}
+.fnasst-in textarea{flex:1;border:0;background:transparent;color:inherit;font:inherit;font-size:15px;resize:none;max-height:120px;outline:none;padding:6px 0}
+.fnasst-send{border:0;background:#1877f2;color:#fff;width:40px;height:40px;border-radius:50%;font-size:18px;cursor:pointer;flex-shrink:0}
+.fnasst-send:disabled{opacity:.45;cursor:default}
+#fnasst-cgu{position:fixed;inset:0;z-index:100002;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center}
+#fnasst-cgu.on{display:flex}
+.fnasst-sheet{background:var(--surface,#fff);color:var(--text,#050505);width:100%;max-width:680px;max-height:88vh;overflow-y:auto;border-radius:18px 18px 0 0;padding:18px 20px calc(24px + env(safe-area-inset-bottom,0px))}
+.fnasst-sheet h3{font-size:18px;margin:0 0 12px}
+.fnasst-sheet ol{padding-left:20px;margin:0 0 16px;font-size:14.5px;line-height:1.55}
+.fnasst-sheet li{margin-bottom:9px}
+.fnasst-sheet button{width:100%;border:0;background:#1877f2;color:#fff;font:inherit;font-weight:700;padding:13px;border-radius:10px;cursor:pointer}
+</style>
+
+<div id="fnasst" role="dialog" aria-modal="true" aria-label="Assistant de support FaceNet">
+  <div class="fnasst-top">
+    <span class="fnasst-mark" aria-hidden="true">✦</span>
+    <b>Assistant de support FaceNet</b>
+    <button type="button" class="fnasst-ib" id="fnasst-new" title="Nouvelle discussion" aria-label="Nouvelle discussion">✎</button>
+    <button type="button" class="fnasst-ib" id="fnasst-x" title="Fermer" aria-label="Fermer">✕</button>
+  </div>
+  <div class="fnasst-body" id="fnasst-body"></div>
+  <div class="fnasst-foot">
+    <p class="fnasst-cgu">En utilisant l'assistant, vous acceptez les <a href="#" id="fnasst-cgu-open">Conditions de l'IA</a>. Aucune discussion n'est conservée.</p>
+    <div class="fnasst-in">
+      <textarea id="fnasst-q" rows="1" maxlength="600" placeholder="Posez une question…" aria-label="Votre question"></textarea>
+      <button type="button" class="fnasst-send" id="fnasst-go" aria-label="Envoyer">➤</button>
+    </div>
+  </div>
+</div>
+
+<div id="fnasst-cgu" role="dialog" aria-modal="true" aria-label="Conditions de l'IA">
+  <div class="fnasst-sheet">
+    <h3>Conditions de l'IA — Assistant de support FaceNet</h3>
+    <ol>
+      <li><b>Objet.</b> L'assistant vous aide à comprendre comment modifier votre nom ou votre photo de profil en tant qu'abonné(e) Tsapi Verified, et comment fonctionne la revérification. Il ne remplace ni l'équipe FaceNet ni un conseil juridique.</li>
+      <li><b>Aucune conservation.</b> La discussion n'existe que sur votre écran. Elle est effacée dès que vous fermez l'assistant, lancez une nouvelle discussion ou quittez la page. FaceNet n'enregistre ni vos questions, ni les réponses, ni historique, ni mémoire.</li>
+      <li><b>Traitement par un prestataire d'IA.</b> Pour rédiger une réponse, votre message est transmis le temps de la réponse à un service d'intelligence artificielle tiers, puis n'est plus utilisé par FaceNet.</li>
+      <li><b>Données sensibles.</b> N'écrivez jamais de mot de passe, de code reçu par SMS ou e-mail, de numéro de pièce d'identité ni de donnée bancaire.</li>
+      <li><b>Exactitude.</b> L'assistant peut se tromper. Il ne peut ni approuver, ni refuser, ni modifier votre profil : la décision de revérification appartient à l'équipe FaceNet.</li>
+      <li><b>Usage.</b> L'assistant répond uniquement aux questions de support sur le profil et la vérification. Tout usage abusif, haineux ou illégal est refusé, et l'accès peut être limité.</li>
+      <li><b>Évolution.</b> Ces conditions peuvent évoluer ; la version affichée ici est celle en vigueur.</li>
+    </ol>
+    <button type="button" id="fnasst-cgu-ok">J'ai compris</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var root = document.getElementById('fnasst'); if (!root || root.dataset.init) return; root.dataset.init = '1';
+  var body = document.getElementById('fnasst-body'), q = document.getElementById('fnasst-q'), go = document.getElementById('fnasst-go');
+  var cgu = document.getElementById('fnasst-cgu');
+  var msgs = [], occupe = false;                 /* conversation : variable de la page, rien dans localStorage / serveur */
+  var SUGGESTIONS = ['Comment mettre à jour mon nom ?', 'Comment mettre à jour ma photo de profil ?', 'Que se passe-t-il après l\u2019envoi de ma pièce d\u2019identité ?'];
+
+  function accueil() {
+    body.innerHTML = '';
+    var h = document.createElement('div'); h.className = 'fnasst-hello';
+    h.innerHTML = '<div class="fnasst-mark" aria-hidden="true">\u2726</div>' +
+      '<h2>Obtenez de l\u2019aide pour mettre à jour les informations de votre profil Tsapi Verified</h2>' +
+      '<p>Les abonnés Tsapi Verified peuvent modifier leur nom et leur photo de profil, sous réserve d\u2019une revérification de leur pièce d\u2019identité.</p>';
+    SUGGESTIONS.forEach(function (s) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'fnasst-chip'; b.textContent = s;
+      b.addEventListener('click', function () { envoyer(s); }); h.appendChild(b);
+    });
+    body.appendChild(h);
+  }
+  function bulle(role, texte) {
+    var d = document.createElement('div'); d.className = 'fnasst-m ' + (role === 'user' ? 'u' : 'a'); d.textContent = texte;
+    body.appendChild(d); body.scrollTop = body.scrollHeight; return d;
+  }
+  function envoyer(texte) {
+    texte = (texte || '').trim(); if (!texte || occupe) return;
+    if (!msgs.length) body.innerHTML = '';
+    msgs.push({ role: 'user', content: texte.slice(0, 600) }); bulle('user', texte);
+    q.value = ''; q.style.height = 'auto';
+    occupe = true; go.disabled = true;
+    var attente = bulle('assistant', '\u2026');
+    fetch('/api/assistant-support', {
+      method: 'POST', credentials: 'same-origin', cache: 'no-store',
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      body: JSON.stringify({ messages: msgs.slice(-12) })
+    }).then(function (r) { return r.json().catch(function () { return {}; }); }).then(function (d) {
+      var rep = (d && d.success && d.reponse) ? d.reponse : ((d && d.error) || 'Je n\u2019ai pas pu répondre pour le moment. Réessayez dans un instant.');
+      attente.textContent = rep;
+      if (d && d.success) msgs.push({ role: 'assistant', content: rep }); else msgs.pop();
+    }).catch(function () { attente.textContent = 'Connexion impossible. Vérifiez votre réseau et réessayez.'; msgs.pop(); })
+      .then(function () { occupe = false; go.disabled = false; body.scrollTop = body.scrollHeight; });
+  }
+  function effacer() { msgs = []; q.value = ''; accueil(); }
+  window.fnOuvrirAssistant = function () { effacer(); root.classList.add('on'); try { q.focus(); } catch (e) {} };
+  function fermer() { root.classList.remove('on'); cgu.classList.remove('on'); effacer(); }   /* fermeture = tout disparaît */
+  document.getElementById('fnasst-x').addEventListener('click', fermer);
+  document.getElementById('fnasst-new').addEventListener('click', effacer);
+  document.getElementById('fnasst-cgu-open').addEventListener('click', function (e) { e.preventDefault(); cgu.classList.add('on'); });
+  document.getElementById('fnasst-cgu-ok').addEventListener('click', function () { cgu.classList.remove('on'); });
+  cgu.addEventListener('click', function (e) { if (e.target === cgu) cgu.classList.remove('on'); });
+  go.addEventListener('click', function () { envoyer(q.value); });
+  q.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); envoyer(q.value); } });
+  q.addEventListener('input', function () { q.style.height = 'auto'; q.style.height = Math.min(q.scrollHeight, 120) + 'px'; });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && root.classList.contains('on')) { if (cgu.classList.contains('on')) cgu.classList.remove('on'); else fermer(); } });
+  window.addEventListener('pagehide', function () { msgs = []; });
+})();
+</script>

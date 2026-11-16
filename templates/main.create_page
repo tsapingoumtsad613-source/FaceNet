@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .pgw { max-width: 560px; margin: 0 auto; background: #fff; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1c1e21; position: relative; padding-bottom: 24px; }
+    .pgw-top { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #e4e6eb; position: sticky; top: 0; background: #fff; z-index: 5; }
+    .pgw-top button, .pgw-top a { background: none; border: 0; font-size: 15px; color: #1877F2; cursor: pointer; text-decoration: none; }
+    .pgw-top .pgw-titre { font-weight: 700; font-size: 17px; color: #1c1e21; }
+    .pgw-etape { display: none; padding: 20px 16px; }
+    .pgw-etape.actif { display: block; }
+    .pgw h2 { margin: 0 0 6px; font-size: 22px; }
+    .pgw p.aide { margin: 0 0 18px; color: #65676b; font-size: 15px; line-height: 1.4; }
+    .pgw-champ { width: 100%; border: 1px solid #ccd0d5; border-radius: 12px; padding: 12px 14px; font-size: 16px; margin-bottom: 12px; background: #fff; font-family: inherit; }
+    .pgw-champ:focus { outline: 2px solid #1877F2; border-color: transparent; }
+    .pgw-puces { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .pgw-puce { background: #e4e6eb; border: 0; border-radius: 20px; padding: 10px 16px; font-size: 15px; cursor: pointer; }
+    .pgw-puce.actif { background: #1877F2; color: #fff; }
+    .pgw-choix { display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; cursor: pointer; }
+    .pgw-choix input { margin-top: 4px; width: 20px; height: 20px; accent-color: #1877F2; }
+    .pgw-choix strong { display: block; font-size: 16px; }
+    .pgw-choix span { color: #65676b; font-size: 14px; }
+    .pgw-pied { position: fixed; bottom: 0; left: 0; right: 0; max-width: 560px; margin: 0 auto; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: #fff; z-index: 50; }
+    .pgw-pied-main { padding: 8px 16px 24px; background: #fff; }
+    .pgw-btn { width: 100%; border: 0; border-radius: 10px; padding: 14px; font-size: 16px; font-weight: 600; background: #1877F2; color: #fff; cursor: pointer; }
+    .pgw-btn[disabled] { background: #e4e6eb; color: #bcc0c4; cursor: not-allowed; }
+    .pgw-btn.gris { background: #e4e6eb; color: #1c1e21; margin-top: 8px; }
+    .pgw-couv { position: relative; height: 150px; background: #ccd0d5 center/cover; border-radius: 12px; margin-bottom: 70px; }
+    .pgw-av { position: absolute; left: 50%; bottom: -60px; transform: translateX(-50%); width: 120px; height: 120px; border-radius: 50%; border: 4px solid #fff; background: #ccd0d5 center/cover; }
+    .pgw-cam { position: absolute; width: 36px; height: 36px; border-radius: 50%; background: #e4e6eb; border: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; }
+    .pgw-nom-apercu { text-align: center; font-size: 22px; font-weight: 700; margin-top: 6px; }
+    .pgw-ami { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+    .pgw-ami img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; }
+    .pgw-ami label { flex: 1; font-size: 16px; }
+    .pgw-ami input { width: 22px; height: 22px; accent-color: #1877F2; }
+    .pgw-bascule { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 14px 0; }
+    .pgw-bascule strong { display: block; font-size: 16px; margin-bottom: 4px; }
+    .pgw-bascule span { color: #65676b; font-size: 14px; }
+    .pgw-bascule input { width: 46px; height: 26px; accent-color: #1877F2; flex-shrink: 0; }
+    .pgw-erreur { color: #d93025; font-size: 14px; margin: 8px 0; display: none; }
+    .pgw-aide-modale { display: none; position: fixed; inset: 0; background: #fff; z-index: 60; overflow-y: auto; }
+    .pgw-aide-modale.ouvert { display: block; }
+</style>
+
+<div class="pgw" id="pgw">
+    <div class="pgw-top">
+        <button type="button" id="pgw-retour" aria-label="Retour">←</button>
+        <span class="pgw-titre">Créer</span>
+        <a href="/feed">Annuler</a>
+    </div>
+
+    <!-- 1. Nom -->
+    <section class="pgw-etape actif" data-etape="nom">
+        <h2>Choisir un nom de Page</h2>
+        <p class="aide">Choisissez un nom reconnaissable : le vôtre, celui de votre marque ou celui de votre entreprise.</p>
+        <input class="pgw-champ" id="pg-nom" maxlength="120" placeholder="Nom de la Page" autocomplete="off">
+    </section>
+
+    <!-- 2. Catégorie -->
+    <section class="pgw-etape" data-etape="categorie">
+        <h2>Choisir une catégorie</h2>
+        <p class="aide">Choisissez une catégorie à afficher sur votre Page.</p>
+        <input class="pgw-champ" id="pg-cat" placeholder="Rechercher une catégorie" autocomplete="off">
+        <h3 style="margin:8px 0 0;font-size:17px;">Catégories populaires</h3>
+        <div class="pgw-puces" id="pg-cat-liste">
+            {% for c in categories %}<button type="button" class="pgw-puce" data-cat="{{ c }}">{{ c }}</button>{% endfor %}
+        </div>
+    </section>
+
+    <!-- 3. Type -->
+    <section class="pgw-etape" data-etape="type">
+        <h2>Type de Page</h2>
+        <p class="aide">Sélectionnez l'utilisation principale de votre Page. Vous pourrez le modifier plus tard.</p>
+        <label class="pgw-choix"><input type="radio" name="pg-type" value="entreprise" checked>
+            <div><strong>Entreprise</strong><span>Idéal pour les entreprises proposant des produits ou services, les organisations à but non lucratif et d'autres organisations.</span></div></label>
+        <label class="pgw-choix"><input type="radio" name="pg-type" value="creator">
+            <div><strong>Creator</strong><span>Idéal pour les créateur(ice)s de contenu, les personnalités publiques et autres entreprises qui cherchent à monétiser du contenu original.</span></div></label>
+        <button type="button" class="pgw-btn gris" id="pg-aide-ouvrir">Aidez-moi à choisir</button>
+    </section>
+
+    <!-- 4. Détails -->
+    <section class="pgw-etape" data-etape="details">
+        <h2>Terminez la configuration de votre Page</h2>
+        <p class="aide">Ajoutez plus de détails pour aider les gens à interagir avec vous.</p>
+        <textarea class="pgw-champ" id="pg-bio" rows="3" placeholder="Bio : décrivez l'objet de votre Page"></textarea>
+        <input class="pgw-champ" id="pg-site" placeholder="Site web">
+        <input class="pgw-champ" id="pg-email" type="email" placeholder="Adresse e-mail">
+        <input class="pgw-champ" id="pg-tel" type="tel" placeholder="Numéro de téléphone">
+        <input class="pgw-champ" id="pg-adresse" placeholder="Adresse">
+        <input class="pgw-champ" id="pg-ville" placeholder="Ville">
+        <input class="pgw-champ" id="pg-cp" placeholder="Code postal">
+    </section>
+
+    <!-- 5. Photos -->
+    <section class="pgw-etape" data-etape="photos">
+        <h2>Personnalisez votre Page</h2>
+        <p class="aide">Votre photo de profil est l'une des premières choses que les gens voient. Utilisez votre logo ou une image simple.</p>
+        <div class="pgw-couv" id="pg-couv-apercu">
+            <button type="button" class="pgw-cam" style="right:10px;bottom:10px;" data-pick="couverture" aria-label="Photo de couverture">📷</button>
+            <div class="pgw-av" id="pg-av-apercu">
+                <button type="button" class="pgw-cam" style="right:-4px;bottom:0;" data-pick="avatar" aria-label="Photo de profil">📷</button>
+            </div>
+        </div>
+        <div class="pgw-nom-apercu" id="pg-nom-apercu"></div>
+        <input type="file" id="pg-file-avatar" accept="image/*" hidden>
+        <input type="file" id="pg-file-couverture" accept="image/*" hidden>
+    </section>
+
+    <!-- 6. Amis -->
+    <section class="pgw-etape" data-etape="amis">
+        <h2>Invitez vos ami(e)s</h2>
+        <p class="aide">Invitez vos ami(e)s à aimer votre nouvelle Page.</p>
+        <input class="pgw-champ" id="pg-amis-rech" placeholder="Retrouver des ami(e)s">
+        {% if amis %}
+        <div style="text-align:right;margin-bottom:6px;"><button type="button" id="pg-amis-tout" style="background:none;border:0;color:#1877F2;font-size:15px;cursor:pointer;">Tout désélectionner</button></div>
+        {% for a in amis %}
+        <div class="pgw-ami" data-nom="{{ (a.nom_complet or a.username)|lower }}">
+            <img src="{{ url_for('static', filename='uploads/' + (a.avatar or 'default_avatar.png')) }}" alt="">
+            <label for="pg-ami-{{ a.id }}">{{ a.nom_complet or a.username }}</label>
+            <input type="checkbox" id="pg-ami-{{ a.id }}" class="pg-ami-cb" value="{{ a.id }}" checked>
+        </div>
+        {% endfor %}
+        {% else %}<p class="aide">Vous n'avez pas encore d'ami(e)s à inviter.</p>{% endif %}
+    </section>
+
+    <!-- 7. Notifications -->
+    <section class="pgw-etape" data-etape="notifs">
+        <h2>Suivez l'actualité de votre Page</h2>
+        <p class="aide">Activez ces fonctionnalités pour tirer pleinement parti de votre Page. Vous pouvez les modifier à tout moment.</p>
+        <div class="pgw-bascule"><div><strong>E-mails promotionnels et marketing à propos de votre Page</strong><span>Découvrez les produits et services qui peuvent vous aider à faire de votre Page un succès.</span></div><input type="checkbox" id="pg-promo" checked></div>
+        <div class="pgw-bascule"><div><strong>Notifications concernant votre Page sur votre profil</strong><span>Ne manquez aucune information importante à propos de votre Page lorsque vous êtes sur votre profil.</span></div><input type="checkbox" id="pg-notif" checked></div>
+    </section>
+
+    <div class="pgw-erreur" id="pg-erreur" style="padding:0 16px;"></div>
+    <div class="pgw-pied-main"><button type="button" class="pgw-btn" id="pg-suivant" disabled>Suivant</button></div>
+
+    <!-- Aidez-moi à choisir -->
+    <div class="pgw-aide-modale" id="pg-aide">
+        <div class="pgw-top"><button type="button" id="pg-aide-fermer">←</button><span class="pgw-titre">Aidez-moi à choisir</span><span></span></div>
+        <div style="padding:20px 16px 100px;">
+            <h2>Comment allez-vous utiliser votre Page ?</h2>
+            <p class="aide">En indiquant vos intentions, vous nous aiderez à adapter l'expérience à vos besoins.</p>
+            {% for groupe, titre in (('creator', 'Creator'), ('entreprise', 'Entreprise')) %}
+            <h3 style="margin:18px 0 0;font-size:16px;">{{ titre }}</h3>
+            {% for cle, nom, desc in objectifs[groupe] %}
+            <label class="pgw-choix"><input type="checkbox" class="pg-objectif" data-groupe="{{ groupe }}" value="{{ cle }}"><div><strong>{{ nom }}</strong><span>{{ desc }}</span></div></label>
+            {% endfor %}{% endfor %}
+        </div>
+        <div class="pgw-pied"><button type="button" class="pgw-btn" id="pg-aide-ok">Suivant</button></div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var ETAPES = ['nom', 'categorie', 'type', 'details', 'photos', 'amis', 'notifs'];
+    var i = 0, categorie = '', fichiers = {avatar: null, couverture: null}, envoi = false;
+    var $ = function (id) { return document.getElementById(id); };
+    var btn = $('pg-suivant');
+
+    function valide() {
+        var e = ETAPES[i];
+        if (e === 'nom') return $('pg-nom').value.trim().length >= 2;
+        if (e === 'categorie') return categorie.length > 0;
+        return true;
+    }
+    function afficher() {
+        document.querySelectorAll('.pgw-etape').forEach(function (s) {
+            s.classList.toggle('actif', s.getAttribute('data-etape') === ETAPES[i]);
+        });
+        btn.disabled = !valide();
+        btn.textContent = (i === ETAPES.length - 1) ? 'Terminer' : 'Suivant';
+        $('pg-nom-apercu').textContent = $('pg-nom').value.trim();
+        $('pg-erreur').style.display = 'none';
+        window.scrollTo(0, 0);
+    }
+    $('pg-nom').addEventListener('input', function () { btn.disabled = !valide(); });
+    $('pg-nom').addEventListener('keydown', function (ev) { if (ev.key === 'Enter' && valide()) { ev.preventDefault(); btn.click(); } });
+    // Catégories : tous les métiers du monde. La recherche trouve toujours quelque chose.
+    var LISTE_CAT = "Médecin|Médecin généraliste|Chirurgien|Chirurgien-dentiste|Dentiste|Orthodontiste|Pédiatre|Gynécologue|Cardiologue|Dermatologue|Ophtalmologue|Opticien|Optométriste|ORL|Psychiatre|Psychologue|Psychothérapeute|Neurologue|Radiologue|Anesthésiste|Urgentiste|Oncologue|Urologue|Néphrologue|Pneumologue|Gastro-entérologue|Endocrinologue|Rhumatologue|Allergologue|Gériatre|Hématologue|Infectiologue|Médecin du travail|Médecin du sport|Médecin légiste|Infirmier(ère)|Sage-femme|Aide-soignant(e)|Kinésithérapeute|Ostéopathe|Chiropracteur|Podologue|Orthophoniste|Ergothérapeute|Diététicien(ne)|Nutritionniste|Pharmacien(ne)|Préparateur en pharmacie|Biologiste médical|Technicien de laboratoire|Vétérinaire|Auxiliaire vétérinaire|Ambulancier|Secouriste|Acupuncteur|Naturopathe|Herboriste|Tradipraticien|Guérisseur|Hypnothérapeute|Sophrologue|Art-thérapeute|Musicothérapeute|Coach de santé|Clinique|Hôpital|Pharmacie|Cabinet médical|Laboratoire d'analyses|Centre de santé|Centre de rééducation|Maison de retraite|Avocat|Notaire|Huissier de justice|Juriste|Magistrat|Juge|Greffier|Expert-comptable|Comptable|Commissaire aux comptes|Auditeur|Conseiller financier|Conseiller en gestion de patrimoine|Banquier|Courtier|Courtier en assurance|Agent d'assurance|Actuaire|Trader|Analyste financier|Fiscaliste|Trésorier|Contrôleur de gestion|Inspecteur des impôts|Inspecteur du travail|Expert en assurance|Expert automobile|Contrôleur technique|Banque|Assurance|Bureau de change|Transfert d'argent|Microfinance|Agent immobilier|Promoteur immobilier|Syndic de copropriété|Expert immobilier|Géomètre-expert|Agence immobilière|Enseignant(e)|Professeur|Professeur des écoles|Instituteur|Maître de conférences|Chercheur|Directeur d'école|Formateur|Tuteur|Professeur particulier|Professeur de langues|Professeur de musique|Professeur de danse|Professeur de sport|Professeur de yoga|Professeur d'arts martiaux|Éducateur spécialisé|Éducateur de jeunes enfants|Assistante maternelle|Auxiliaire de puériculture|Conseiller d'orientation|Bibliothécaire|Documentaliste|Archiviste|Traducteur|Interprète|École|Collège|Lycée|Université|École primaire|École maternelle|Crèche|Garderie|École de langues|Auto-école|Moniteur d'auto-école|Centre de formation|École de musique|École de danse|Cours de soutien|Bibliothèque|Développeur|Développeur web|Développeur mobile|Développeur de jeux vidéo|Ingénieur logiciel|Ingénieur informatique|Data scientist|Analyste de données|Ingénieur IA|Administrateur système|Administrateur réseau|Cybersécurité|Technicien informatique|Technicien de maintenance|Chef de projet|Product manager|Scrum master|UX designer|UI designer|Graphiste|Webdesigner|Intégrateur web|Community manager|Growth hacker|Spécialiste SEO|Testeur QA|DevOps|Architecte cloud|Réparateur de téléphones|Réparateur d'ordinateurs|Startup|Entreprise de logiciels|Agence web|Éditeur de logiciels|Fournisseur d'accès internet|Opérateur télécom|Application|Site web|Ingénieur|Ingénieur civil|Ingénieur mécanicien|Ingénieur électricien|Ingénieur chimiste|Ingénieur agronome|Ingénieur en aéronautique|Ingénieur pétrolier|Architecte|Architecte d'intérieur|Urbaniste|Dessinateur-projeteur|Géomètre|Topographe|Maçon|Charpentier|Menuisier|Ébéniste|Plombier|Électricien|Carreleur|Peintre en bâtiment|Plâtrier|Couvreur|Serrurier|Soudeur|Chaudronnier|Ferronnier|Vitrier|Étanchéiste|Grutier|Conducteur d'engins|Conducteur de travaux|Chef de chantier|Technicien du bâtiment|Climaticien|Frigoriste|Installateur de panneaux solaires|Foreur de puits|Mineur|Géologue|Entreprise de construction|Matériaux de construction|Quincaillerie|Mécanicien|Mécanicien automobile|Mécanicien moto|Carrossier|Électricien auto|Garagiste|Vulcanisateur|Réparateur d'électroménager|Tourneur-fraiseur|Opérateur de production|Ouvrier|Technicien de maintenance industrielle|Usine|Couturier|Couturière|Tailleur|Styliste|Modéliste|Cordonnier|Maroquinier|Tisserand|Teinturier|Brodeur|Tapissier|Bijoutier|Joaillier|Horloger|Orfèvre|Potier|Céramiste|Verrier|Sculpteur|Forgeron|Tanneur|Vannier|Luthier|Imprimeur|Relieur|Artisan|Atelier de couture|Pressing|Blanchisserie|Imprimerie|Designer|Designer industriel|Designer de mode|Designer de bijoux|Décorateur|Décorateur d'intérieur|Boulanger|Pâtissier|Chocolatier|Boucher|Charcutier|Poissonnier|Fromager|Traiteur|Cuisinier|Chef cuisinier|Cuisinier à domicile|Serveur|Barman|Barista|Sommelier|Restaurant|Café|Bar|Fast-food|Pizzeria|Boulangerie|Pâtisserie|Glacier|Food truck|Street food|Brasserie|Brasseur|Vigneron|Cave à vins|Distillateur|Producteur de jus de fruits|Apiculteur|Producteur de miel|Laiterie|Rôtisserie|Service de livraison de repas|Épicerie|Supermarché|Marché|Primeur|Agriculteur|Éleveur|Maraîcher|Arboriculteur|Viticulteur|Horticulteur|Planteur|Fleuriste|Pépiniériste|Jardinier|Paysagiste|Pêcheur|Aquaculteur|Pisciculteur|Forestier|Bûcheron|Berger|Ferme|Exploitation agricole|Coopérative agricole|Vente de semences|Vente d'engrais|Matériel agricole|Chauffeur|Chauffeur de taxi|Chauffeur VTC|Chauffeur privé|Chauffeur-livreur|Chauffeur poids lourd|Routier|Conducteur de bus|Conducteur de train|Pilote de ligne|Pilote|Hôtesse de l'air|Steward|Contrôleur aérien|Marin|Capitaine de navire|Docker|Logisticien|Transitaire|Déménageur|Coursier|Livreur|Livreur à moto|Moto-taxi|Compagnie aérienne|Compagnie de transport|Transport de marchandises|Location de voitures|Concessionnaire automobile|Vente de pièces détachées|Station-service|Lavage auto|Aéroport|Gare routière|Commerçant|Vendeur|Vendeuse|Caissier|Gérant de magasin|Directeur commercial|Commercial|Représentant|Acheteur|Grossiste|Importateur|Exportateur|Marchand|Vendeur ambulant|Antiquaire|Brocanteur|Bouquiniste|Boutique de vêtements|Boutique de chaussures|Magasin d'électronique|Magasin de meubles|Magasin de bricolage|Librairie|Papeterie|Bijouterie|Parfumerie|Magasin de jouets|Magasin de sport|Animalerie|Magasin de téléphonie|Boutique en ligne|E-commerce|Dropshipping|Friperie|Grande surface|Centre commercial|Marque|Marque de vêtements|Marque de cosmétiques|Produit ou service|Magasin|Coiffeur|Coiffeuse|Barbier|Esthéticienne|Maquilleur|Maquilleuse|Manucure|Prothésiste ongulaire|Tatoueur|Masseur|Spa|Salon de coiffure|Salon de beauté|Institut de beauté|Salon de massage|Barber shop|Conseiller en image|Cosmétologue|Parfumeur|Journaliste|Reporter|Rédacteur|Rédacteur web|Écrivain|Auteur|Poète|Scénariste|Éditeur|Correcteur|Photographe|Photographe de mariage|Vidéaste|Réalisateur|Producteur|Acteur|Actrice|Comédien|Humoriste|Cinéaste|Monteur vidéo|Ingénieur du son|Chanteur|Chanteuse|Musicien|Compositeur|DJ|Rappeur|Chef d'orchestre|Danseur|Chorégraphe|Peintre|Dessinateur|Illustrateur|Auteur de bande dessinée|Animateur 2D/3D|Artiste|Artiste visuel|Galeriste|Commissaire d'exposition|Conservateur de musée|Musée|Galerie d'art|Théâtre|Cinéma|Salle de concert|Maison de production|Maison d'édition|Studio d'enregistrement|Studio photo|Label musical|Groupe de musique|Musicien ou groupe de musique|Chaîne de télévision|Station de radio|Journal|Magazine|Blog|Podcast|Média|Site d'actualités|Influenceur|Créateur de contenu|Blogueur|Youtubeur|Streamer|Animateur radio|Animateur télé|Présentateur|Mannequin|Agence de mannequins|Agence de communication|Agence de publicité|Agence de relations publiques|Chargé de communication|Publicitaire|Concepteur-rédacteur|Directeur artistique|Athlète|Footballeur|Basketteur|Entraîneur|Coach sportif|Coach de vie|Coach en développement personnel|Préparateur physique|Arbitre|Club de sport|Club de football|Salle de sport|Centre de fitness|Studio de yoga|Salle d'arts martiaux|Piscine|Maître-nageur|Guide de montagne|Moniteur de ski|Moniteur de plongée|Alpiniste|Équipe sportive|Fédération sportive|Stade|Parc d'attractions|Parc de loisirs|Centre de loisirs|Salle de jeux|Cirque|Magicien|Animateur|Animateur d'événements|Organisateur d'événements|Wedding planner|Décorateur événementiel|Salle de réception|Discothèque|Boîte de nuit|Lounge|Gamer|Équipe esport|Jeu vidéo|Hôtelier|Hôtel|Auberge|Gîte|Chambre d'hôtes|Résidence de tourisme|Réceptionniste|Femme de chambre|Concierge|Guide touristique|Guide de safari|Agent de voyages|Agence de voyages|Tour-opérateur|Office de tourisme|Camping|Location saisonnière|Villa|Resort|Croisière|Policier|Gendarme|Militaire|Soldat|Pompier|Agent de sécurité|Garde du corps|Détective privé|Douanier|Garde forestier|Agent municipal|Fonctionnaire|Maire|Élu|Homme politique|Femme politique|Parti politique|Ambassadeur|Diplomate|Administration publique|Mairie|Préfecture|Ministère|Commissariat|Caserne de pompiers|Organisation gouvernementale|Organisation non gouvernementale (ONG)|Association|Association caritative|Organisation à but non lucratif|Fondation|Syndicat|Cause ou communauté|Communauté|Église|Mosquée|Temple|Synagogue|Lieu de culte|Pasteur|Prêtre|Imam|Rabbin|Moine|Organisation religieuse|Assistant social|Travailleur social|Aide à domicile|Auxiliaire de vie|Garde d'enfants|Nounou|Baby-sitter|Femme de ménage|Agent d'entretien|Société de nettoyage|Pompes funèbres|Thanatopracteur|Cimetière|Agent de recrutement|Chasseur de têtes|Ressources humaines|Responsable RH|Consultant|Consultant en management|Coach professionnel|Entrepreneur|Chef d'entreprise|Freelance|Indépendant|Auto-entrepreneur|PDG|Directeur général|Secrétaire|Assistant(e) de direction|Standardiste|Employé de bureau|Gestionnaire de paie|Responsable qualité|Responsable logistique|Responsable des achats|Chef de produit|Directeur marketing|Spécialiste du marketing digital|Étude de marché|Cabinet de conseil|Entreprise|Entreprise locale|Scientifique|Physicien|Chimiste|Biologiste|Mathématicien|Statisticien|Astronome|Astrophysicien|Météorologue|Océanographe|Botaniste|Zoologiste|Écologue|Archéologue|Historien|Sociologue|Anthropologue|Économiste|Géographe|Philosophe|Linguiste|Politologue|Cartographe|Laboratoire de recherche|Institut de recherche|Centre de recherche|Observatoire|Énergie renouvelable|Énergie solaire|Éolienne|Centrale électrique|Distribution d'eau|Pétrole et gaz|Gestion des déchets|Recyclage|Éboueur|Environnement|Protection de la nature|Réserve naturelle|Zoo|Éleveur de chiens|Toiletteur|Dresseur|Comportementaliste animalier|Pension pour animaux|Clinique vétérinaire|Refuge animalier|Cybercafé|Taxiphone|Transfert d'argent mobile|Vendeur de crédit téléphonique|Astrologue|Personnalité publique|Divertissement|Livre|Film|Émission de télévision|Événement|Organisation|Institution|Lieu local|Éducation".split('|');
+    var liste = $('pg-cat-liste');
+    var serveur = Array.prototype.map.call(liste.querySelectorAll('.pgw-puce'), function (p) { return p.getAttribute('data-cat'); });
+    var norm = function (t) { return t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim(); };
+    var vus = {}, TOUTES = [];
+    serveur.concat(LISTE_CAT).forEach(function (c) {
+        var k = norm(c);
+        if (c && !vus[k]) { vus[k] = 1; TOUTES.push({nom: c, n: k}); }
+    });
+    var POPULAIRES = serveur.length ? serveur.slice(0, 30) : LISTE_CAT.slice(0, 30);
+    var MAX_AFFICHE = 120;
+
+    function puce(nom) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'pgw-puce' + (nom === categorie ? ' actif' : '');
+        b.setAttribute('data-cat', nom); b.textContent = nom;
+        return b;
+    }
+    function rendreCategories() {
+        var saisie = $('pg-cat').value.trim(), q = norm(saisie);
+        liste.innerHTML = '';
+        var noms;
+        if (!q) {
+            noms = POPULAIRES;
+        } else {
+            var mots = q.split(' ');
+            noms = TOUTES.filter(function (c) {
+                return mots.every(function (m) { return c.n.indexOf(m) > -1; });
+            }).sort(function (a, b) {
+                return (a.n.indexOf(q) === 0 ? 0 : 1) - (b.n.indexOf(q) === 0 ? 0 : 1) || a.nom.localeCompare(b.nom, 'fr');
+            }).map(function (c) { return c.nom; });
+        }
+        noms.slice(0, MAX_AFFICHE).forEach(function (n) { liste.appendChild(puce(n)); });
+        if (q && !noms.length) {
+            // Aucune catégorie connue : la saisie de l'utilisateur est acceptée telle quelle
+            liste.appendChild(puce(saisie));
+        }
+    }
+    $('pg-cat').addEventListener('input', function () {
+        categorie = this.value.trim();
+        rendreCategories();
+        btn.disabled = !valide();
+    });
+    liste.addEventListener('click', function (ev) {
+        var p = ev.target.closest('.pgw-puce');
+        if (!p) return;
+        categorie = p.getAttribute('data-cat');
+        $('pg-cat').value = categorie;
+        liste.querySelectorAll('.pgw-puce').forEach(function (x) { x.classList.toggle('actif', x === p); });
+        btn.disabled = !valide();
+    });
+    rendreCategories();
+
+    // Aidez-moi à choisir : coche des objectifs → bascule le type automatiquement
+    $('pg-aide-ouvrir').addEventListener('click', function () { $('pg-aide').classList.add('ouvert'); });
+    $('pg-aide-fermer').addEventListener('click', function () { $('pg-aide').classList.remove('ouvert'); });
+    $('pg-aide-ok').addEventListener('click', function () {
+        var c = document.querySelectorAll('.pg-objectif[data-groupe="creator"]:checked').length;
+        var e = document.querySelectorAll('.pg-objectif[data-groupe="entreprise"]:checked').length;
+        if (c || e) document.querySelector('input[name="pg-type"][value="' + (c > e ? 'creator' : 'entreprise') + '"]').checked = true;
+        $('pg-aide').classList.remove('ouvert');
+    });
+
+    // Photos
+    document.querySelectorAll('[data-pick]').forEach(function (b) {
+        b.addEventListener('click', function () { $('pg-file-' + b.getAttribute('data-pick')).click(); });
+    });
+    ['avatar', 'couverture'].forEach(function (k) {
+        $('pg-file-' + k).addEventListener('change', function () {
+            var f = this.files[0]; if (!f) return;
+            fichiers[k] = f;
+            var url = URL.createObjectURL(f);
+            $(k === 'avatar' ? 'pg-av-apercu' : 'pg-couv-apercu').style.backgroundImage = 'url(' + url + ')';
+        });
+    });
+
+    // Amis
+    var tout = $('pg-amis-tout');
+    if (tout) tout.addEventListener('click', function () {
+        var cbs = document.querySelectorAll('.pg-ami-cb');
+        var toutCoche = Array.prototype.every.call(cbs, function (c) { return c.checked; });
+        cbs.forEach(function (c) { c.checked = !toutCoche; });
+        tout.textContent = toutCoche ? 'Tout sélectionner' : 'Tout désélectionner';
+    });
+    $('pg-amis-rech').addEventListener('input', function () {
+        var q = this.value.trim().toLowerCase();
+        document.querySelectorAll('.pgw-ami').forEach(function (a) {
+            a.style.display = a.getAttribute('data-nom').indexOf(q) > -1 ? '' : 'none';
+        });
+    });
+
+    function erreur(m) { var e = $('pg-erreur'); e.textContent = m; e.style.display = 'block'; }
+
+    function creer() {
+        if (envoi) return; envoi = true; btn.disabled = true; btn.textContent = 'Création…';
+        var fd = new FormData();
+        fd.append('nom', $('pg-nom').value.trim());
+        fd.append('categorie', categorie);
+        fd.append('type_page', document.querySelector('input[name="pg-type"]:checked').value);
+        fd.append('objectifs', Array.prototype.map.call(document.querySelectorAll('.pg-objectif:checked'), function (c) { return c.value; }).join(','));
+        fd.append('bio', $('pg-bio').value); fd.append('site_web', $('pg-site').value);
+        fd.append('email', $('pg-email').value); fd.append('telephone', $('pg-tel').value);
+        fd.append('adresse', $('pg-adresse').value); fd.append('ville', $('pg-ville').value);
+        fd.append('code_postal', $('pg-cp').value);
+        fd.append('amis', Array.prototype.map.call(document.querySelectorAll('.pg-ami-cb:checked'), function (c) { return c.value; }).join(','));
+        fd.append('emails_promo', $('pg-promo').checked ? '1' : '0');
+        fd.append('notif_profil', $('pg-notif').checked ? '1' : '0');
+        if (fichiers.avatar) fd.append('avatar', fichiers.avatar);
+        if (fichiers.couverture) fd.append('couverture', fichiers.couverture);
+        fetch('/pages/creer', {method: 'POST', body: fd, credentials: 'same-origin'})
+            .then(function (r) { return r.json().catch(function () { return {success: false, message: 'Réponse invalide.'}; }); })
+            .then(function (d) {
+                if (d.success) { window.location.href = d.url; return; }
+                envoi = false; erreur(d.message || 'Erreur.');
+                if (d.message && d.message.indexOf('nom') > -1) { i = 0; }
+                afficher();
+            })
+            .catch(function () { envoi = false; erreur('Connexion impossible. Réessayez.'); afficher(); });
+    }
+
+    btn.addEventListener('click', function () {
+        if (!valide()) return;
+        if (i === ETAPES.length - 1) { creer(); return; }
+        i++; afficher();
+    });
+    $('pgw-retour').addEventListener('click', function () {
+        if (i === 0) { window.history.length > 1 ? window.history.back() : (window.location.href = '/feed'); return; }
+        i--; afficher();
+    });
+    afficher();
+})();
+</script>
+{% endblock %}

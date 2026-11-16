@@ -1,0 +1,409 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+.ad{--ink:#14213d;--mute:#667085;--line:#e6e9f0;--bg:#f3f5fa;--card:#fff;--brand:#1f6fff;--brand2:#7a5cff;--ok:#12a36b;--warn:#f59e0b;--bad:#e5484d;
+    font-family:'Plus Jakarta Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);background:var(--bg);min-height:100vh;padding:14px 14px 110px}
+.ad *{box-sizing:border-box}
+.ad a{color:inherit;text-decoration:none}
+.ad-wrap{max-width:1120px;margin:0 auto}
+.ad-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.ad-round{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--card);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--ink);transition:.15s}
+.ad-round:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(20,33,61,.12)}
+.ad-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px;align-items:start}
+@media(max-width:860px){.ad-grid{grid-template-columns:1fr}}
+.ad-card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(20,33,61,.04)}
+.ad-card h3{margin:0 0 12px;font-size:17px;font-weight:800;letter-spacing:-.01em}
+
+/* Galerie */
+.ad-gal{position:relative;border-radius:22px;overflow:hidden;background:#0d1426;box-shadow:0 14px 34px rgba(20,33,61,.18)}
+.ad-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;aspect-ratio:4/5;max-height:640px}
+.ad-track::-webkit-scrollbar{display:none}
+.ad-track img{flex:0 0 100%;width:100%;height:100%;object-fit:cover;scroll-snap-align:center;cursor:zoom-in}
+.ad-count{position:absolute;right:12px;top:12px;background:rgba(10,15,30,.62);color:#fff;border-radius:999px;padding:5px 11px;font-size:12px;font-weight:700;backdrop-filter:blur(6px)}
+.ad-dots{position:absolute;left:0;right:0;bottom:12px;display:flex;justify-content:center;gap:6px}
+.ad-dots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.5);transition:.2s}
+.ad-dots i.on{background:#fff;width:20px;border-radius:6px}
+.ad-badge{position:absolute;left:12px;top:12px;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:800;color:#fff}
+.ad-badge.disponible{background:var(--ok)}.ad-badge.reserve{background:var(--warn)}.ad-badge.vendu{background:var(--bad)}
+.ad-thumbs{display:flex;gap:8px;margin-top:10px;overflow-x:auto;scrollbar-width:none}
+.ad-thumbs img{width:62px;height:62px;border-radius:12px;object-fit:cover;border:2px solid transparent;cursor:pointer;opacity:.7}
+.ad-thumbs img.on{border-color:var(--brand);opacity:1}
+
+/* Titre / prix */
+.ad-title{font-size:26px;line-height:1.15;font-weight:800;letter-spacing:-.02em;margin:0 0 6px}
+.ad-price{font-size:30px;font-weight:800;letter-spacing:-.02em;background:linear-gradient(90deg,var(--brand),var(--brand2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.ad-neg{display:inline-block;margin-left:8px;font-size:12px;font-weight:700;color:var(--ok);background:#e6f7f0;border-radius:999px;padding:4px 10px;vertical-align:middle;-webkit-text-fill-color:var(--ok)}
+.ad-meta{display:flex;flex-wrap:wrap;gap:12px;color:var(--mute);font-size:13px;margin-top:10px}
+.ad-meta span{display:inline-flex;align-items:center;gap:6px}
+
+/* Contacter */
+.ad-contact textarea{width:100%;border:1px solid var(--line);border-radius:14px;padding:12px 14px;font:inherit;font-size:15px;resize:none;background:#f8f9fd;outline:none}
+.ad-contact textarea:focus{border-color:var(--brand);background:#fff;box-shadow:0 0 0 3px rgba(31,111,255,.12)}
+.ad-chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.ad-chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink)}
+.ad-chip:hover{border-color:var(--brand);color:var(--brand)}
+.ad-btn{border:0;border-radius:14px;padding:13px 18px;font:inherit;font-weight:800;font-size:15px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:.15s}
+.ad-btn:active{transform:scale(.98)}
+.ad-btn.main{background:linear-gradient(90deg,var(--brand),var(--brand2));color:#fff;box-shadow:0 8px 20px rgba(31,111,255,.28);width:100%}
+.ad-btn.soft{background:#eef2fb;color:var(--ink)}
+.ad-btn.ghost{background:#fff;border:1px solid var(--line);color:var(--ink)}
+.ad-btn:disabled{opacity:.55;cursor:not-allowed}
+
+/* Actions */
+.ad-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.ad-act{display:flex;flex-direction:column;align-items:center;gap:7px;background:none;border:0;cursor:pointer;font:inherit;font-size:12.5px;font-weight:700;color:var(--ink);padding:4px 0}
+.ad-act i{width:52px;height:52px;border-radius:18px;background:#eef2fb;display:flex;align-items:center;justify-content:center;font-size:19px;transition:.18s}
+.ad-act:hover i{background:#e0e8fb;transform:translateY(-2px)}
+.ad-act.on i{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff}
+
+/* Texte */
+.ad-desc{white-space:pre-line;line-height:1.6;font-size:15px;color:#2b3550}
+.ad-seller{display:flex;align-items:center;gap:12px}
+.ad-seller img{width:54px;height:54px;border-radius:50%;object-fit:cover;border:2px solid #fff;box-shadow:0 0 0 2px var(--line)}
+.ad-seller b{font-size:16px}.ad-seller small{display:block;color:var(--mute);font-size:12.5px;margin-top:2px}
+.ad-seller .ad-btn{margin-left:auto;padding:10px 16px;font-size:14px}
+.ad-verif{color:var(--brand);margin-left:4px;font-size:13px}
+.ad-rows{display:grid;gap:0}
+.ad-row{display:flex;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px dashed var(--line);font-size:14.5px}
+.ad-row:last-child{border:0}.ad-row span:first-child{color:var(--mute)}.ad-row span:last-child{font-weight:700;text-align:right}
+.ad-loc{display:flex;align-items:center;gap:14px}
+.ad-loc .pin{width:54px;height:54px;border-radius:16px;background:linear-gradient(135deg,#dbe7ff,#efe9ff);display:flex;align-items:center;justify-content:center;color:var(--brand);font-size:22px}
+.ad-loc small{color:var(--mute);display:block;margin-top:2px}
+.ad-loc a{margin-left:auto;font-weight:800;color:var(--brand);font-size:14px}
+
+/* Recherches similaires */
+.ad-sim{display:flex;flex-wrap:wrap;gap:9px}
+.ad-sim button{border:1px solid var(--line);background:#f8f9fd;border-radius:999px;padding:9px 15px;font:inherit;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;gap:8px;align-items:center;color:var(--ink)}
+.ad-sim button:hover{border-color:var(--brand);color:var(--brand);background:#fff}
+.ad-hide{display:flex;gap:14px;align-items:center;background:#fff7ed;border:1px solid #fde1bd}
+.ad-hide p{margin:0;font-size:14px;color:#6b4a1b;flex:1;line-height:1.5}
+.ad-hide .ad-btn{white-space:nowrap}
+
+/* Groupes */
+.ad-groups{display:grid;gap:10px}
+.ad-group{display:flex;align-items:center;gap:12px;padding:10px;border:1px solid var(--line);border-radius:16px}
+.ad-group .cv{width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#1f6fff,#7a5cff);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;overflow:hidden;flex:none}
+.ad-group .cv img{width:100%;height:100%;object-fit:cover}
+.ad-group b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw}
+.ad-group small{color:var(--mute);font-size:12.5px}
+.ad-group .ad-btn{margin-left:auto;padding:9px 14px;font-size:13.5px;flex:none}
+.ad-empty{color:var(--mute);font-size:14px;margin:0}
+
+/* Autres annonces du vendeur */
+.ad-row-h{display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+.ad-mini{flex:0 0 150px}
+.ad-mini img{width:150px;height:150px;border-radius:16px;object-fit:cover;background:#e9edf6}
+.ad-mini b{display:block;margin-top:7px;font-size:14px}.ad-mini small{color:var(--mute);font-size:12.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Barre basse */
+.ad-bar{position:fixed;left:0;right:0;bottom:0;z-index:900;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
+.ad-bar-in{max-width:1120px;margin:0 auto;display:flex;gap:10px;align-items:center}
+.ad-bar-in .p{font-weight:800;font-size:18px;margin-right:auto;white-space:nowrap}
+.ad-bar .ad-btn{padding:12px 18px}
+
+/* Feuilles */
+.ad-ov{position:fixed;inset:0;background:rgba(10,15,30,.55);z-index:100000;display:none;align-items:flex-end;justify-content:center}
+.ad-ov.on{display:flex}
+.ad-sheet{background:#fff;width:100%;max-width:560px;max-height:88vh;overflow:auto;border-radius:24px 24px 0 0;padding:20px;animation:up .22s ease-out}
+@media(min-width:700px){.ad-ov{align-items:center}.ad-sheet{border-radius:24px}}
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.ad-sheet h4{margin:0 0 4px;font-size:19px;font-weight:800}.ad-sheet p.s{margin:0 0 14px;color:var(--mute);font-size:14px}
+.ad-sheet input,.ad-sheet select,.ad-sheet textarea{width:100%;border:1px solid var(--line);border-radius:14px;padding:13px 14px;font:inherit;font-size:15px;margin-bottom:10px;background:#f8f9fd;outline:none}
+.ad-sheet input:focus,.ad-sheet select:focus,.ad-sheet textarea:focus{border-color:var(--brand);background:#fff}
+.ad-sheet .x{float:right;background:#eef2fb;border:0;width:34px;height:34px;border-radius:50%;cursor:pointer}
+.ad-res{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-top:6px}
+.ad-res a img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:14px;background:#e9edf6}
+.ad-res b{display:block;font-size:14px;margin-top:6px}.ad-res small{color:var(--mute);font-size:12.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ad-lb{position:fixed;inset:0;background:#000;z-index:100001;display:none;align-items:center;justify-content:center}
+.ad-lb.on{display:flex}.ad-lb img{max-width:100%;max-height:100%}
+.ad-lb button{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.18);color:#fff;border:0;width:42px;height:42px;border-radius:50%;font-size:18px;cursor:pointer}
+.ad-toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:#14213d;color:#fff;padding:12px 18px;border-radius:14px;font-weight:700;font-size:14px;z-index:100002;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:90vw}
+</style>
+
+<div class="ad"><div class="ad-wrap">
+
+  <div class="ad-top">
+    <a class="ad-round" href="{{ url_for('main.marketplace') }}" aria-label="Retour"><i class="fas fa-arrow-left"></i></a>
+    <div style="display:flex;gap:8px">
+      <button class="ad-round" data-q="{{ a.titre }}" onclick="AD.ouvrirRecherche(this.dataset.q)" aria-label="Rechercher"><i class="fas fa-search"></i></button>
+      <button class="ad-round" onclick="AD.partager()" aria-label="Partager"><i class="fas fa-share-nodes"></i></button>
+    </div>
+  </div>
+
+  <div class="ad-grid">
+
+    <!-- Colonne gauche : galerie -->
+    <div>
+      <div class="ad-gal">
+        <div class="ad-track" id="ad-track">
+          {% for p in photos %}<img src="{{ p }}" alt="{{ a.titre }} — photo {{ loop.index }}" onclick="AD.zoom({{ loop.index0 }})">{% endfor %}
+        </div>
+        <span class="ad-badge {{ statut }}">{{ {'disponible':'Disponible','reserve':'Réservé','vendu':'Vendu'}.get(statut,'Disponible') }}</span>
+        <span class="ad-count" id="ad-count">1 / {{ photos|length }}</span>
+        {% if photos|length > 1 %}<div class="ad-dots" id="ad-dots">{% for p in photos %}<i class="{{ 'on' if loop.first }}"></i>{% endfor %}</div>{% endif %}
+      </div>
+      {% if photos|length > 1 %}
+      <div class="ad-thumbs" id="ad-thumbs">{% for p in photos %}<img src="{{ p }}" class="{{ 'on' if loop.first }}" onclick="AD.aller({{ loop.index0 }})" alt="">{% endfor %}</div>
+      {% endif %}
+    </div>
+
+    <!-- Colonne droite : infos -->
+    <div>
+      <div class="ad-card">
+        <h1 class="ad-title">{{ a.titre }}</h1>
+        <div class="ad-price">{{ prix_txt }}{% if a.negociable %}<span class="ad-neg">Négociable</span>{% endif %}</div>
+        <div class="ad-meta">
+          <span><i class="fas fa-location-dot"></i>{{ a.localisation }}</span>
+          <span><i class="far fa-clock"></i>Publié {{ publie }}</span>
+          <span><i class="far fa-eye"></i>{{ nb_vues }} vue{{ 's' if nb_vues > 1 }}</span>
+        </div>
+      </div>
+
+      {% if est_proprio %}
+      <div class="ad-card"><h3>C'est votre annonce</h3>
+        <p class="ad-empty">Les acheteurs peuvent vous écrire, vous faire une offre ou l'enregistrer. Gérez-la depuis le Marketplace.</p>
+        <a class="ad-btn soft" style="margin-top:12px;display:inline-flex" href="{{ url_for('marketplace_pro.messages') }}"><i class="fas fa-inbox"></i> Mes messages</a>
+      </div>
+      {% else %}
+      <div class="ad-card ad-contact">
+        <h3><i class="fas fa-paper-plane" style="color:var(--brand)"></i>&nbsp; Écrire au vendeur</h3>
+        <div class="ad-chips">
+          {% for t in ['Bonjour, cet article est-il toujours disponible ?','Est-ce que le prix est négociable ?','Où peut-on se voir pour le voir ?','Livrez-vous ?'] %}
+          <button class="ad-chip" type="button" data-t="{{ t }}" onclick="AD.remplir(this.dataset.t)">{{ t }}</button>{% endfor %}
+        </div>
+        <textarea id="ad-msg" rows="2" maxlength="2000">Bonjour, cet article est-il toujours disponible ?</textarea>
+        <button class="ad-btn main" id="ad-send" style="margin-top:10px" onclick="AD.contacter()"><i class="fas fa-paper-plane"></i> Envoyer le message</button>
+      </div>
+      {% endif %}
+
+      <div class="ad-card">
+        <div class="ad-actions">
+          <button class="ad-act {{ 'on' if alerte_active }}" id="ad-b-alerte" onclick="AD.alerte()"><i class="fas fa-bell"></i>Alerte</button>
+          <button class="ad-act" onclick="AD.ouvrir('ad-offre')"><i class="fas fa-hand-holding-dollar"></i>Faire une offre</button>
+          <button class="ad-act" onclick="AD.partager()"><i class="fas fa-share-nodes"></i>Partager</button>
+          <button class="ad-act {{ 'on' if deja_favori }}" id="ad-b-fav" onclick="AD.favori()"><i class="fas fa-bookmark"></i><span id="ad-t-fav">{{ 'Enregistré' if deja_favori else 'Enregistrer' }}</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ad-grid" style="margin-top:4px">
+    <div>
+      <div class="ad-card"><h3>Description</h3><div class="ad-desc">{{ a.description }}</div></div>
+
+      <div class="ad-card"><h3>Détails</h3>
+        <div class="ad-rows">
+          <div class="ad-row"><span>État</span><span>{{ a.condition or '—' }}</span></div>
+          <div class="ad-row"><span>Catégorie</span><span>{{ a.categorie }}</span></div>
+          <div class="ad-row"><span>Quantité</span><span>{{ a.quantite or 1 }}</span></div>
+          <div class="ad-row"><span>Prix négociable</span><span>{{ 'Oui' if a.negociable else 'Non' }}</span></div>
+          <div class="ad-row"><span>Livraison</span><span>{{ 'Possible' if a.livraison else 'Remise en main propre' }}</span></div>
+          {% if a.fait_main %}<div class="ad-row"><span>Fabrication</span><span>Fait main</span></div>{% endif %}
+        </div>
+      </div>
+
+      <div class="ad-card"><h3>Lieu</h3>
+        <div class="ad-loc"><div class="pin"><i class="fas fa-map-location-dot"></i></div>
+          <div><b>{{ a.localisation }}</b><small>La localisation est approximative</small></div>
+          <a href="https://www.google.com/maps/search/?api=1&query={{ a.localisation|urlencode }}" target="_blank" rel="noopener">Voir la carte</a></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="ad-card"><h3>Vendeur</h3>
+        <div class="ad-seller">
+          <img src="{{ vendeur_avatar }}" alt="">
+          <div><b>{{ vendeur_nom }}{% if vendeur_verifie %}<i class="fas fa-circle-check ad-verif" title="Compte vérifié"></i>{% endif %}</b>
+            <small>{% if vendeur_depuis %}Membre depuis {{ vendeur_depuis.strftime('%Y') }} · {% endif %}{{ nb_annonces_vendeur }} annonce{{ 's' if nb_annonces_vendeur > 1 }}</small></div>
+          {% if not est_proprio %}<button class="ad-btn {{ 'soft' if suit_vendeur else 'main' }}" style="width:auto" id="ad-b-suivre" onclick="AD.suivre()">{{ 'Suivi' if suit_vendeur else 'Suivre' }}</button>{% endif %}
+        </div>
+        {% if autres %}
+        <div style="margin-top:16px" class="ad-row-h">
+          {% for x in autres %}<a class="ad-mini" href="{{ x.url }}"><img src="{{ x.image }}" alt="" loading="lazy"><b>{{ x.prix_txt }}</b><small>{{ x.titre }}</small></a>{% endfor %}
+        </div>{% endif %}
+      </div>
+
+      <div class="ad-card"><h3>Recherches similaires</h3>
+        <div class="ad-sim">
+          {% for s in similaires %}<button type="button" data-q="{{ s }}" onclick="AD.ouvrirRecherche(this.dataset.q)"><i class="fas fa-search" style="font-size:12px"></i>{{ s }}</button>{% endfor %}
+        </div>
+      </div>
+
+      <div class="ad-card ad-hide">
+        <p>Cette annonce ne vous plaît pas ? Masquez-la : nous vous proposerons moins d'annonces de ce type.</p>
+        <button class="ad-btn ghost" onclick="AD.masquer()"><i class="far fa-eye-slash"></i> Masquer</button>
+      </div>
+
+      <div class="ad-card"><h3>Groupes d'achat et de vente</h3>
+        <div class="ad-groups" id="ad-groups">
+          {% for g in groupes %}
+          <div class="ad-group" data-id="{{ g.id }}">
+            <a class="cv" href="{{ g.url }}">{% if g.cover %}<img src="{{ g.cover }}" alt="">{% else %}<i class="fas fa-users"></i>{% endif %}</a>
+            <div style="min-width:0"><a href="{{ g.url }}"><b>{{ g.nom }}</b></a><small>{{ g.membres }} membre{{ 's' if g.membres > 1 }}{% if g.prive %} · Privé{% endif %}</small></div>
+            {% if g.membre %}<a class="ad-btn soft" href="{{ g.url }}">Ouvrir</a>
+            {% elif g.en_attente %}<button class="ad-btn soft" disabled>En attente</button>
+            {% else %}<button class="ad-btn main" style="width:auto" onclick="AD.rejoindre({{ g.id }}, this)">{{ 'Demander' if g.prive else 'Rejoindre' }}</button>{% endif %}
+          </div>
+          {% else %}<p class="ad-empty">Aucun groupe à suggérer pour le moment.</p>{% endfor %}
+        </div>
+      </div>
+
+      {% if not est_proprio %}
+      <div style="text-align:center;margin:6px 0 18px"><button class="ad-btn ghost" onclick="AD.ouvrir('ad-signal')" style="font-size:13.5px"><i class="far fa-flag"></i> Signaler cette annonce</button></div>
+      {% endif %}
+    </div>
+  </div>
+</div></div>
+
+{% if not est_proprio %}
+<div class="ad-bar"><div class="ad-bar-in">
+  <div class="p">{{ prix_txt }}</div>
+  <button class="ad-btn soft" onclick="AD.ouvrir('ad-offre')"><i class="fas fa-hand-holding-dollar"></i> Offre</button>
+  <button class="ad-btn main" style="width:auto" onclick="document.getElementById('ad-msg').scrollIntoView({behavior:'smooth',block:'center'});document.getElementById('ad-msg').focus()"><i class="fas fa-comment-dots"></i> Discuter</button>
+</div></div>
+{% endif %}
+
+<!-- Feuille : offre -->
+<div class="ad-ov" id="ad-offre" onclick="if(event.target===this)AD.fermer('ad-offre')"><div class="ad-sheet">
+  <button class="x" onclick="AD.fermer('ad-offre')">✕</button>
+  <h4>Faire une offre</h4><p class="s">Prix demandé : {{ prix_txt }}. Proposez le montant qui vous convient.</p>
+  <input id="ad-o-montant" type="number" inputmode="numeric" min="100" placeholder="Votre offre en FCFA" value="{{ (a.prix * 0.9)|round|int if a.negociable else a.prix }}">
+  <textarea id="ad-o-note" rows="2" maxlength="300" placeholder="Un mot pour le vendeur (facultatif)"></textarea>
+  <button class="ad-btn main" id="ad-o-go" onclick="AD.offre()">Envoyer mon offre</button>
+</div></div>
+
+<!-- Feuille : signalement -->
+<div class="ad-ov" id="ad-signal" onclick="if(event.target===this)AD.fermer('ad-signal')"><div class="ad-sheet">
+  <button class="x" onclick="AD.fermer('ad-signal')">✕</button>
+  <h4>Signaler l'annonce</h4><p class="s">Dites-nous ce qui ne va pas.</p>
+  <select id="ad-s-motif">
+    <option value="annonce_trompeuse">Annonce trompeuse</option><option value="fraude">Arnaque / fraude</option>
+    <option value="article_interdit">Article interdit</option><option value="doublon">Annonce en double</option>
+    <option value="mauvaise_categorie">Mauvaise catégorie</option><option value="autre">Autre</option>
+  </select>
+  <textarea id="ad-s-desc" rows="3" maxlength="500" placeholder="Détails (facultatif)"></textarea>
+  <button class="ad-btn main" onclick="AD.signaler()">Envoyer le signalement</button>
+</div></div>
+
+<!-- Feuille : résultats de recherche -->
+<div class="ad-ov" id="ad-search" onclick="if(event.target===this)AD.fermer('ad-search')"><div class="ad-sheet">
+  <button class="x" onclick="AD.fermer('ad-search')">✕</button>
+  <h4 id="ad-q-titre">Recherche</h4><p class="s" id="ad-q-sub"></p>
+  <div style="display:flex;gap:8px"><input id="ad-q-input" placeholder="Rechercher dans le Marketplace" onkeydown="if(event.key==='Enter')AD.chercher()"><button class="ad-btn main" style="width:auto;height:48px" onclick="AD.chercher()"><i class="fas fa-search"></i></button></div>
+  <div class="ad-res" id="ad-q-res"></div>
+</div></div>
+
+<div class="ad-lb" id="ad-lb" onclick="AD.fermerZoom()"><button aria-label="Fermer">✕</button><img id="ad-lb-img" alt=""></div>
+
+<script>
+const AD = (function () {
+  const ID = {{ a.id }}, B = '/marketplace', CONNECTE = {{ 'true' if connecte else 'false' }},
+        LOGIN = {{ url_for('main.login')|tojson }}, PHOTOS = {{ photos|tojson }};
+  let fav = {{ 'true' if deja_favori else 'false' }}, alerteOn = {{ 'true' if alerte_active else 'false' }},
+      suit = {{ 'true' if suit_vendeur else 'false' }};
+  const $ = i => document.getElementById(i);
+  ['ad-offre','ad-signal','ad-search','ad-lb'].forEach(i => { const e = $(i); if (e) document.body.appendChild(e); });
+
+  function toast(m) { const t = document.createElement('div'); t.className = 'ad-toast'; t.textContent = m; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
+  async function api(url, body, method) {
+    try {
+      const r = await fetch(url, { method: method || (body === undefined ? 'GET' : 'POST'), headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
+      const d = await r.json().catch(() => ({ success: false })); d._status = r.status; return d;
+    } catch (e) { return { success: false, message: 'Erreur réseau. Réessayez.' }; }
+  }
+  function besoinConnexion(d) { if (d && d._status === 401) { toast('Connectez-vous pour continuer.'); setTimeout(() => location.href = LOGIN, 900); return true; } return false; }
+  function garde() { if (!CONNECTE) { toast('Connectez-vous pour continuer.'); setTimeout(() => location.href = LOGIN, 900); return false; } return true; }
+
+  /* galerie */
+  const track = $('ad-track');
+  function maj() {
+    if (!track) return; const i = Math.round(track.scrollLeft / track.clientWidth);
+    $('ad-count').textContent = (i + 1) + ' / ' + PHOTOS.length;
+    document.querySelectorAll('#ad-dots i').forEach((d, k) => d.classList.toggle('on', k === i));
+    document.querySelectorAll('#ad-thumbs img').forEach((d, k) => d.classList.toggle('on', k === i));
+  }
+  if (track) track.addEventListener('scroll', () => requestAnimationFrame(maj));
+  function aller(i) { track.scrollTo({ left: i * track.clientWidth, behavior: 'smooth' }); }
+  function zoom(i) { $('ad-lb-img').src = PHOTOS[i]; $('ad-lb').classList.add('on'); }
+  function fermerZoom() { $('ad-lb').classList.remove('on'); }
+
+  function ouvrir(id) { if (!garde()) return; $(id).classList.add('on'); }
+  function fermer(id) { $(id).classList.remove('on'); }
+  function remplir(t) { $('ad-msg').value = t; $('ad-msg').focus(); }
+
+  async function contacter() {
+    if (!garde()) return; const m = $('ad-msg').value.trim(); if (!m) return toast('Écrivez un message.');
+    const b = $('ad-send'); b.disabled = true;
+    const d = await api(B + '/api/annonce/' + ID + '/contacter', { message: m }); b.disabled = false;
+    if (besoinConnexion(d)) return;
+    if (!d.success) return toast(d.message || 'Envoi impossible.');
+    toast('Message envoyé ✔'); if (d.url) setTimeout(() => location.href = d.url, 700);
+  }
+  async function offre() {
+    const montant = parseInt($('ad-o-montant').value, 10); if (!montant || montant < 100) return toast('Montant invalide (min. 100 FCFA).');
+    const b = $('ad-o-go'); b.disabled = true;
+    const d = await api(B + '/api/annonce/' + ID + '/offre', { montant, message: $('ad-o-note').value });
+    b.disabled = false; if (besoinConnexion(d)) return;
+    if (!d.success) return toast(d.message || 'Offre impossible.');
+    fermer('ad-offre'); toast('Offre envoyée ✔'); if (d.url) setTimeout(() => location.href = d.url, 900);
+  }
+  async function favori() {
+    if (!garde()) return; const voulu = !fav;
+    const d = await api(B + '/api/annonce/' + ID + '/favori', { etat: voulu }); if (besoinConnexion(d)) return;
+    if (!d.success) return toast('Action impossible.');
+    fav = !!d.favori; $('ad-b-fav').classList.toggle('on', fav); $('ad-t-fav').textContent = fav ? 'Enregistré' : 'Enregistrer';
+    toast(fav ? 'Ajouté à vos favoris' : 'Retiré de vos favoris');
+  }
+  async function alerte() {
+    if (!garde()) return; const d = await api(B + '/api/annonce/' + ID + '/alerte', {}); if (besoinConnexion(d)) return;
+    if (!d.success) return toast(d.message || 'Action impossible.');
+    alerteOn = d.actif; $('ad-b-alerte').classList.toggle('on', alerteOn); toast(d.message);
+  }
+  async function partager() {
+    const url = location.origin + location.pathname, data = { title: {{ a.titre|tojson }}, text: {{ (a.titre ~ ' — ' ~ prix_txt)|tojson }}, url };
+    if (navigator.share) { try { await navigator.share(data); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+    try { await navigator.clipboard.writeText(url); toast('Lien copié ✔'); } catch (e) { prompt('Copiez ce lien :', url); }
+  }
+  async function masquer() {
+    if (!garde()) return; const d = await api(B + '/api/annonce/' + ID + '/masquer', { etat: true }); if (besoinConnexion(d)) return;
+    if (!d.success) return toast(d.message || 'Action impossible.');
+    toast('Annonce masquée'); setTimeout(() => location.href = d.retour, 800);
+  }
+  async function signaler() {
+    const d = await api(B + '/api/annonce/' + ID + '/signaler', { motif: $('ad-s-motif').value, description: $('ad-s-desc').value });
+    if (besoinConnexion(d)) return; fermer('ad-signal'); toast(d.success ? d.message : (d.message || 'Signalement impossible.'));
+  }
+  async function suivre() {
+    if (!garde()) return; const d = await api(B + '/api/vendeur/{{ a.user_id }}/suivre', {}); if (besoinConnexion(d)) return;
+    if (!d.success) return toast(d.message || 'Action impossible.'); suit = d.suit;
+    const b = $('ad-b-suivre'); b.textContent = suit ? 'Suivi' : 'Suivre'; b.className = 'ad-btn ' + (suit ? 'soft' : 'main');
+  }
+  async function rejoindre(gid, btn) {
+    if (!garde()) return; btn.disabled = true; const d = await api(B + '/api/groupes/' + gid + '/rejoindre', {});
+    if (besoinConnexion(d)) return; btn.disabled = false;
+    if (!d.success) return toast(d.message || 'Action impossible.');
+    btn.className = 'ad-btn soft'; btn.style.width = ''; btn.disabled = true; btn.textContent = d.etat === 'membre' ? 'Membre ✔' : 'En attente'; toast(d.message);
+  }
+
+  /* recherche similaire : clic -> recherche automatique dans les annonces publiées */
+  function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+  async function ouvrirRecherche(q) { $('ad-q-input').value = q; $('ad-search').classList.add('on'); chercher(); }
+  async function chercher() {
+    const q = $('ad-q-input').value.trim(); if (!q) return;
+    $('ad-q-titre').textContent = '« ' + q + ' »'; $('ad-q-sub').textContent = 'Recherche en cours…'; $('ad-q-res').innerHTML = '';
+    const d = await api(B + '/api/recherche?q=' + encodeURIComponent(q) + '&exclure=' + ID);
+    if (!d.success) { $('ad-q-sub').textContent = 'Recherche impossible pour le moment.'; return; }
+    if (!d.total) { $('ad-q-sub').textContent = "Aucune annonce publiée pour « " + q + " » pour l'instant. Revenez bientôt !"; return; }
+    $('ad-q-sub').textContent = d.total + ' annonce' + (d.total > 1 ? 's' : '') + ' trouvée' + (d.total > 1 ? 's' : '') + ' sur Tsapi';
+    $('ad-q-res').innerHTML = d.annonces.map(x => '<a href="' + x.url + '"><img loading="lazy" src="' + x.image + '" alt=""><b>' + esc(x.prix_txt) + '</b><small>' + esc(x.titre) + '</small></a>').join('');
+  }
+
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { document.querySelectorAll('.ad-ov.on').forEach(o => o.classList.remove('on')); fermerZoom(); } });
+  return { aller, zoom, fermerZoom, ouvrir, fermer, remplir, contacter, offre, favori, alerte, partager, masquer, signaler, suivre, rejoindre, ouvrirRecherche, chercher };
+})();
+</script>
+{% endblock %}

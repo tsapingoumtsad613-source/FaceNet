@@ -1,0 +1,1279 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    /* ═════════ Page commentaires « façon Facebook » ═════════ */
+    .cm-page, .cm-dock, .cm-overlay, .cm-cam, .cm-rpick, .cm-toast {
+        --cm-bg:#fff; --cm-txt:#1c1e21; --cm-mut:#65676b; --cm-blue:#0866ff; --cm-line:#e4e6eb;
+        --cm-chip:#f0f2f5; --cm-red:#f02849; --cm-orange:#f7701e; --cm-radius:14px;
+    }
+    .cm-page { max-width:640px; margin:0 auto; background:var(--cm-bg); color:var(--cm-txt); min-height:100vh; position:relative; font-size:16px; }
+    .cm-page *, .cm-dock *, .cm-overlay *, .cm-cam *, .cm-rpick *, .cm-toast { box-sizing:border-box; }
+    .cm-page button, .cm-dock button, .cm-overlay button, .cm-cam button, .cm-rpick button, .cm-toast button { font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+
+    .cm-topbar { display:flex; align-items:center; gap:14px; padding:12px 16px; background:var(--cm-bg);
+        border-bottom:1px solid var(--cm-line); position:sticky; top:0; z-index:30; }
+    .cm-topbar .cm-back { border:0; background:none; font-size:19px; color:var(--cm-txt); padding:4px 6px; }
+    .cm-topbar h2 { margin:0; font-size:17px; font-weight:700; flex:1; }
+    .cm-topbar .cm-count { font-size:13px; color:var(--cm-mut); font-weight:600; }
+
+    .cm-summary { display:flex; align-items:center; justify-content:space-between; padding:14px 16px 6px; font-size:17px; }
+    .cm-summary .cm-react { display:flex; align-items:center; gap:8px; }
+    .cm-ricons { display:inline-flex; }
+    .cm-ricons i { width:24px; height:24px; border-radius:50%; border:2px solid #fff; margin-left:-6px; display:inline-flex;
+        align-items:center; justify-content:center; font-size:11px; color:#fff; }
+    .cm-ricons i:first-child { margin-left:0; }
+    .cm-ricons .r-like { background:#1877f2; } .cm-ricons .r-love { background:#f33e58; } .cm-ricons .r-wow { background:#f7b125; }
+    .cm-summary .cm-shares { color:var(--cm-mut); font-size:16px; }
+
+    /* Publication affichée en grand, à taille normale (comme dans le fil) : texte entier, média pleine largeur */
+    .cm-preview { margin:0 0 4px; border:0; border-bottom:1px solid var(--cm-line); border-radius:0; padding:12px 0 12px; }
+    .cm-preview-h { display:flex; align-items:center; gap:10px; padding:0 16px; }
+    .cm-preview-h img { width:42px; height:42px; border-radius:50%; object-fit:cover; }
+    .cm-preview-h strong { font-size:15.5px; display:block; } .cm-preview-h span { font-size:13px; color:var(--cm-mut); }
+    .cm-preview-b { font-size:17px; line-height:1.5; margin:12px 0 0; padding:0 16px; white-space:pre-wrap; word-break:break-word; display:block; }
+    .cm-preview-more { display:none !important; }
+    .cm-preview-media { margin-top:12px; width:100%; max-width:100%; height:auto; max-height:none; object-fit:contain; border-radius:0; display:block; background:var(--cm-chip); }
+    video.cm-preview-media { max-height:80vh; background:#000; }
+
+    .cm-sortbar { padding:12px 16px 6px; }
+    .cm-sortbtn { border:0; background:none; font-size:17px; font-weight:500; color:var(--cm-txt); display:inline-flex;
+        align-items:center; gap:8px; padding:6px 0; }
+    .cm-sortbtn i { font-size:14px; }
+
+    .cm-list { padding:6px 16px 24px; min-height:160px; }
+    .cm-empty, .cm-err { text-align:center; color:var(--cm-mut); font-size:15px; padding:36px 10px; }
+    .cm-err button { margin-top:10px; border:0; background:var(--cm-chip); border-radius:18px; padding:8px 16px; font-weight:700; }
+    .cm-skel { display:flex; gap:10px; margin:18px 0; }
+    .cm-skel i { width:36px; height:36px; border-radius:50%; background:var(--cm-chip); flex:none; }
+    .cm-skel b { flex:1; display:block; height:54px; border-radius:12px; background:var(--cm-chip); animation:cm-pulse 1.2s infinite; }
+    @keyframes cm-pulse { 50% { opacity:.45; } }
+    .cm-more-btn { border:0; background:none; color:var(--cm-mut); font-weight:700; font-size:15px; padding:12px 0; width:100%; }
+
+    /* — un commentaire — */
+    .cm-c { display:flex; gap:10px; margin:18px 0 0; scroll-margin-top:90px; border-radius:12px; }
+    .cm-c.cm-reply { margin-top:12px; }
+    .cm-c .cm-av { width:40px; height:40px; border-radius:50%; object-fit:cover; flex:none; background:var(--cm-chip); }
+    .cm-c.cm-reply .cm-av { width:30px; height:30px; }
+    .cm-body { flex:1; min-width:0; }
+    .cm-head { display:flex; flex-wrap:wrap; align-items:center; gap:4px 6px; font-size:15px; line-height:1.3; }
+    .cm-name { font-weight:700; color:var(--cm-txt); text-decoration:none; }
+    .cm-ver { color:#1da1f2; font-size:13px; }
+    .cm-time, .cm-dot { color:var(--cm-mut); font-size:14px; }
+    .cm-tag { color:var(--cm-blue); font-weight:600; font-size:14px; }
+    .cm-pin { color:var(--cm-mut); font-size:13px; }
+    .cm-text { font-size:17px; line-height:1.38; margin-top:2px; white-space:pre-wrap; word-break:break-word; }
+    .cm-text a { color:var(--cm-blue); font-weight:600; text-decoration:none; word-break:break-all; }
+    .cm-text .cm-to { color:var(--cm-blue); font-weight:700; }
+    .cm-edited { color:var(--cm-mut); font-size:13px; }
+
+    .cm-media { margin-top:8px; }
+    .cm-media img.cm-img, .cm-media img.cm-gif { max-width:min(100%,320px); max-height:380px; border-radius:14px; display:block; background:var(--cm-chip); cursor:zoom-in; }
+    .cm-media .cm-sticker { font-size:84px; line-height:1.05; display:block; }
+    .cm-media .cm-avshape { width:130px; height:130px; object-fit:cover; display:block; }
+    .cm-shape-circle { border-radius:50%; } .cm-shape-rounded { border-radius:28px; }
+    .cm-shape-heart { clip-path:path('M65 120 C15 82 0 56 0 34 C0 14 15 0 34 0 C47 0 58 7 65 18 C72 7 83 0 96 0 C115 0 130 14 130 34 C130 56 115 82 65 120 Z'); }
+    .cm-shape-star { clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); }
+    .cm-shape-hex { clip-path:polygon(25% 5%,75% 5%,100% 50%,75% 95%,25% 95%,0 50%); }
+    .cm-star { display:flex; flex-direction:column; align-items:flex-start; gap:6px; }
+    .cm-star .cm-starvis { font-size:78px; line-height:1; filter:drop-shadow(0 4px 6px rgba(0,0,0,.18)); }
+    .cm-star .cm-starline { color:var(--cm-orange); font-weight:700; font-size:15px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+    .cm-voice { display:flex; align-items:center; gap:8px; background:var(--cm-chip); border-radius:22px; padding:6px 10px; max-width:300px; }
+    .cm-voice audio { height:32px; max-width:230px; }
+
+    .cm-acts { display:flex; align-items:center; gap:16px; margin-top:6px; min-height:34px; }
+    .cm-acts .cm-btn { border:0; background:none; color:var(--cm-mut); font-weight:700; font-size:15px; padding:6px 0; }
+    .cm-acts .cm-btn:hover { text-decoration:underline; }
+    .cm-rbadge { display:inline-flex; align-items:center; gap:4px; font-size:14px; font-weight:600; color:var(--cm-mut); border:0; background:none; padding:2px 0; }
+    .cm-rbadge .e { font-size:17px; }
+    .cm-acts .cm-sp { flex:1; }
+    .cm-ic { border:0; background:none; color:var(--cm-mut); font-size:21px; padding:6px 4px; line-height:1; position:relative;
+        min-width:34px; min-height:34px; display:inline-flex; align-items:center; justify-content:center; }
+    .cm-ic.on { color:var(--cm-blue); } .cm-ic.on-down { color:var(--cm-red); }
+    .cm-ic .em { font-size:21px; }
+    .cm-showrep { border:0; background:none; color:var(--cm-mut); font-weight:700; font-size:15px; padding:8px 0 2px; display:flex; align-items:center; gap:8px; }
+    .cm-reps { margin-left:0; }
+    .cm-flash { animation:cm-flash 3s ease-out; }
+    @keyframes cm-flash { 0%,45% { background:#e7f3ff; box-shadow:0 0 0 6px #e7f3ff; } 100% { background:transparent; box-shadow:0 0 0 6px transparent; } }
+
+    .cm-edit textarea { width:100%; border:1px solid var(--cm-line); border-radius:14px; padding:9px 12px; font:inherit; font-size:16px; resize:none; outline:none; margin-top:4px; }
+    .cm-edit .row { display:flex; gap:8px; margin-top:6px; }
+    .cm-edit button { border:0; border-radius:16px; padding:7px 16px; font-weight:700; font-size:14px; }
+    .cm-edit .ok { background:var(--cm-blue); color:#fff; } .cm-edit .no { background:var(--cm-chip); color:var(--cm-txt); }
+
+    /* — dock : réponse en cours + pièce jointe + zone de saisie + panneaux — */
+    .cm-dock { position:fixed; left:0; right:0; bottom:calc(var(--nav-h, 0px) + env(safe-area-inset-bottom, 0px)); z-index:40; max-width:640px; margin:0 auto; background:var(--cm-bg);
+        border-top:1px solid var(--cm-line); box-shadow:0 -4px 14px rgba(0,0,0,.05); }
+    .cm-replybar { display:none; align-items:center; gap:8px; padding:8px 16px 0; font-size:14px; color:var(--cm-mut); }
+    .cm-replybar.show { display:flex; } .cm-replybar b { color:var(--cm-txt); }
+    .cm-replybar button { border:0; background:none; color:var(--cm-mut); font-size:16px; margin-left:auto; padding:2px 6px; }
+    .cm-attach { display:none; padding:10px 16px 0; } .cm-attach.show { display:block; }
+    .cm-attach .box { position:relative; display:inline-block; }
+    .cm-attach img { max-height:120px; max-width:200px; border-radius:12px; display:block; background:var(--cm-chip); }
+    .cm-attach .x { position:absolute; top:-8px; right:-8px; width:26px; height:26px; border-radius:50%; border:0; background:#333; color:#fff; font-size:13px; }
+    .cm-field { padding:10px 16px 4px; }
+    .cm-field textarea { width:100%; display:block; resize:none; border:0; background:var(--cm-chip); border-radius:22px; padding:11px 18px; font:inherit;
+        font-size:17px; line-height:1.3; outline:none; color:var(--cm-txt); max-height:120px; }
+    .cm-tools { display:flex; align-items:center; gap:10px; padding:4px 16px 8px; }
+    .cm-tool { border:0; background:none; color:#4b4c4f; font-size:22px; width:42px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; padding:0; }
+    .cm-tool.on { color:#1c1e21; background:#e4e6eb; }
+    .cm-giftag { font-size:11px; font-weight:900; border:2.2px solid currentColor; border-radius:6px; padding:1px 3px; letter-spacing:-.3px; }
+    .cm-tool.on .cm-giftag { background:#4b4c4f; color:#fff; border-color:#4b4c4f; }
+    .cm-tools .cm-sp { flex:1; }
+    .cm-send { color:#9a9da3; font-size:24px; } .cm-send.ready { color:var(--cm-blue); }
+    .cm-blocked { padding:14px 16px; text-align:center; color:var(--cm-mut); font-size:14.5px; }
+
+    .cm-panel { display:none; height:min(46vh,380px); border-top:1px solid var(--cm-line); background:var(--cm-bg); border-radius:16px 16px 0 0; flex-direction:column; }
+    .cm-panel.show { display:flex; }
+    .cm-panel .grab { width:44px; height:5px; border-radius:3px; background:#c9ccd1; margin:8px auto 4px; flex:none; }
+    .cm-ptabs { display:flex; align-items:center; gap:4px; padding:4px 10px 0; overflow-x:auto; flex:none; border-bottom:1px solid var(--cm-line); scrollbar-width:none; }
+    .cm-ptabs::-webkit-scrollbar { display:none; }
+    .cm-ptab { border:0; background:none; font-size:26px; min-width:54px; height:48px; border-bottom:3px solid transparent; flex:none; color:#4b4c4f; padding:0 6px; }
+    .cm-ptab.on { border-bottom-color:var(--cm-blue); }
+    .cm-ptab .fa-solid, .cm-ptab .fa-regular { font-size:21px; }
+    .cm-psearch { display:flex; gap:8px; align-items:center; padding:10px 14px 6px; overflow-x:auto; flex:none; scrollbar-width:none; }
+    .cm-psearch::-webkit-scrollbar { display:none; }
+    .cm-sinput { flex:none; display:flex; align-items:center; gap:8px; border:1.5px solid #c9ccd1; border-radius:22px; padding:0 14px; height:44px; background:#fff; min-width:170px; }
+    .cm-sinput input { border:0; outline:none; font:inherit; font-size:16px; width:100%; background:none; color:var(--cm-txt); }
+    .cm-sinput i { color:var(--cm-mut); }
+    .cm-chipb { flex:none; border:0; border-radius:22px; height:44px; padding:0 18px; font-size:17px; font-weight:500; color:#222; }
+    .cm-pbody { flex:1; overflow-y:auto; padding:6px 10px 18px; -webkit-overflow-scrolling:touch; }
+    .cm-sgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+    .cm-sgrid button { border:0; background:none; font-size:58px; line-height:1.1; padding:8px 0; border-radius:14px; transition:transform .12s; }
+    .cm-sgrid button:active { transform:scale(.88); background:var(--cm-chip); }
+    .cm-sgrid.small { grid-template-columns:repeat(8,1fr); gap:2px; } .cm-sgrid.small button { font-size:28px; padding:6px 0; }
+    .cm-pempty { text-align:center; color:var(--cm-mut); padding:30px 14px; font-size:15px; }
+    .cm-gifs { column-count:2; column-gap:6px; }
+    .cm-gifs button { display:block; width:100%; border:0; padding:0; margin:0 0 6px; border-radius:10px; overflow:hidden; background:var(--cm-chip); break-inside:avoid; }
+    .cm-gifs img { width:100%; display:block; }
+    .cm-ghead { padding:6px 14px 8px; flex:none; }
+    .cm-gal-h { display:flex; align-items:center; justify-content:space-between; padding:8px 18px 8px; flex:none; position:relative; }
+    .cm-gal-h .ttl { border:0; background:none; font-size:20px; font-weight:500; display:flex; align-items:center; gap:10px; color:var(--cm-txt); padding:0; }
+    .cm-gal-h .cam { border:0; background:none; font-size:26px; color:#111; }
+    .cm-galgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:3px; }
+    .cm-galgrid button { border:0; padding:0; aspect-ratio:1; background:var(--cm-chip); overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:30px; color:var(--cm-blue); }
+    .cm-galgrid img { width:100%; height:100%; object-fit:cover; display:block; }
+    .cm-pop { position:absolute; left:14px; top:46px; background:#fff; border-radius:12px; box-shadow:0 6px 24px rgba(0,0,0,.22); padding:6px; z-index:5; min-width:220px; }
+    .cm-pop button { display:flex; width:100%; gap:12px; align-items:center; border:0; background:none; padding:11px 12px; font-size:16px; border-radius:8px; text-align:left; color:var(--cm-txt); }
+    .cm-pop button:hover { background:var(--cm-chip); }
+    .cm-avbox { text-align:center; padding:6px 10px; }
+    .cm-avbox .pv { width:150px; height:150px; margin:10px auto 14px; object-fit:cover; display:block; background:var(--cm-chip); }
+    .cm-shapes { display:flex; justify-content:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+    .cm-shapes button { width:52px; height:52px; border:2px solid transparent; background:var(--cm-chip); border-radius:12px; padding:5px; }
+    .cm-shapes button.on { border-color:var(--cm-blue); }
+    .cm-shapes img { width:100%; height:100%; object-fit:cover; display:block; }
+    .cm-bigbtn { border:0; background:var(--cm-blue); color:#fff; font-weight:700; font-size:16px; border-radius:24px; padding:12px 30px; }
+    .cm-bigbtn[disabled] { opacity:.45; }
+    .cm-stars { text-align:center; padding:6px 14px; }
+    .cm-stars p { margin:8px 0 12px; color:var(--cm-mut); font-size:14.5px; }
+    .cm-starpick { display:flex; justify-content:center; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+    .cm-starpick button { border:2px solid transparent; background:var(--cm-chip); border-radius:16px; font-size:40px; width:64px; height:64px; padding:0; }
+    .cm-starpick button.on { border-color:var(--cm-orange); background:#fff1e8; }
+    .cm-qty { display:inline-flex; align-items:center; gap:16px; margin-bottom:16px; font-weight:700; font-size:18px; }
+    .cm-qty button { width:38px; height:38px; border-radius:50%; border:0; background:var(--cm-chip); font-size:20px; font-weight:700; }
+
+    /* — feuilles, menus, réactions, toast — */
+    .cm-overlay { position:fixed; inset:0; z-index:500; background:rgba(0,0,0,.45); display:none; align-items:flex-end; justify-content:center; }
+    .cm-overlay.show { display:flex; }
+    .cm-sheet { background:#fff; width:100%; max-width:640px; border-radius:18px 18px 0 0; padding:8px 0 calc(14px + env(safe-area-inset-bottom)); max-height:86vh; overflow-y:auto;
+        animation:cm-up .18s ease-out; color:var(--cm-txt); }
+    @keyframes cm-up { from { transform:translateY(30px); opacity:.4; } to { transform:none; opacity:1; } }
+    .cm-sheet .grab { width:44px; height:5px; border-radius:3px; background:#c9ccd1; margin:4px auto 10px; }
+    .cm-sheet h3 { margin:2px 20px 8px; font-size:17px; }
+    .cm-sheet .sub { margin:0 20px 10px; color:var(--cm-mut); font-size:14px; }
+    .cm-opt { display:flex; align-items:center; gap:14px; width:100%; border:0; background:none; text-align:left; padding:12px 20px; color:var(--cm-txt); }
+    .cm-opt:active { background:var(--cm-chip); }
+    .cm-opt .t { flex:1; } .cm-opt .t b { display:block; font-size:19px; font-weight:500; } .cm-opt .t span { display:block; font-size:16px; color:var(--cm-mut); margin-top:2px; line-height:1.3; }
+    .cm-opt .ic { width:26px; text-align:center; font-size:19px; color:#444; } .cm-opt.danger, .cm-opt.danger .ic { color:var(--cm-red); }
+    .cm-opt .t.one { font-size:17px; }
+    .cm-radio { width:26px; height:26px; border-radius:50%; border:2px solid #65676b; flex:none; position:relative; }
+    .cm-opt.sel .cm-radio { border-color:var(--cm-blue); border-width:2px; }
+    .cm-opt.sel .cm-radio::after { content:''; position:absolute; inset:4px; border-radius:50%; background:var(--cm-blue); }
+    .cm-rpick { position:fixed; z-index:520; background:#fff; border-radius:30px; padding:6px 10px; display:none; gap:2px; box-shadow:0 6px 26px rgba(0,0,0,.28); }
+    .cm-rpick.show { display:flex; }
+    .cm-rpick button { border:0; background:none; font-size:30px; padding:2px 5px; transition:transform .12s; }
+    .cm-rpick button:hover, .cm-rpick button:active { transform:scale(1.28) translateY(-4px); }
+    .cm-toast { position:fixed; left:50%; bottom:140px; transform:translateX(-50%); background:#242526; color:#fff; padding:11px 18px; border-radius:24px; font-size:14.5px; z-index:700;
+        display:none; max-width:92vw; text-align:center; align-items:center; gap:12px; }
+    .cm-toast.show { display:flex; } .cm-toast button { border:0; background:none; color:#7fb2ff; font-weight:700; font-size:14.5px; padding:0; }
+    .cm-lightbox img { max-width:94vw; max-height:90vh; border-radius:8px; }
+    .cm-lightbox { align-items:center; background:rgba(0,0,0,.88); }
+
+    /* — caméra plein écran avec effets — */
+    .cm-cam { position:fixed; inset:0; z-index:600; background:#000; display:none; color:#fff; touch-action:none; user-select:none; -webkit-user-select:none; }
+    .cm-cam.show { display:block; }
+    .cm-cam canvas.live { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; background:#000; }
+    .cm-cam video { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+    .cm-cam .grid { position:absolute; inset:0; pointer-events:none; display:none;
+        background:linear-gradient(to right,transparent 33.2%,rgba(255,255,255,.35) 33.3%,transparent 33.4%,transparent 66.5%,rgba(255,255,255,.35) 66.6%,transparent 66.7%),
+                   linear-gradient(to bottom,transparent 33.2%,rgba(255,255,255,.35) 33.3%,transparent 33.4%,transparent 66.5%,rgba(255,255,255,.35) 66.6%,transparent 66.7%); }
+    .cm-cam .grid.on { display:block; }
+    .cam-top { position:absolute; top:0; left:0; right:0; display:flex; justify-content:space-between; align-items:center; padding:calc(16px + env(safe-area-inset-top)) 22px 10px; z-index:3;
+        background:linear-gradient(rgba(0,0,0,.5),transparent); }
+    .cam-top button, .cam-bar button { border:0; background:none; color:#fff; font-size:26px; padding:6px; }
+    .cam-top .flash { position:relative; } .cam-top .flash.on { color:#ffd84a; }
+    .cam-top .flash small { position:absolute; right:-2px; bottom:2px; font-size:12px; }
+    .cam-pill { position:absolute; left:50%; transform:translateX(-50%); bottom:calc(200px + env(safe-area-inset-bottom)); z-index:3; background:rgba(40,40,40,.7); border-radius:24px;
+        padding:10px 18px; font-size:19px; color:#fff; border:0; display:flex; gap:10px; align-items:center; backdrop-filter:blur(6px); }
+    .cam-strip { position:absolute; left:0; right:0; bottom:calc(84px + env(safe-area-inset-bottom)); height:96px; z-index:3; display:flex; align-items:center; justify-content:center; gap:9px; }
+    .cam-fx { border:2px solid rgba(255,255,255,.9); border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; color:#fff; overflow:hidden; padding:0; background:#000; }
+    .cam-fx.s2 { width:50px; height:50px; font-size:9px; } .cam-fx.s1 { width:68px; height:68px; font-size:12px; }
+    .cam-fx.empty { visibility:hidden; }
+    .cam-shutter { width:118px; height:118px; border-radius:50%; border:6px solid rgba(255,255,255,.55); background:rgba(80,80,80,.35); padding:6px; flex:none; }
+    .cam-shutter > span { display:flex; width:100%; height:100%; border-radius:50%; background:#fff; align-items:center; justify-content:center; font-weight:800; color:#fff; font-size:14px; overflow:hidden; }
+    .cam-bar { position:absolute; left:0; right:0; bottom:0; padding:8px 22px calc(18px + env(safe-area-inset-bottom)); display:flex; align-items:center; justify-content:space-between; z-index:3; height:calc(84px + env(safe-area-inset-bottom)); }
+    .cam-bar .mid { display:flex; align-items:center; gap:16px; background:rgba(40,40,40,.55); border-radius:30px; padding:6px 18px; }
+    .cam-bar .nm { text-align:center; line-height:1.2; } .cam-bar .nm b { display:block; font-size:19px; } .cam-bar .nm span { font-size:15px; opacity:.9; }
+    .cam-bar .mid button { font-size:25px; } .cam-bar .fav.on { color:#ffd84a; }
+    .cam-count { position:absolute; inset:0; display:none; align-items:center; justify-content:center; font-size:140px; font-weight:800; z-index:4; text-shadow:0 4px 24px rgba(0,0,0,.6); pointer-events:none; }
+    .cam-white { position:absolute; inset:0; background:#fff; z-index:6; display:none; }
+    .cam-msg { position:absolute; left:20px; right:20px; top:40%; z-index:2; text-align:center; font-size:16px; line-height:1.5; display:none; }
+    .cam-msg button { margin-top:14px; border:0; border-radius:22px; background:#fff; color:#111; padding:11px 22px; font-weight:700; font-size:15px; }
+    .cam-review { position:absolute; inset:0; background:#000; z-index:7; display:none; flex-direction:column; }
+    .cam-review.show { display:flex; } .cam-review img { flex:1; min-height:0; width:100%; object-fit:contain; }
+    .cam-review .r { display:flex; gap:14px; padding:16px 20px calc(20px + env(safe-area-inset-bottom)); }
+    .cam-review .r button { flex:1; border:0; border-radius:26px; padding:14px; font-size:17px; font-weight:700; }
+    .cam-review .redo { background:#3a3b3c; color:#fff; } .cam-review .use { background:var(--cm-blue,#0866ff); color:#fff; }
+    .cam-sheet-fx .cm-sgrid { grid-template-columns:repeat(4,1fr); }
+    .fxcard { border:0; background:none; display:flex !important; flex-direction:column; align-items:center; gap:6px; font-size:13px !important; font-weight:600; padding:8px 0 !important; color:var(--cm-txt); }
+    .fxcard i { width:60px; height:60px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-style:normal; font-size:12px; font-weight:800; color:#fff; border:2px solid #ddd; }
+    .fxcard.on i { border-color:var(--cm-blue); box-shadow:0 0 0 3px #cfe0ff; }
+    .cm-seg { display:inline-flex; background:var(--cm-chip); border-radius:12px; padding:3px; gap:2px; }
+    .cm-seg button { border:0; background:none; padding:7px 14px; border-radius:10px; font-weight:600; font-size:14px; color:var(--cm-txt); }
+    .cm-seg button.on { background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.18); }
+    .cm-switch { display:flex; align-items:center; justify-content:space-between; padding:12px 20px; font-size:17px; }
+    .cm-switch input { width:46px; height:26px; accent-color:var(--cm-blue); }
+</style>
+
+{% set _mu = (pub.media_url or '')|lower %}
+<div class="cm-page" id="cmPage">
+    <div class="cm-topbar">
+        <button class="cm-back" type="button" id="cmBack" aria-label="Retour"><i class="fa-solid fa-arrow-left"></i></button>
+        <h2>Commentaires</h2>
+        <span class="cm-count" id="cmCount"></span>
+    </div>
+
+    <div class="cm-summary">
+        <div class="cm-react" id="cmReact"></div>
+        <div class="cm-shares" id="cmShares"></div>
+    </div>
+
+    <div class="cm-preview">
+        <div class="cm-preview-h">
+            <img src="{{ url_for('static', filename='uploads/' + (user.avatar or 'default_avatar.png')) }}" alt="">
+            <div>
+                <strong>{{ user.nom_complet }}</strong>
+                <span>{{ pub.date_creation.strftime('%d %b à %H:%M') if pub.date_creation else '' }}</span>
+            </div>
+        </div>
+        {% if pub.contenu %}
+        <div class="cm-preview-b" id="cmPrevB">{{ pub.contenu }}</div>
+        <button type="button" class="cm-preview-more" id="cmPrevMore" hidden>Voir plus</button>
+        {% endif %}
+        {% if _mu.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp')) %}
+        <img class="cm-preview-media" src="{{ url_for('static', filename='uploads/' + pub.media_url) }}" alt="" loading="lazy">
+        {% elif _mu.endswith(('.mp4', '.webm', '.mov')) %}
+        <video class="cm-preview-media" src="{{ url_for('static', filename='uploads/' + pub.media_url) }}" controls preload="metadata" playsinline></video>
+        {% endif %}
+    </div>
+
+    <div class="cm-sortbar">
+        <button type="button" class="cm-sortbtn" id="cmSortBtn" aria-haspopup="dialog">
+            <span id="cmSortLabel">Plus pertinents</span> <i class="fa-solid fa-chevron-down"></i>
+        </button>
+    </div>
+
+    <div class="cm-list" id="cmList" aria-live="polite"></div>
+    <div id="cmSentinel" style="height:2px"></div>
+    <div id="cmDockSpace" style="height:150px"></div>
+</div>
+
+<!-- ═════ Dock : saisie + panneaux ═════ -->
+<div class="cm-dock" id="cmDock">
+    <div class="cm-replybar" id="cmReplyBar"><span>Réponse à <b id="cmReplyName"></b></span><button type="button" id="cmReplyX" aria-label="Annuler la réponse"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="cm-attach" id="cmAttach"><div class="box"><img id="cmAttachImg" alt=""><button type="button" class="x" id="cmAttachX" aria-label="Retirer"><i class="fa-solid fa-xmark"></i></button></div></div>
+    <div id="cmComposer">
+        <div class="cm-field"><textarea id="cmInput" rows="1" placeholder="Commenter en tant que {{ current_user.nom_complet }}" aria-label="Écrire un commentaire"></textarea></div>
+        <div class="cm-tools">
+            <button class="cm-tool" type="button" data-panel="gallery" title="Photos"><i class="fa-solid fa-camera"></i></button>
+            <button class="cm-tool" type="button" data-panel="gif" title="GIF"><span class="cm-giftag">GIF</span></button>
+            <button class="cm-tool" type="button" data-panel="sticker" title="Autocollants et emoji"><i class="fa-regular fa-face-smile"></i></button>
+            <button class="cm-tool" type="button" data-panel="avatar" title="Avatar"><i class="fa-regular fa-face-grin-hearts"></i></button>
+            <button class="cm-tool" type="button" data-panel="stars" title="Étoiles"><i class="fa-regular fa-star"></i></button>
+            <span class="cm-sp"></span>
+            <button class="cm-tool cm-send" type="button" id="cmSend" title="Publier" aria-label="Publier"><i class="fa-regular fa-paper-plane"></i></button>
+        </div>
+    </div>
+    <div class="cm-blocked" id="cmBlocked" hidden></div>
+
+    <div class="cm-panel" id="cmPanel"><div class="grab"></div><div id="cmPanelInner" style="display:flex;flex-direction:column;flex:1;min-height:0"></div></div>
+</div>
+
+<input type="file" id="cmFile" accept="image/*" hidden>
+<input type="file" id="cmFileCam" accept="image/*" capture="environment" hidden>
+
+<!-- feuilles -->
+<div class="cm-overlay" id="cmOv"><div class="cm-sheet" id="cmSheet" role="dialog"></div></div>
+<div class="cm-overlay cm-lightbox" id="cmLb"><img alt="" id="cmLbImg"></div>
+<div class="cm-rpick" id="cmRPick"></div>
+<div class="cm-toast" id="cmToast"></div>
+
+<!-- caméra -->
+<div class="cm-cam" id="cmCam">
+    <video id="camVideo" playsinline muted autoplay></video>
+    <canvas class="live" id="camCanvas"></canvas>
+    <div class="grid" id="camGrid"></div>
+    <div class="cam-msg" id="camMsg"></div>
+    <div class="cam-count" id="camCount"></div>
+    <div class="cam-white" id="camWhite"></div>
+    <div class="cam-top">
+        <button type="button" id="camClose" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
+        <button type="button" class="flash" id="camFlash" aria-label="Flash"><i class="fa-solid fa-bolt"></i><small><i class="fa-solid fa-xmark"></i></small></button>
+        <button type="button" id="camSettings" aria-label="Réglages"><i class="fa-solid fa-gear"></i></button>
+    </div>
+    <button type="button" class="cam-pill" id="camMore"><i class="fa-solid fa-wand-magic-sparkles"></i> Plus d’effets</button>
+    <div class="cam-strip" id="camStrip"></div>
+    <div class="cam-bar">
+        <button type="button" id="camGallery" aria-label="Galerie"><i class="fa-regular fa-images"></i></button>
+        <div class="mid" id="camMid" style="display:none">
+            <button type="button" class="fav" id="camFav" aria-label="Enregistrer l'effet"><i class="fa-regular fa-bookmark"></i></button>
+            <div class="nm"><b id="camFxName"></b><span>De creators</span></div>
+            <button type="button" id="camFxOff" aria-label="Retirer l'effet"><i class="fa-regular fa-circle-xmark"></i></button>
+        </div>
+        <button type="button" id="camFlip" aria-label="Changer de caméra"><i class="fa-solid fa-camera-rotate"></i></button>
+    </div>
+    <div class="cam-review" id="camReview"><img id="camReviewImg" alt=""><div class="r"><button type="button" class="redo" id="camRedo">Reprendre</button><button type="button" class="use" id="camUse">Utiliser la photo</button></div></div>
+    <div class="cm-overlay" id="camOv"><div class="cm-sheet" id="camSheet"></div></div>
+</div>
+
+<script>
+(function () {
+'use strict';
+/* ═════════ Données de la page ═════════ */
+const PUB_ID = {{ pub.id }};
+const OWNER_NAME = {{ (user.prenom or user.nom_complet or '')|tojson }};
+const ME0 = { id: {{ current_user.id }}, name: {{ (current_user.nom_complet or '')|tojson }}, avatar: {{ (current_user.avatar or 'default_avatar.png')|tojson }} };
+const UPL = {{ url_for('static', filename='uploads/')|tojson }};
+const PROFILE_URL = {{ url_for('main.profile', username='__U__')|tojson }};
+const FEED_URL = {{ url_for('main.feed')|tojson }};
+const $ = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+const avatarUrl = n => UPL + (n || 'default_avatar.png');
+
+function h(tag, attrs, ...kids) {
+    const e = document.createElement(tag);
+    for (const k in (attrs || {})) {
+        const v = attrs[k];
+        if (v == null || v === false) continue;
+        if (k === 'class') e.className = v;
+        else if (k === 'html') e.innerHTML = v;            // uniquement du HTML statique écrit ici
+        else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+        else e.setAttribute(k, v === true ? '' : v);
+    }
+    kids.flat().forEach(c => { if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(String(c))); });
+    return e;
+}
+function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) {} return null; }
+function plural(n, a, b) { return n > 1 ? b : a; }
+const strip = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+let toastT = 0;
+function toast(msg, action) {
+    const t = $('#cmToast'); t.textContent = '';
+    t.append(h('span', null, msg));
+    if (action) t.append(h('button', { type: 'button', onclick: () => { t.classList.remove('show'); action.fn(); } }, action.label));
+    t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), action ? 7000 : 3200);
+}
+
+async function api(url, o) {
+    o = o || {};
+    const opt = { method: o.method || 'GET', headers: { 'Accept': 'application/json' }, credentials: 'same-origin' };
+    if (o.json) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(o.json); }
+    if (o.form) opt.body = o.form;
+    let r;
+    try { r = await fetch(url, opt); } catch (e) { throw new Error('Connexion impossible. Vérifiez votre réseau.'); }
+    let d = null; try { d = await r.json(); } catch (e) {}
+    if (!r.ok || (d && d.success === false)) {
+        const er = new Error((d && d.error) || ('Une erreur est survenue (' + r.status + ').'));
+        er.status = r.status; er.data = d; throw er;
+    }
+    return d || {};
+}
+
+function relTime(iso) {
+    if (!iso) return '';
+    const d = new Date(iso); if (isNaN(d)) return '';
+    const s = Math.max(0, (Date.now() - d.getTime()) / 1000);
+    if (s < 45) return 'À l’instant';
+    if (s < 3600) return Math.round(s / 60) + ' min';
+    if (s < 86400) return Math.floor(s / 3600) + ' h';
+    if (s < 7 * 86400) return Math.floor(s / 86400) + ' j';
+    if (s < 30 * 86400) return Math.floor(s / (7 * 86400)) + ' sem';
+    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
+}
+const fullDate = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'short' }); };
+
+/* Texte avec liens cliquables, construit sans innerHTML (aucune injection possible) */
+function linkify(text) {
+    const frag = document.createDocumentFragment();
+    const re = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi; let last = 0, m;
+    while ((m = re.exec(text))) {
+        if (m.index > last) frag.append(text.slice(last, m.index));
+        let url = m[0], tail = '';
+        const t = url.match(/[.,;:!?)\]]+$/); if (t) { tail = t[0]; url = url.slice(0, -tail.length); }
+        frag.append(h('a', { href: url.startsWith('http') ? url : 'https://' + url, target: '_blank', rel: 'noopener noreferrer nofollow' }, url), tail);
+        last = m.index + m[0].length;
+    }
+    if (last < text.length) frag.append(text.slice(last));
+    return frag;
+}
+
+/* ═════════ État ═════════ */
+const S = {
+    tri: store('cm_tri') || 'pertinents', offset: 0, hasMore: false, loading: false, gen: 0,
+    me: ME0, header: null, canComment: true, blockMsg: '', total: 0,
+    reply: null, attach: null, panel: null, sending: false, nodes: new Map(), pinnedId: null, gallery: [],
+};
+if (!['pertinents', 'recents', 'tous'].includes(S.tri)) S.tri = 'pertinents';
+const TRI_LABEL = { pertinents: 'Plus pertinents', recents: 'Les plus récents', tous: 'Tous les commentaires' };
+const list = $('#cmList'), input = $('#cmInput');
+
+/* ═════════ En-tête (réactions / partages / compteur) ═════════ */
+function renderHeader() {
+    const hd = S.header; if (!hd) return;
+    const r = $('#cmReact'); r.textContent = '';
+    if (hd.likes > 0) {
+        r.append(h('span', { class: 'cm-ricons', html: '<i class="r-like fa-solid fa-thumbs-up"></i><i class="r-love fa-solid fa-heart"></i><i class="r-wow fa-solid fa-face-surprise"></i>' }));
+        r.append(h('span', null, hd.liked ? (hd.likes > 1 ? 'Vous et ' + (hd.likes - 1) : 'Vous') : String(hd.likes)));
+    }
+    $('#cmShares').textContent = hd.shares > 0 ? hd.shares + ' ' + plural(hd.shares, 'partage', 'partages') : '';
+    $('#cmCount').textContent = S.total > 0 ? S.total + ' ' + plural(S.total, 'commentaire', 'commentaires') : '';
+}
+
+/* ═════════ Rendu d'un commentaire ═════════ */
+const POS_ORDER = ['👍', '❤️', '😂', '😍', '🔥', '👏', '🙏'];
+function posReactions(c) {
+    const cnt = (c.reactions && c.reactions.counts) || {};
+    const ent = Object.entries(cnt).filter(([e, n]) => e.replace(/️/g, '') !== '👎' && n > 0).sort((a, b) => b[1] - a[1]);
+    return { total: ent.reduce((s, [, n]) => s + n, 0), top: ent.slice(0, 3).map(x => x[0]) };
+}
+const keyE = e => (e || '').replace(/️/g, '');
+
+function mediaNode(c) {
+    const m = c.media; if (!m) return null;
+    if (m.kind === 'image') { const i = h('img', { class: 'cm-img', src: m.src, alt: 'Photo', loading: 'lazy' }); i.addEventListener('click', () => openLightbox(m.src)); return i; }
+    if (m.kind === 'gif') return h('img', { class: 'cm-gif', src: m.src, alt: 'GIF', loading: 'lazy' });
+    if (m.kind === 'sticker') return h('span', { class: 'cm-sticker' }, m.emoji);
+    if (m.kind === 'avatar') return h('img', { class: 'cm-avshape cm-shape-' + (m.emoji || 'circle'), src: m.src, alt: 'Avatar' });
+    if (m.kind === 'etoile') {
+        const line = h('div', { class: 'cm-starline' }, h('i', { class: 'fa-solid fa-star' }), 'A envoyé ' + m.quantite + ' ' + plural(m.quantite, 'Étoile', 'Étoiles'));
+        if (m.serie >= 2) line.append('•', h('span', null, '🔥 ' + m.serie + ' semaines'));
+        return h('div', { class: 'cm-star' }, h('span', { class: 'cm-starvis' }, m.emoji || '🌸'), line);
+    }
+    return null;
+}
+
+function renderComment(c, isReply) {
+    if (S.nodes.has(c.id)) return S.nodes.get(c.id).el;
+    const N = { data: c, isReply: !!isReply, repliesLoaded: 0, repOffset: 0, repHasMore: false, repOpen: false };
+    const el = h('div', { class: 'cm-c' + (isReply ? ' cm-reply' : ''), id: 'comment-' + c.id });
+    N.el = el; S.nodes.set(c.id, N);
+    const prof = c.username ? PROFILE_URL.replace('__U__', encodeURIComponent(c.username)) : null;
+    el.append(h('img', { class: 'cm-av', src: avatarUrl(c.avatar), alt: '', loading: 'lazy' }));
+    const body = h('div', { class: 'cm-body' }); N.body = body; el.append(body);
+
+    N.head = h('div', { class: 'cm-head' }); body.append(N.head);
+    N.content = h('div', { class: 'cm-content' }); body.append(N.content);
+    N.mediaBox = h('div', { class: 'cm-media' }); body.append(N.mediaBox);
+    N.acts = h('div', { class: 'cm-acts' }); body.append(N.acts);
+    N.repArea = h('div', { class: 'cm-reparea' }); body.append(N.repArea);
+    paintComment(N);
+
+    // appui long ou clic droit : menu du commentaire
+    let timer = 0, sx = 0, sy = 0;
+    const cancel = () => { clearTimeout(timer); timer = 0; };
+    N.content.addEventListener('pointerdown', e => { sx = e.clientX; sy = e.clientY; cancel(); timer = setTimeout(() => { timer = 0; openCommentMenu(N); }, 480); });
+    N.content.addEventListener('pointermove', e => { if (timer && (Math.abs(e.clientX - sx) > 8 || Math.abs(e.clientY - sy) > 8)) cancel(); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => N.content.addEventListener(ev, cancel));
+    N.content.addEventListener('contextmenu', e => { e.preventDefault(); openCommentMenu(N); });
+    return el;
+}
+
+function paintComment(N) {
+    const c = N.data, prof = c.username ? PROFILE_URL.replace('__U__', encodeURIComponent(c.username)) : null;
+    N.head.textContent = '';
+    N.head.append(prof ? h('a', { class: 'cm-name', href: prof }, c.author) : h('span', { class: 'cm-name' }, c.author));
+    if (c.verified) N.head.append(h('i', { class: 'cm-ver fa-solid fa-circle-check', title: 'Compte vérifié' }));
+    N.head.append(h('span', { class: 'cm-dot' }, '·'), h('span', { class: 'cm-time', title: fullDate(c.date) }, relTime(c.date)));
+    if (c.by_post_owner) { N.head.append(h('span', { class: 'cm-dot' }, '·'), h('span', { class: 'cm-tag' }, h('i', { class: 'fa-solid fa-pen-nib' }), ' Auteur')); }
+    if (c.pinned) N.head.append(h('span', { class: 'cm-dot' }, '·'), h('i', { class: 'cm-pin fa-solid fa-thumbtack', title: 'Commentaire épinglé' }));
+
+    N.content.textContent = '';
+    const vocal = !!c.audio_url;
+    const texteMedia = c.media && ['image', 'gif', 'avatar', 'etoile', 'sticker'].includes(c.media.kind);
+    const replis = ['📷 Photo', 'GIF', '🙂 Avatar', '⭐ Étoile', '🎤 Message vocal'];
+    const showText = !vocal && c.contenu && !(texteMedia && (replis.includes(c.contenu) || c.contenu === (c.media.emoji || '\u0000') || /^A envoyé \d+ Étoiles?$/.test(c.contenu)));
+    if (showText) {
+        const t = h('div', { class: 'cm-text' });
+        if (c.reply_to_name && c.reply_to_id && c.reply_to_id !== c.parent_id) t.append(h('span', { class: 'cm-to' }, c.reply_to_name), ' ');
+        t.append(linkify(c.contenu));
+        if (c.edited) t.append(' ', h('span', { class: 'cm-edited' }, '· Modifié'));
+        N.content.append(t);
+    }
+    N.mediaBox.textContent = '';
+    if (vocal) N.mediaBox.append(h('div', { class: 'cm-voice' }, h('i', { class: 'fa-solid fa-microphone' }), h('audio', { controls: true, preload: 'none', src: c.audio_url })));
+    const mn = mediaNode(c); if (mn) N.mediaBox.append(mn);
+
+    paintActions(N);
+    paintRepliesToggle(N);
+    N.el.classList.toggle('cm-pinned', !!c.pinned);
+}
+
+function paintActions(N) {
+    const c = N.data, a = N.acts; a.textContent = '';
+    a.append(h('button', { class: 'cm-btn', type: 'button', onclick: () => startReply(N) }, 'Répondre'));
+    const pr = posReactions(c);
+    if (pr.total > 0) a.append(h('button', { class: 'cm-rbadge', type: 'button', title: 'Réactions', onclick: () => showReactionDetail(N) }, h('span', { class: 'e' }, pr.top.join('')), pr.total));
+    a.append(h('span', { class: 'cm-sp' }));
+    a.append(h('button', { class: 'cm-ic', type: 'button', 'aria-label': 'Plus d’options', onclick: () => openCommentMenu(N) }, h('i', { class: 'fa-solid fa-ellipsis' })));
+    const mine = c.reactions && c.reactions.mine ? keyE(c.reactions.mine) : null;
+    const upChar = mine && mine !== '👎' && mine !== '👍';
+    const up = h('button', { class: 'cm-ic' + (mine === '👍' ? ' on' : ''), type: 'button', 'aria-label': 'J’aime' },
+        upChar ? h('span', { class: 'em' }, c.reactions.mine) : h('i', { class: (mine === '👍' ? 'fa-solid' : 'fa-regular') + ' fa-thumbs-up' }));
+    const down = h('button', { class: 'cm-ic' + (mine === '👎' ? ' on-down' : ''), type: 'button', 'aria-label': 'Je n’aime pas', onclick: () => react(N, '👎') },
+        h('i', { class: (mine === '👎' ? 'fa-solid' : 'fa-regular') + ' fa-thumbs-down' }));
+    // appui court : 👍 (ou retire ma réaction) ; appui long : choix de la réaction
+    let lt = 0, long = false;
+    up.addEventListener('pointerdown', () => { long = false; clearTimeout(lt); lt = setTimeout(() => { long = true; showReactionPicker(up, N); }, 420); });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => up.addEventListener(ev, () => clearTimeout(lt)));
+    up.addEventListener('click', () => { if (long) { long = false; return; } react(N, mine && mine !== '👎' ? c.reactions.mine : '👍'); });
+    up.addEventListener('contextmenu', e => { e.preventDefault(); showReactionPicker(up, N); });
+    a.append(up, down);
+}
+
+function paintRepliesToggle(N) {
+    const c = N.data; N.repArea.textContent = '';
+    if (N.isReply) return;
+    const n = c.replies_count || 0;
+    if (!N.repBox) N.repBox = h('div', { class: 'cm-reps' });
+    if (n > 0 && !N.repOpen) {
+        N.repArea.append(h('button', { class: 'cm-showrep', type: 'button', onclick: () => expandReplies(N) }, h('i', { class: 'fa-solid fa-chevron-down' }), 'Voir ' + n + ' ' + plural(n, 'réponse', 'réponses')));
+    }
+    N.repArea.append(N.repBox);
+    if (N.repOpen && N.repHasMore) {
+        N.repArea.append(h('button', { class: 'cm-showrep', type: 'button', onclick: () => expandReplies(N) }, h('i', { class: 'fa-solid fa-chevron-down' }), 'Voir plus de réponses'));
+    }
+}
+
+async function expandReplies(N) {
+    if (N.loadingRep) return; N.loadingRep = true;
+    const btn = N.repArea.querySelector('.cm-showrep'); if (btn) btn.style.opacity = .5;
+    try {
+        const d = await api(`/api/comment/${N.data.id}/reponses?offset=${N.repOffset}&limit=5`);
+        N.repOpen = true;
+        d.replies.forEach(r => { if (!S.nodes.has(r.id)) N.repBox.append(renderComment(r, true)); });
+        N.repOffset = d.next_offset; N.repHasMore = d.has_more;
+        N.data.replies_count = d.total;
+        paintRepliesToggle(N);
+    } catch (e) { toast(e.message); if (btn) btn.style.opacity = 1; }
+    N.loadingRep = false;
+}
+
+/* ═════════ Réactions ═════════ */
+async function react(N, emoji) {
+    const c = N.data, old = JSON.parse(JSON.stringify(c.reactions || { counts: {}, total: 0, mine: null, top: [] }));
+    // mise à jour immédiate, corrigée ensuite par la réponse du serveur
+    const cur = c.reactions || (c.reactions = { counts: {}, total: 0, mine: null, top: [] });
+    if (cur.mine) { cur.counts[cur.mine] = Math.max(0, (cur.counts[cur.mine] || 1) - 1); }
+    cur.mine = (cur.mine && keyE(cur.mine) === keyE(emoji)) ? null : emoji;
+    if (cur.mine) cur.counts[emoji] = (cur.counts[emoji] || 0) + 1;
+    paintActions(N);
+    try {
+        const d = await api(`/api/comment/${c.id}/reagir`, { method: 'POST', json: { emoji } });
+        c.reactions = { counts: d.counts || {}, total: d.total_reactions || 0, mine: d.mine || null, top: d.top || [] };
+    } catch (e) { c.reactions = old; toast(e.message); }
+    paintActions(N);
+}
+const rpick = $('#cmRPick');
+function showReactionPicker(anchor, N) {
+    rpick.textContent = '';
+    ['👍', '❤️', '😂', '😍', '🔥', '👏', '🙏'].forEach(e => rpick.append(h('button', { type: 'button', onclick: ev => { ev.stopPropagation(); hideReactionPicker(); react(N, e); } }, e)));
+    rpick.classList.add('show');
+    const r = anchor.getBoundingClientRect(), w = rpick.offsetWidth;
+    rpick.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w + 20)) + 'px';
+    rpick.style.top = Math.max(8, r.top - 62) + 'px';
+}
+function hideReactionPicker() { rpick.classList.remove('show'); }
+document.addEventListener('pointerdown', e => { if (rpick.classList.contains('show') && !rpick.contains(e.target)) setTimeout(hideReactionPicker, 0); });
+function showReactionDetail(N) {
+    const cnt = (N.data.reactions && N.data.reactions.counts) || {};
+    const rows = Object.entries(cnt).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
+    openSheet({ title: 'Réactions', custom: rows.length ? rows.map(([e, n]) => h('div', { class: 'cm-opt' }, h('span', { class: 'ic', style: 'font-size:24px' }, e), h('div', { class: 't one' }, n + ' ' + plural(n, 'personne', 'personnes')))) : [h('div', { class: 'cm-pempty' }, 'Aucune réaction pour le moment.')] });
+}
+
+/* ═════════ Feuilles (menus du bas) ═════════ */
+const ov = $('#cmOv'), sheet = $('#cmSheet');
+function openSheet(o) {
+    sheet.textContent = '';
+    sheet.append(h('div', { class: 'grab' }));
+    if (o.title) sheet.append(h('h3', null, o.title));
+    if (o.sub) sheet.append(h('div', { class: 'sub' }, o.sub));
+    (o.custom || []).forEach(n => sheet.append(n));
+    (o.items || []).forEach(it => {
+        sheet.append(h('button', { type: 'button', class: 'cm-opt' + (it.danger ? ' danger' : '') + (it.sel ? ' sel' : ''), onclick: () => { if (!it.keep) closeSheet(); it.fn && it.fn(); } },
+            it.icon ? h('span', { class: 'ic' }, h('i', { class: it.icon })) : null,
+            h('div', { class: 't' + (it.desc ? '' : ' one') }, it.desc ? h('b', null, it.label) : it.label, it.desc ? h('span', null, it.desc) : null),
+            it.radio ? h('span', { class: 'cm-radio' }) : null));
+    });
+    ov.classList.add('show');
+}
+function closeSheet() { ov.classList.remove('show'); }
+ov.addEventListener('click', e => { if (e.target === ov) closeSheet(); });
+
+function openLightbox(src) { $('#cmLbImg').src = src; $('#cmLb').classList.add('show'); }
+$('#cmLb').addEventListener('click', () => $('#cmLb').classList.remove('show'));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeSheet(); $('#cmLb').classList.remove('show'); hideReactionPicker(); closePanel(); } });
+
+/* Tri */
+$('#cmSortBtn').addEventListener('click', () => {
+    const items = [
+        { k: 'pertinents', label: 'Plus pertinents', desc: 'Afficher les commentaires d’ami(e)s et ceux ayant entraîné le plus de réactions en premier.' },
+        { k: 'recents', label: 'Les plus récents', desc: 'Afficher tous les commentaires, les plus récents en premier.' },
+        { k: 'tous', label: 'Tous les commentaires', desc: 'Afficher tous les commentaires, y compris le spam potentiel.' },
+    ].map(o => ({ label: o.label, desc: o.desc, radio: true, sel: S.tri === o.k, fn: () => setTri(o.k) }));
+    openSheet({ items });
+});
+function setTri(k) { if (k === S.tri) return; S.tri = k; store('cm_tri', k); $('#cmSortLabel').textContent = TRI_LABEL[k]; load(true); }
+
+/* Menu d'un commentaire */
+function openCommentMenu(N) {
+    hideReactionPicker();
+    const c = N.data, items = [];
+    const copiable = c.contenu && !c.audio_url && !(c.media && ['etoile', 'avatar'].includes(c.media.kind));
+    if (copiable) items.push({ icon: 'fa-regular fa-copy', label: 'Copier le texte', fn: () => copyText(c.contenu) });
+    if (copiable && c.contenu.trim()) items.push({ icon: 'fa-solid fa-language', label: 'Traduire le commentaire', fn: () => window.FNCommentTranslation.open({ id: c.id, text: c.contenu }, {{ langue_ui|default('fr')|tojson }}) });
+    if (S.header && S.header.is_owner && !N.isReply) items.push({ icon: 'fa-solid fa-thumbtack', label: c.pinned ? 'Désépingler le commentaire' : 'Épingler le commentaire', fn: () => togglePin(N) });
+    if (c.mine && !c.audio_url && !c.media) items.push({ icon: 'fa-regular fa-pen-to-square', label: 'Modifier', fn: () => startEdit(N) });
+    if (c.can_delete) items.push({ icon: 'fa-regular fa-trash-can', label: 'Supprimer', danger: true, fn: () => confirmDelete(N) });
+    if (!c.mine) items.push({ icon: 'fa-regular fa-flag', label: 'Signaler le commentaire', danger: true, fn: () => reportMenu(N) });
+    openSheet({ items });
+}
+function copyText(t) {
+    const done = () => toast('Texte copié');
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, () => toast('Copie impossible'));
+    else { const ta = h('textarea', { style: 'position:fixed;opacity:0' }); ta.value = t; document.body.append(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (e) { toast('Copie impossible'); } ta.remove(); }
+}
+async function togglePin(N) {
+    try {
+        const d = await api(`/api/comment/${N.data.id}/epingler`, { method: 'POST' });
+        S.nodes.forEach(x => { if (x.data.pinned) { x.data.pinned = false; paintComment(x); } });
+        N.data.pinned = d.pinned; paintComment(N);
+        if (d.pinned) { list.prepend(N.el); } else { load(true); }
+        toast(d.pinned ? 'Commentaire épinglé' : 'Commentaire désépinglé');
+    } catch (e) { toast(e.message); }
+}
+function confirmDelete(N) {
+    openSheet({ title: 'Supprimer ce commentaire ?', sub: 'Cette action est définitive.', items: [
+        { icon: 'fa-regular fa-trash-can', label: 'Supprimer', danger: true, fn: async () => {
+            try {
+                const d = await api(`/api/comment/${N.data.id}/delete`, { method: 'POST' });
+                removeNode(N); S.total = d.comments_count != null ? d.comments_count : Math.max(0, S.total - 1); renderHeader(); checkEmpty();
+                toast('Commentaire supprimé');
+            } catch (e) { toast(e.message); }
+        } },
+        { icon: 'fa-solid fa-xmark', label: 'Annuler' }] });
+}
+function removeNode(N) {
+    N.el.querySelectorAll('.cm-c').forEach(x => S.nodes.delete(parseInt(x.id.replace('comment-', ''), 10)));
+    S.nodes.delete(N.data.id); N.el.remove();
+    if (N.isReply && N.data.parent_id && S.nodes.has(N.data.parent_id)) {
+        const P = S.nodes.get(N.data.parent_id); P.data.replies_count = Math.max(0, (P.data.replies_count || 1) - 1); paintRepliesToggle(P);
+    }
+    if (S.reply && S.reply.id === N.data.id) clearReply();
+}
+function reportMenu(N) {
+    const raisons = [['Spam', 'fa-solid fa-ban'], ['Harcèlement ou intimidation', 'fa-regular fa-face-angry'], ['Discours haineux', 'fa-solid fa-hand'], ['Violence ou menaces', 'fa-solid fa-triangle-exclamation'],
+        ['Nudité ou contenu sexuel', 'fa-solid fa-eye-slash'], ['Fausses informations', 'fa-regular fa-circle-question'], ['Arnaque ou fraude', 'fa-solid fa-user-secret'], ['Autre', 'fa-regular fa-flag']];
+    openSheet({ title: 'Pourquoi signalez-vous ce commentaire ?', sub: 'Votre signalement est anonyme.', items: raisons.map(([r, ic]) => ({ icon: ic, label: r, fn: async () => {
+        try { const d = await api(`/api/comment/${N.data.id}/report`, { method: 'POST', json: { raison: r } }); toast(d.message || 'Commentaire signalé'); }
+        catch (e) { toast(e.message); } } })) });
+}
+function startEdit(N) {
+    const c = N.data;
+    const ta = h('textarea', { rows: 2 }); ta.value = c.contenu;
+    N.content.textContent = '';
+    const box = h('div', { class: 'cm-edit' }, ta, h('div', { class: 'row' },
+        h('button', { class: 'ok', type: 'button', onclick: async () => {
+            const v = ta.value.trim(); if (!v) return;
+            try { const d = await api(`/api/comment/${c.id}/edit`, { method: 'POST', json: { contenu: v } }); c.contenu = d.contenu; c.edited = true; paintComment(N); }
+            catch (e) { toast(e.message); } } }, 'Enregistrer'),
+        h('button', { class: 'no', type: 'button', onclick: () => paintComment(N) }, 'Annuler')));
+    N.content.append(box); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+}
+
+/* ═════════ Chargement de la liste ═════════ */
+function skeleton() { list.textContent = ''; for (let i = 0; i < 3; i++) list.append(h('div', { class: 'cm-skel' }, h('i'), h('b'))); }
+function checkEmpty() {
+    const has = list.querySelector('.cm-c');
+    const e = list.querySelector('.cm-empty');
+    if (!has && !e && !S.loading) list.append(h('div', { class: 'cm-empty' }, 'Aucun commentaire pour le moment. Soyez le premier à réagir !'));
+    if (has && e) e.remove();
+}
+async function load(reset) {
+    if (S.loading && !reset) return;
+    if (reset) { S.gen++; S.offset = 0; S.nodes.clear(); skeleton(); }
+    const gen = S.gen; S.loading = true;
+    try {
+        const d = await api(`/api/publication/${PUB_ID}/commentaires-tri?tri=${S.tri}&offset=${S.offset}&limit=15`);
+        if (gen !== S.gen) return;
+        if (reset) list.textContent = '';
+        const sk = list.querySelector('.cm-more-btn'); if (sk) sk.remove();
+        d.comments.forEach(c => { if (!S.nodes.has(c.id)) list.append(renderComment(c, false)); });
+        S.offset = d.next_offset; S.hasMore = d.has_more; S.total = d.comments_count; S.header = d.header; S.me = d.me;
+        setCanComment(d.can_comment, d.block_message);
+        renderHeader(); $('#cmSortLabel').textContent = TRI_LABEL[S.tri];
+        S.loading = false; checkEmpty();
+        if (S.hasMore) list.append(h('button', { class: 'cm-more-btn', type: 'button', onclick: () => load(false) }, 'Voir plus de commentaires'));
+        if (reset && !S.hashDone) { S.hashDone = true; revealFromHash(); }
+    } catch (e) {
+        if (gen !== S.gen) return;
+        S.loading = false;
+        if (reset) { list.textContent = ''; list.append(h('div', { class: 'cm-err' }, e.message, h('br'), h('button', { type: 'button', onclick: () => load(true) }, 'Réessayer'))); }
+        else toast(e.message);
+    }
+    S.loading = false;
+}
+new IntersectionObserver(es => { if (es[0].isIntersecting && S.hasMore && !S.loading && list.querySelector('.cm-c')) load(false); }, { rootMargin: '400px' }).observe($('#cmSentinel'));
+
+function setCanComment(ok, msg) {
+    S.canComment = ok; S.blockMsg = msg || '';
+    $('#cmComposer').hidden = !ok; $('#cmBlocked').hidden = ok; $('#cmBlocked').textContent = msg || 'Les commentaires sont désactivés.';
+    if (!ok) closePanel();
+    syncDock();
+}
+
+/* Arrivée depuis une notification : #comment-<id> */
+async function revealFromHash() {
+    const m = (location.hash || '').match(/^#comment-(\d+)$/); if (!m) return;
+    const id = parseInt(m[1], 10);
+    const flash = () => { const n = S.nodes.get(id); if (!n) return false; n.el.scrollIntoView({ behavior: 'smooth', block: 'center' }); n.el.classList.add('cm-flash'); return true; };
+    if (flash()) return;
+    try {
+        const ctx = await api(`/api/comment/${id}/contexte`);
+        const rootId = ctx.parent_id || id;
+        for (let i = 0; i < 25 && !S.nodes.has(rootId) && S.hasMore; i++) await load(false);
+        const R = S.nodes.get(rootId);
+        if (R && ctx.parent_id) { for (let i = 0; i < 25 && !S.nodes.has(id) && (!R.repOpen || R.repHasMore); i++) await expandReplies(R); }
+        if (!flash()) toast('Ce commentaire n’est plus disponible.');
+    } catch (e) { toast('Ce commentaire n’est plus disponible.'); }
+}
+
+/* ═════════ Zone de saisie ═════════ */
+function autosize() { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 120) + 'px'; syncDock(); }
+function updateSend() { $('#cmSend').classList.toggle('ready', !!(input.value.trim() || S.attach)); }
+input.addEventListener('input', () => { autosize(); updateSend(); });
+input.addEventListener('focus', () => closePanel());
+input.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send(); } });
+input.addEventListener('paste', e => {
+    const f = Array.from((e.clipboardData && e.clipboardData.files) || []).find(x => x.type.startsWith('image/'));
+    if (f) { e.preventDefault(); attachFile(f); }
+});
+$('#cmSend').addEventListener('click', send);
+$('#cmBack').addEventListener('click', () => { if (history.length > 1 && document.referrer) history.back(); else location.href = FEED_URL; });
+
+function startReply(N) {
+    S.reply = { id: N.data.id, name: N.data.author };
+    $('#cmReplyName').textContent = N.data.author; $('#cmReplyBar').classList.add('show');
+    input.placeholder = 'Répondre à ' + N.data.author + '…'; closePanel(); input.focus(); syncDock();
+}
+function clearReply() { S.reply = null; $('#cmReplyBar').classList.remove('show'); input.placeholder = 'Commenter en tant que ' + (S.me.name || ME0.name); syncDock(); }
+$('#cmReplyX').addEventListener('click', clearReply);
+
+function setAttach(a) {
+    if (S.attach && S.attach.preview && S.attach.kind === 'image') URL.revokeObjectURL(S.attach.preview);
+    S.attach = a;
+    $('#cmAttach').classList.toggle('show', !!a);
+    if (a) $('#cmAttachImg').src = a.preview;
+    updateSend(); syncDock();
+}
+$('#cmAttachX').addEventListener('click', () => setAttach(null));
+
+/* Réduit une photo (max 1600 px, JPEG) : plus léger, sans métadonnées GPS */
+async function prepareImage(file) {
+    if (file.type === 'image/gif') { if (file.size > 8 * 1024 * 1024) throw new Error('GIF trop volumineux (8 Mo maximum).'); return file; }
+    try {
+        const bmp = await createImageBitmap(file);
+        const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+        const cv = document.createElement('canvas'); cv.width = Math.round(bmp.width * k); cv.height = Math.round(bmp.height * k);
+        cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height);
+        const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', .88));
+        if (blob) return blob;
+    } catch (e) {}
+    if (file.size > 8 * 1024 * 1024) throw new Error('Image trop volumineuse (8 Mo maximum).');
+    return file;
+}
+async function attachFile(file) {
+    if (!file || !file.type.startsWith('image/')) { toast('Choisissez une image.'); return; }
+    try {
+        const blob = await prepareImage(file);
+        setAttach({ kind: 'image', blob, preview: URL.createObjectURL(blob) });
+        closePanel(); input.focus();
+    } catch (e) { toast(e.message); }
+}
+
+async function postMedia(fields, fileBlob) {
+    const fd = new FormData();
+    Object.entries(fields).forEach(([k, v]) => { if (v != null && v !== '') fd.append(k, v); });
+    if (S.reply) fd.append('parent_id', S.reply.id);
+    if (fileBlob) fd.append('image', fileBlob, 'photo.jpg');
+    return api(`/api/comment/${PUB_ID}/media`, { method: 'POST', form: fd });
+}
+async function send() {
+    if (S.sending || !S.canComment) return;
+    const text = input.value.trim();
+    if (!text && !S.attach) return;
+    S.sending = true; $('#cmSend').style.opacity = .5;
+    try {
+        let item;
+        if (S.attach) {
+            const a = S.attach;
+            const d = a.kind === 'image' ? await postMedia({ kind: 'image', texte: text }, a.blob) : await postMedia({ kind: 'gif', url: a.url, texte: text });
+            item = d.comment; S.total = d.comments_count;
+        } else {
+            const d = await api(`/api/comment/${PUB_ID}`, { method: 'POST', json: { contenu: text, parent_id: S.reply ? S.reply.id : null } });
+            item = { id: d.id, user_id: S.me.id, author: d.author, username: d.author_username, avatar: d.avatar, contenu: d.contenu, date: d.date, edited: false, mine: true,
+                by_post_owner: !!(S.header && S.header.is_owner), can_delete: true, parent_id: d.parent_id, reply_to_id: d.reply_to_id, reply_to_name: d.reply_to_name,
+                replies_count: 0, reactions: { counts: {}, total: 0, mine: null, top: [] }, media: null, pinned: false, verified: false };
+            S.total = d.comments_count;
+        }
+        input.value = ''; autosize(); setAttach(null); clearReply(); renderHeader();
+        insertNew(item);
+    } catch (e) { toast(e.message); }
+    S.sending = false; $('#cmSend').style.opacity = 1; updateSend();
+}
+function insertNew(item) {
+    const empty = list.querySelector('.cm-empty'); if (empty) empty.remove();
+    if (item.parent_id && S.nodes.has(item.parent_id)) {
+        const R = S.nodes.get(item.parent_id);
+        R.data.replies_count = (R.data.replies_count || 0) + 1;
+        const el = renderComment(item, true);
+        R.repBox.append(el); R.repOpen = true; R.repOffset += 1;
+        paintRepliesToggle(R);
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('cm-flash');
+    } else {
+        const el = renderComment(item, false);
+        const firstNonPinned = Array.from(list.querySelectorAll(':scope > .cm-c')).find(x => !x.classList.contains('cm-pinned'));
+        if (S.tri === 'tous' || S.tri === 'recents' || S.tri === 'pertinents') (firstNonPinned ? list.insertBefore(el, firstNonPinned) : list.prepend(el));
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('cm-flash');
+    }
+}
+
+/* Envoi immédiat (autocollant, avatar, étoile) */
+async function sendNow(fields) {
+    if (S.sending || !S.canComment) return false;
+    S.sending = true;
+    try {
+        const d = await postMedia(fields); S.total = d.comments_count; renderHeader(); insertNew(d.comment);
+        clearReply(); S.sending = false; return true;
+    } catch (e) { toast(e.message); }
+    S.sending = false; return false;
+}
+
+/* ═════════ Panneaux sous la zone de saisie ═════════ */
+const panel = $('#cmPanel'), pin = $('#cmPanelInner');
+function syncDock() {
+    requestAnimationFrame(() => { const hgt = $('#cmDock').offsetHeight; const nav = document.querySelector('.facenet-nav-bottom'); const nh = nav ? nav.offsetHeight : 0; $('#cmDockSpace').style.height = (hgt + 20) + 'px'; $('#cmToast').style.bottom = (hgt + nh + 14) + 'px'; });
+}
+function closePanel() {
+    if (!S.panel) return; S.panel = null; panel.classList.remove('show'); pin.textContent = '';
+    $$('.cm-tool[data-panel]').forEach(b => b.classList.remove('on')); syncDock();
+}
+function openPanel(name) {
+    if (S.panel === name) { closePanel(); return; }
+    input.blur(); S.panel = name; panel.classList.add('show');
+    $$('.cm-tool[data-panel]').forEach(b => b.classList.toggle('on', b.dataset.panel === name));
+    pin.textContent = '';
+    ({ gallery: buildGallery, gif: buildGif, sticker: buildSticker, avatar: buildAvatar, stars: buildStars })[name]();
+    syncDock();
+}
+$$('.cm-tool[data-panel]').forEach(b => b.addEventListener('click', () => { if (!S.canComment) return; openPanel(b.dataset.panel); }));
+
+/* — Galerie — */
+const fileIn = $('#cmFile'), fileCam = $('#cmFileCam');
+fileIn.addEventListener('change', () => {
+    const files = Array.from(fileIn.files || []); fileIn.value = '';
+    if (!files.length) return;
+    files.forEach(f => { if (f.type.startsWith('image/')) S.gallery.unshift({ file: f, url: URL.createObjectURL(f) }); });
+    if (S.gallery.length > 40) S.gallery.length = 40;
+    attachFile(files[0]);
+});
+fileCam.addEventListener('change', () => { const f = fileCam.files && fileCam.files[0]; fileCam.value = ''; if (f) attachFile(f); });
+function pickFiles(accept, multiple) { fileIn.accept = accept; fileIn.multiple = !!multiple; fileIn.click(); }
+function buildGallery() {
+    const head = h('div', { class: 'cm-gal-h' });
+    const ttl = h('button', { class: 'ttl', type: 'button' }, h('span', null, 'Galerie'), h('i', { class: 'fa-solid fa-chevron-down', style: 'font-size:15px' }));
+    const cam = h('button', { class: 'cam', type: 'button', 'aria-label': 'Appareil photo', onclick: () => Cam.open() }, h('i', { class: 'fa-solid fa-camera' }));
+    head.append(ttl, cam);
+    ttl.addEventListener('click', e => {
+        e.stopPropagation(); const old = head.querySelector('.cm-pop'); if (old) { old.remove(); return; }
+        const pop = h('div', { class: 'cm-pop' },
+            h('button', { type: 'button', onclick: () => { pop.remove(); pickFiles('image/*', true); } }, h('i', { class: 'fa-regular fa-image' }), 'Photos de l’appareil'),
+            h('button', { type: 'button', onclick: () => { pop.remove(); pickFiles('image/gif', false); } }, h('i', { class: 'fa-solid fa-film' }), 'Images animées (GIF)'),
+            h('button', { type: 'button', onclick: () => { pop.remove(); fileCam.click(); } }, h('i', { class: 'fa-solid fa-mobile-screen' }), 'Appareil photo du téléphone'));
+        head.append(pop);
+        setTimeout(() => document.addEventListener('click', () => pop.remove(), { once: true }), 0);
+    });
+    const body = h('div', { class: 'cm-pbody' });
+    const grid = h('div', { class: 'cm-galgrid' });
+    grid.append(h('button', { type: 'button', 'aria-label': 'Choisir des photos', onclick: () => pickFiles('image/*', true) }, h('i', { class: 'fa-solid fa-plus' })));
+    S.gallery.forEach(g => grid.append(h('button', { type: 'button', onclick: () => attachFile(g.file) }, h('img', { src: g.url, alt: '' }))));
+    body.append(grid);
+    if (!S.gallery.length) body.append(h('div', { class: 'cm-pempty' }, 'Touchez + pour choisir une photo dans la galerie de votre téléphone, ou l’icône appareil photo pour en prendre une avec des effets.'));
+    pin.append(head, body);
+}
+
+/* — GIF — */
+let gifTimer = 0, gifQ = '', gifPos = 0, gifBusy = false, gifEnd = false;
+function buildGif() {
+    const inp = h('input', { type: 'search', placeholder: 'Rechercher des GIF', autocomplete: 'off', 'aria-label': 'Rechercher des GIF' });
+    const box = h('div', { class: 'cm-sinput' }, h('i', { class: 'fa-solid fa-magnifying-glass' }), inp);
+    const body = h('div', { class: 'cm-pbody' }); const grid = h('div', { class: 'cm-gifs' }); body.append(grid);
+    pin.append(h('div', { class: 'cm-ghead' }, box), body);
+    gifQ = ''; gifPos = 0; gifEnd = false;
+    const run = async (reset) => {
+        if (gifBusy || (gifEnd && !reset)) return; gifBusy = true;
+        if (reset) { gifPos = 0; gifEnd = false; grid.textContent = ''; body.querySelectorAll('.cm-pempty').forEach(x => x.remove()); }
+        try {
+            const d = await api('/api/gifs?q=' + encodeURIComponent(gifQ) + '&pos=' + gifPos);
+            d.gifs.forEach(g => grid.append(h('button', { type: 'button', title: g.titre, onclick: () => { setAttach({ kind: 'gif', url: g.url, preview: g.apercu }); closePanel(); input.focus(); } },
+                h('img', { src: g.apercu, alt: g.titre, loading: 'lazy', style: g.w && g.h ? `aspect-ratio:${g.w}/${g.h}` : '' }))));
+            gifPos = d.next; if (!d.gifs.length) { gifEnd = true; if (!grid.children.length) body.append(h('div', { class: 'cm-pempty' }, 'Aucun GIF trouvé.')); }
+        } catch (e) { gifEnd = true; body.append(h('div', { class: 'cm-pempty' }, e.message)); }
+        gifBusy = false;
+    };
+    inp.addEventListener('input', () => { clearTimeout(gifTimer); gifTimer = setTimeout(() => { gifQ = inp.value.trim(); run(true); }, 350); });
+    body.addEventListener('scroll', () => { if (body.scrollTop + body.clientHeight > body.scrollHeight - 300) run(false); });
+    run(true);
+}
+
+/* — Autocollants + emoji — */
+const EMO = [
+    { id: 'pop', label: 'Populaires', ico: '⭐', kw: 'populaire top favoris tendance', list: '👍 ❤️ 😂 😍 🔥 👏 🙏 😮 😢 😡 🎉 💯 🥳 😎 🤩 😭 🙌 💪 🤝 ✨ 😘 🤣 😅 🥰' },
+    { id: 'happy', label: 'Heureux', ico: '😀', kw: 'content joie sourire rire joyeux heureux mdr lol', list: '😀 😃 😄 😁 😆 😅 🤣 😂 🙂 😊 😇 🥳 😎 🤩 😋 😜 🤪 😝 😌 😉 😺 🤗 😸 🙃' },
+    { id: 'love', label: 'Amoureux', ico: '😍', kw: 'amour coeur love bisou romantique tendresse', list: '😍 🥰 😘 😗 😚 💖 💗 💓 💕 💞 💘 💝 ❤️ 🧡 💛 💚 💙 💜 🤍 🖤 💋 🌹 😻 🫶' },
+    { id: 'sad', label: 'Triste', ico: '😢', kw: 'pleurer larme peine deuil tristesse chagrin', list: '😢 😭 😞 😔 😟 😕 🙁 😣 😖 😫 😩 🥺 😿 💔 😓 😪 🥀 😰' },
+    { id: 'angry', label: 'Colère', ico: '😡', kw: 'colere enerve furieux rage fache', list: '😠 😡 🤬 😤 👿 💢 😒 🙄 😾 👊 😈' },
+    { id: 'wow', label: 'Surpris', ico: '😮', kw: 'surprise choc wow etonne peur', list: '😮 😯 😲 😳 🤯 😱 🥶 🥵 😵 🤭 🤔 🫢 😬 🙀 🤨' },
+    { id: 'party', label: 'Fête', ico: '🎉', kw: 'fete anniversaire party celebration bravo felicitations', list: '🎉 🎊 🥳 🎂 🎈 🎁 🍾 🥂 🍻 🎶 🎤 💃 🕺 🪩 🎆 ✨ 🏆 🥇 🎵 🎇' },
+    { id: 'hands', label: 'Gestes', ico: '👍', kw: 'main geste pouce bravo merci salut prier', list: '👍 👎 👏 🙌 🙏 💪 👌 ✌️ 🤞 🤝 👋 🤙 🫶 🤟 ✊ 👊 🫡 🤷 🙋 🫰' },
+    { id: 'animals', label: 'Animaux', ico: '🐶', kw: 'animal animaux chien chat nature', list: '🐶 🐱 🐭 🐹 🐰 🦊 🐻 🐼 🐨 🐯 🦁 🐮 🐷 🐸 🐵 🐔 🐧 🦉 🦄 🐝 🦋 🐢 🐍 🐙 🐬 🦈 🐘 🦒' },
+    { id: 'food', label: 'Nourriture', ico: '🍕', kw: 'nourriture manger boisson pizza gateau fruit cafe', list: '🍕 🍔 🍟 🌭 🍿 🍩 🍪 🍫 🍦 🍓 🍎 🍌 🍉 🥑 🌽 🍗 🥩 ☕ 🍺 🍷 🥤 🍰' },
+    { id: 'misc', label: 'Divers', ico: '🌈', kw: 'divers objet sport voiture voyage meteo soleil argent', list: '⚽ 🏀 🎮 🎧 📸 💡 🚗 ✈️ 🏠 🌍 🌈 ☀️ 🌙 ⭐ 💰 📱 💻 📚 ⏰ 🔔 🔥 💎 🌸 🌺' },
+];
+const EMO_ALL = EMO.map(c => ({ ...c, items: c.list.split(' ') }));
+function buildSticker() {
+    let tab = 'pop', mode = 'sticker', q = '';
+    const tabs = h('div', { class: 'cm-ptabs' }), search = h('div', { class: 'cm-psearch' }), body = h('div', { class: 'cm-pbody' });
+    const inp = h('input', { type: 'search', placeholder: 'Rechercher', autocomplete: 'off', 'aria-label': 'Rechercher un autocollant' });
+    const chipColors = { happy: '#ffc800', love: '#ff5c9a', sad: '#a8a08e', angry: '#ff6b5a', wow: '#6cc4ff', party: '#9b6bff' };
+    pin.append(tabs, search, body);
+    function paint() {
+        tabs.textContent = '';
+        tabs.append(h('button', { class: 'cm-ptab' + (tab === 'search' ? ' on' : ''), type: 'button', 'aria-label': 'Recherche', onclick: () => { tab = 'search'; paint(); inp.focus(); } }, h('i', { class: 'fa-solid fa-magnifying-glass' })));
+        EMO_ALL.forEach(c => tabs.append(h('button', { class: 'cm-ptab' + (tab === c.id ? ' on' : ''), type: 'button', title: c.label, onclick: () => { tab = c.id; q = ''; inp.value = ''; paint(); } }, c.ico)));
+        tabs.append(h('button', { class: 'cm-ptab' + (mode === 'emoji' ? ' on' : ''), type: 'button', title: 'Emoji dans le texte', onclick: () => { mode = mode === 'emoji' ? 'sticker' : 'emoji'; paint(); } }, h('i', { class: 'fa-regular fa-keyboard' })));
+        search.textContent = '';
+        search.append(h('div', { class: 'cm-sinput' }, h('i', { class: 'fa-solid fa-magnifying-glass' }), inp));
+        EMO_ALL.filter(c => chipColors[c.id]).forEach(c => search.append(h('button', { class: 'cm-chipb', type: 'button', style: 'background:' + chipColors[c.id], onclick: () => { tab = c.id; q = ''; inp.value = ''; paint(); } }, c.label)));
+        grid();
+    }
+    function grid() {
+        body.textContent = '';
+        let items = [];
+        const nq = strip(q);
+        if (nq) EMO_ALL.forEach(c => { if (strip(c.label + ' ' + c.kw).includes(nq) || c.items.includes(q.trim())) items.push(...c.items); });
+        else if (mode === 'emoji' || tab === 'search') EMO_ALL.forEach(c => items.push(...c.items));
+        else items = (EMO_ALL.find(c => c.id === tab) || EMO_ALL[0]).items;
+        items = Array.from(new Set(items));
+        if (!items.length) { body.append(h('div', { class: 'cm-pempty' }, 'Aucun résultat. Essayez « amour », « fête » ou « triste ».')); return; }
+        const g = h('div', { class: 'cm-sgrid' + (mode === 'emoji' ? ' small' : '') });
+        items.forEach(e => g.append(h('button', { type: 'button', 'aria-label': e, onclick: async () => {
+            if (mode === 'emoji') { const s = input.selectionStart == null ? input.value.length : input.selectionStart; input.value = input.value.slice(0, s) + e + input.value.slice(input.selectionEnd == null ? s : input.selectionEnd); input.selectionStart = input.selectionEnd = s + e.length; updateSend(); autosize(); }
+            else { const ok = await sendNow({ kind: 'sticker', emoji: e }); if (ok) closePanel(); }
+        } }, e)));
+        body.append(g);
+    }
+    inp.addEventListener('input', () => { q = inp.value; if (q && tab !== 'search') { tab = 'search'; tabs.querySelectorAll('.cm-ptab').forEach((b, i) => b.classList.toggle('on', i === 0)); } grid(); });
+    paint();
+}
+
+/* — Avatar — */
+function buildAvatar() {
+    let shape = 'circle';
+    const src = avatarUrl(S.me.avatar);
+    const pv = h('img', { class: 'pv cm-shape-circle', src, alt: 'Mon avatar' });
+    const shapes = h('div', { class: 'cm-shapes' });
+    const paint = () => { shapes.textContent = ''; [['circle', 'Rond'], ['rounded', 'Arrondi'], ['heart', 'Cœur'], ['star', 'Étoile'], ['hex', 'Hexagone']].forEach(([k, t]) =>
+        shapes.append(h('button', { type: 'button', title: t, class: shape === k ? 'on' : '', onclick: () => { shape = k; pv.className = 'pv cm-shape-' + k; paint(); } }, h('img', { class: 'cm-shape-' + k, src, alt: t })))); };
+    paint();
+    const b = h('button', { class: 'cm-bigbtn', type: 'button', onclick: async () => { b.disabled = true; const ok = await sendNow({ kind: 'avatar', emoji: shape }); b.disabled = false; if (ok) closePanel(); } }, 'Envoyer mon avatar');
+    pin.append(h('div', { class: 'cm-pbody' }, h('div', { class: 'cm-avbox' }, pv, shapes, b)));
+}
+
+/* — Étoiles — */
+function buildStars() {
+    const owner = S.header && S.header.is_owner;
+    let vis = '🌸', qty = 1;
+    const note = h('p', null, owner ? 'Vous ne pouvez pas vous envoyer d’étoile.' : 'Montrez votre soutien à ' + (OWNER_NAME || 'l’auteur') + ' avec une étoile : elle s’affiche dans vos commentaires avec votre série de semaines.');
+    const pick = h('div', { class: 'cm-starpick' }), qd = h('span', null, '1');
+    const paint = () => { pick.textContent = ''; ['🌸', '⭐', '🌟', '💎', '🔥', '🎁'].forEach(e => pick.append(h('button', { type: 'button', class: vis === e ? 'on' : '', onclick: () => { vis = e; paint(); } }, e))); qd.textContent = qty; };
+    paint();
+    const qtyBox = h('div', { class: 'cm-qty' }, h('button', { type: 'button', 'aria-label': 'Moins', onclick: () => { qty = Math.max(1, qty - 1); paint(); } }, '−'), h('span', null, qd, ' ', h('i', { class: 'fa-solid fa-star', style: 'color:#f7701e' })), h('button', { type: 'button', 'aria-label': 'Plus', onclick: () => { qty = Math.min(5, qty + 1); paint(); } }, '+'));
+    const b = h('button', { class: 'cm-bigbtn', type: 'button', disabled: owner, onclick: async () => { b.disabled = true; const ok = await sendNow({ kind: 'etoile', emoji: vis, quantite: qty }); b.disabled = !!owner; if (ok) { closePanel(); toast('Étoile envoyée !'); } } }, 'Envoyer');
+    pin.append(h('div', { class: 'cm-pbody' }, h('div', { class: 'cm-stars' }, note, pick, qtyBox, h('div', null, b))));
+}
+
+/* ═════════ Caméra avec effets ═════════ */
+const Cam = (function () {
+    const root = $('#cmCam'), video = $('#camVideo'), canvas = $('#camCanvas'), ctx = canvas.getContext('2d', { willReadFrequently: true });
+    let stream = null, track = null, raf = 0, facing = 'user', fxI = 0, mirror = true, grid = false, timerSec = 0, hd = false, flashOn = false, torchOK = false, busy = false, shotBlob = null, open = false;
+    const CW = 540;
+    const FX = [
+        { id: 'none', label: 'Normal', bg: '#fff', txt: '' },
+        { id: 'natural', label: 'natural', bg: 'linear-gradient(135deg,#f5c6a5,#d98a6c)', txt: '' , face: true },
+        { id: 'circle', label: 'circle', bg: '#000', txt: 'circle' },
+        { id: 'glitch', label: 'glitch', bg: 'conic-gradient(#ff2d55,#00e5ff,#fff,#ff2d55)', txt: 'GLITCH' },
+        { id: 'noir', label: 'noir & blanc', bg: 'linear-gradient(135deg,#eee,#222)', txt: 'N&B' },
+        { id: 'vintage', label: 'vintage', bg: 'linear-gradient(135deg,#d9b27c,#7a5230)', txt: 'RETRO' },
+        { id: 'pop', label: 'pop', bg: 'linear-gradient(135deg,#ff3cac,#784ba0,#2b86c5)', txt: 'POP' },
+        { id: 'froid', label: 'froid', bg: 'linear-gradient(135deg,#a8e6ff,#3a6df0)', txt: 'FROID' },
+        { id: 'chaud', label: 'chaud', bg: 'linear-gradient(135deg,#ffd27a,#ff6b35)', txt: 'CHAUD' },
+    ];
+    const favs = () => { try { return JSON.parse(store('cm_fx_fav') || '[]'); } catch (e) { return []; } };
+    const fxEnabled = (function () { try { return 'filter' in CanvasRenderingContext2D.prototype; } catch (e) { return false; } })();
+
+    function cover(c, v, w, h_, flip) {
+        const vw = v.videoWidth, vh = v.videoHeight; if (!vw) return;
+        const ar = w / h_, vr = vw / vh; let sw = vw, sh = vh, sx = 0, sy = 0;
+        if (vr > ar) { sw = vh * ar; sx = (vw - sw) / 2; } else { sh = vw / ar; sy = (vh - sh) / 2; }
+        c.save(); if (flip) { c.translate(w, 0); c.scale(-1, 1); } c.drawImage(v, sx, sy, sw, sh, 0, 0, w, h_); c.restore();
+    }
+    function tint(c, w, h_, color, mode) { c.save(); c.globalCompositeOperation = mode; c.fillStyle = color; c.fillRect(0, 0, w, h_); c.restore(); }
+    function vignette(c, w, h_, a) { const g = c.createRadialGradient(w / 2, h_ / 2, Math.min(w, h_) * .3, w / 2, h_ / 2, Math.max(w, h_) * .7); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,' + a + ')'); c.fillStyle = g; c.fillRect(0, 0, w, h_); }
+    const DRAW = {
+        none: (c, v, w, h_, f) => cover(c, v, w, h_, f),
+        natural: (c, v, w, h_, f, k) => { c.filter = 'brightness(1.05) contrast(1.04) saturate(1.1)'; cover(c, v, w, h_, f); c.filter = 'none'; c.globalAlpha = .34; c.filter = 'blur(' + (3 * k) + 'px) brightness(1.1)'; cover(c, v, w, h_, f); c.globalAlpha = 1; c.filter = 'none'; },
+        circle: (c, v, w, h_, f, k) => { c.filter = 'blur(' + (16 * k) + 'px) brightness(.5)'; cover(c, v, w, h_, f); c.filter = 'none'; const r = Math.min(w, h_) * .46;
+            c.save(); c.beginPath(); c.arc(w / 2, h_ / 2, r, 0, 6.2832); c.clip(); cover(c, v, w, h_, f); c.restore(); c.lineWidth = 5 * k; c.strokeStyle = '#fff'; c.beginPath(); c.arc(w / 2, h_ / 2, r, 0, 6.2832); c.stroke(); },
+        glitch: (c, v, w, h_, f, k, t) => {
+            cover(c, v, w, h_, f);
+            const id = c.getImageData(0, 0, w, h_), s = id.data, o = new Uint8ClampedArray(s), amp = Math.round((6 + 4 * Math.sin(t / 120)) * k), tt = Math.floor(t / 90);
+            for (let y = 0; y < h_; y++) {
+                const band = (((y >> 4) + tt) % 11 === 0) ? Math.round((((y * 7 + tt) % 23) - 11) * k) : 0, row = y * w;
+                for (let x = 0; x < w; x++) {
+                    const i = (row + x) * 4, xr = Math.min(w - 1, Math.max(0, x + amp + band)), xg = Math.min(w - 1, Math.max(0, x + band)), xb = Math.min(w - 1, Math.max(0, x - amp + band));
+                    o[i] = s[(row + xr) * 4]; o[i + 1] = s[(row + xg) * 4 + 1]; o[i + 2] = s[(row + xb) * 4 + 2];
+                }
+            }
+            id.data.set(o); c.putImageData(id, 0, 0);
+        },
+        noir: (c, v, w, h_, f) => { c.filter = 'grayscale(1) contrast(1.15) brightness(1.05)'; cover(c, v, w, h_, f); c.filter = 'none'; vignette(c, w, h_, .35); },
+        vintage: (c, v, w, h_, f) => { c.filter = 'sepia(.55) contrast(1.1) saturate(1.25)'; cover(c, v, w, h_, f); c.filter = 'none'; tint(c, w, h_, 'rgba(255,170,80,.12)', 'overlay'); vignette(c, w, h_, .5); },
+        pop: (c, v, w, h_, f) => { c.filter = 'saturate(1.9) contrast(1.15) brightness(1.05)'; cover(c, v, w, h_, f); c.filter = 'none'; },
+        froid: (c, v, w, h_, f) => { c.filter = 'saturate(1.1) brightness(1.03)'; cover(c, v, w, h_, f); c.filter = 'none'; tint(c, w, h_, 'rgba(60,120,255,.22)', 'overlay'); },
+        chaud: (c, v, w, h_, f) => { c.filter = 'saturate(1.15) brightness(1.04)'; cover(c, v, w, h_, f); c.filter = 'none'; tint(c, w, h_, 'rgba(255,150,40,.24)', 'overlay'); },
+    };
+    function render(c, w, h_, t) {
+        const id = FX[fxI].id, k = w / CW, flip = facing === 'user' && mirror;
+        let fn = DRAW[id] || DRAW.none; if (!fxEnabled && !['none', 'glitch', 'circle'].includes(id)) fn = DRAW.none;
+        fn(c, video, w, h_, flip, k, t || performance.now());
+    }
+    function loop(ts) {
+        if (!open) return;
+        if (video.readyState >= 2 && !busy) render(ctx, canvas.width, canvas.height, ts);
+        raf = requestAnimationFrame(loop);
+    }
+    async function start() {
+        stop(); const msg = $('#camMsg'); msg.style.display = 'none';
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('Caméra non disponible sur cette page (HTTPS requis).');
+        stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: facing, width: { ideal: hd ? 1920 : 1280 }, height: { ideal: hd ? 1080 : 720 } } });
+        track = stream.getVideoTracks()[0]; video.srcObject = stream; await video.play().catch(() => {});
+        const caps = track.getCapabilities ? track.getCapabilities() : {}; torchOK = !!caps.torch;
+        if (flashOn && torchOK) track.applyConstraints({ advanced: [{ torch: true }] }).catch(() => {});
+    }
+    function stop() { if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; track = null; }
+    function sizeCanvas() { const r = root.getBoundingClientRect(); canvas.width = CW; canvas.height = Math.max(CW, Math.round(CW * (r.height || window.innerHeight) / (r.width || window.innerWidth))); }
+
+    async function openCam() {
+        root.classList.add('show'); open = true; shotBlob = null; $('#camReview').classList.remove('show');
+        sizeCanvas(); paint();
+        try { await start(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop); }
+        catch (e) {
+            const msg = $('#camMsg'); msg.style.display = 'block'; msg.textContent = '';
+            msg.append(h('div', null, (e && e.name === 'NotAllowedError') ? 'Autorisez l’accès à la caméra dans votre navigateur pour prendre une photo.' : (e && e.message) || 'Caméra indisponible.'),
+                h('button', { type: 'button', onclick: () => { close(); fileCam.click(); } }, 'Utiliser l’appareil photo du téléphone'));
+        }
+    }
+    function close() { open = false; cancelAnimationFrame(raf); stop(); root.classList.remove('show'); $('#camOv').classList.remove('show'); }
+
+    /* carrousel d'effets : 2 vignettes de chaque côté du déclencheur */
+    function paint() {
+        const strip = $('#camStrip'); strip.textContent = '';
+        const slot = off => {
+            const i = fxI + off, f = FX[i];
+            if (!f) return h('div', { class: 'cam-fx ' + (Math.abs(off) === 1 ? 's1' : 's2') + ' empty' });
+            return h('button', { type: 'button', class: 'cam-fx ' + (Math.abs(off) === 1 ? 's1' : 's2'), style: 'background:' + f.bg, 'aria-label': f.label, onclick: () => { fxI = i; paint(); } }, f.txt);
+        };
+        const cur = FX[fxI];
+        const shutter = h('button', { type: 'button', class: 'cam-shutter', 'aria-label': 'Prendre la photo', onclick: shoot }, h('span', { style: 'background:' + (fxI ? cur.bg : '#fff') }, fxI ? cur.txt : ''));
+        strip.append(slot(-2), slot(-1), shutter, slot(1), slot(2));
+        $('#camMid').style.display = fxI ? 'flex' : 'none'; $('#camFxName').textContent = cur.label;
+        $('#camFav').classList.toggle('on', favs().includes(cur.id)); $('#camFav i').className = (favs().includes(cur.id) ? 'fa-solid' : 'fa-regular') + ' fa-bookmark';
+        $('#camGallery').style.visibility = 'visible';
+        const fl = $('#camFlash'); fl.classList.toggle('on', flashOn); fl.querySelector('small').style.display = flashOn ? 'none' : '';
+        $('#camGrid').classList.toggle('on', grid);
+    }
+    let sx0 = null;
+    $('#camStrip').addEventListener('pointerdown', e => { sx0 = e.clientX; });
+    $('#camStrip').addEventListener('pointerup', e => { if (sx0 == null) return; const dx = e.clientX - sx0; sx0 = null; if (Math.abs(dx) > 45) { fxI = Math.max(0, Math.min(FX.length - 1, fxI + (dx < 0 ? 1 : -1))); paint(); e.preventDefault(); } });
+
+    async function setFlash() {
+        flashOn = !flashOn;
+        if (torchOK && track) { try { await track.applyConstraints({ advanced: [{ torch: flashOn }] }); } catch (e) { torchOK = false; } }
+        paint();
+    }
+    async function countdown() {
+        const el = $('#camCount'); el.style.display = 'flex';
+        for (let n = timerSec; n > 0; n--) { el.textContent = n; await new Promise(r => setTimeout(r, 1000)); }
+        el.style.display = 'none';
+    }
+    async function shoot() {
+        if (busy || !video.videoWidth) return; busy = true;
+        try {
+            if (timerSec) await countdown();
+            if (flashOn && !torchOK) { const w = $('#camWhite'); w.style.display = 'block'; await new Promise(r => setTimeout(r, 220)); w.style.display = 'none'; }
+            const scale = Math.min(2, 1920 / canvas.height), out = document.createElement('canvas');
+            out.width = Math.round(canvas.width * scale); out.height = Math.round(canvas.height * scale);
+            render(out.getContext('2d', { willReadFrequently: true }), out.width, out.height, performance.now());
+            const blob = await new Promise(r => out.toBlob(r, 'image/jpeg', .9));
+            if (!blob) throw new Error('Capture impossible.');
+            shotBlob = blob; $('#camReviewImg').src = URL.createObjectURL(blob); $('#camReview').classList.add('show');
+        } catch (e) { toast(e.message); }
+        busy = false;
+    }
+
+    /* feuilles internes : effets, réglages */
+    function camSheet(inner) { const s = $('#camSheet'); s.textContent = ''; s.append(h('div', { class: 'grab' }), ...inner); $('#camOv').classList.add('show'); }
+    $('#camOv').addEventListener('click', e => { if (e.target.id === 'camOv') $('#camOv').classList.remove('show'); });
+    function effectsSheet() {
+        const f = favs(), grid_ = h('div', { class: 'cm-sgrid' });
+        const order = FX.slice().sort((a, b) => (f.includes(b.id) ? 1 : 0) - (f.includes(a.id) ? 1 : 0));
+        order.forEach(fx => grid_.append(h('button', { type: 'button', class: 'fxcard' + (FX[fxI].id === fx.id ? ' on' : ''), onclick: () => { fxI = FX.indexOf(fx); paint(); $('#camOv').classList.remove('show'); } },
+            h('i', { style: 'background:' + fx.bg + ';color:' + (fx.id === 'none' ? '#333' : '#fff') }, fx.txt || (fx.id === 'none' ? '∅' : '')), (f.includes(fx.id) ? '★ ' : '') + fx.label)));
+        camSheet([h('h3', null, 'Effets'), h('div', { class: 'sub' }, f.length ? 'Vos effets enregistrés apparaissent en premier.' : 'Touchez le marque-page pour enregistrer un effet.'), h('div', { style: 'padding:0 14px' }, grid_)]);
+    }
+    function settingsSheet() {
+        const sw = (label, val, fn) => { const i = h('input', { type: 'checkbox' }); i.checked = val; i.addEventListener('change', () => fn(i.checked)); return h('label', { class: 'cm-switch' }, h('span', null, label), i); };
+        const seg = h('div', { class: 'cm-seg' }); const paintSeg = () => { seg.textContent = ''; [[0, 'Aucun'], [3, '3 s'], [10, '10 s']].forEach(([v, t]) => seg.append(h('button', { type: 'button', class: timerSec === v ? 'on' : '', onclick: () => { timerSec = v; paintSeg(); } }, t))); }; paintSeg();
+        camSheet([h('h3', null, 'Réglages de la caméra'),
+            sw('Effet miroir (caméra avant)', mirror, v => { mirror = v; }),
+            sw('Grille de composition', grid, v => { grid = v; paint(); }),
+            sw('Haute qualité (HD)', hd, async v => { hd = v; try { await start(); } catch (e) { toast(e.message); } }),
+            h('div', { class: 'cm-switch' }, h('span', null, 'Retardateur'), seg)]);
+    }
+
+    $('#camClose').addEventListener('click', close);
+    $('#camFlash').addEventListener('click', setFlash);
+    $('#camSettings').addEventListener('click', settingsSheet);
+    $('#camMore').addEventListener('click', effectsSheet);
+    $('#camFlip').addEventListener('click', async () => { facing = facing === 'user' ? 'environment' : 'user'; try { await start(); } catch (e) { facing = facing === 'user' ? 'environment' : 'user'; toast('Impossible de changer de caméra.'); try { await start(); } catch (e2) {} } });
+    $('#camFxOff').addEventListener('click', () => { fxI = 0; paint(); });
+    $('#camFav').addEventListener('click', () => { const id = FX[fxI].id, f = favs(), i = f.indexOf(id); if (i >= 0) f.splice(i, 1); else f.push(id); store('cm_fx_fav', JSON.stringify(f)); paint(); toast(i >= 0 ? 'Effet retiré des favoris' : 'Effet enregistré'); });
+    $('#camGallery').addEventListener('click', () => { close(); pickFiles('image/*', true); });
+    $('#camRedo').addEventListener('click', () => { $('#camReview').classList.remove('show'); shotBlob = null; });
+    $('#camUse').addEventListener('click', () => {
+        if (!shotBlob) return; const b = shotBlob; close();
+        setAttach({ kind: 'image', blob: b, preview: URL.createObjectURL(b) }); closePanel(); input.focus();
+    });
+    document.addEventListener('visibilitychange', () => { if (document.hidden && open) { stop(); } else if (!document.hidden && open && !stream) start().catch(() => {}); });
+    window.addEventListener('resize', () => { if (open) sizeCanvas(); });
+    return { open: openCam, close };
+})();
+
+/* ═════════ Divers ═════════ */
+(function () {
+    const b = $('#cmPrevB'), m = $('#cmPrevMore'); if (!b || !m) return;
+    requestAnimationFrame(() => { if (b.scrollHeight > b.clientHeight + 2) m.hidden = false; });
+    m.addEventListener('click', () => { const o = b.classList.toggle('open'); m.textContent = o ? 'Voir moins' : 'Voir plus'; });
+})();
+window.addEventListener('resize', syncDock);
+setInterval(() => { $$('.cm-time').forEach(t => { const N = null; }); }, 60000);
+
+$('#cmSortLabel').textContent = TRI_LABEL[S.tri];
+autosize(); updateSend(); load(true);
+})();
+</script>
+{% endblock %}
+<script>
+
+(function(){
+  if (window.FNCommentTranslation) return;
+  var LANGS = [{code:'af',name:'Afrikaans'},{code:'sq',name:'Albanais'},{code:'am',name:'Amharique'},{code:'ar',name:'Arabe'},{code:'hy',name:'Arménien'},{code:'az',name:'Azéri'},{code:'eu',name:'Basque'},{code:'be',name:'Biélorusse'},{code:'bn',name:'Bengali'},{code:'bs',name:'Bosniaque'},{code:'bg',name:'Bulgare'},{code:'my',name:'Birman'},{code:'ca',name:'Catalan'},{code:'zh',name:'Chinois'},{code:'zh-TW',name:'Chinois traditionnel'},{code:'hr',name:'Croate'},{code:'cs',name:'Tchèque'},{code:'da',name:'Danois'},{code:'nl',name:'Néerlandais'},{code:'en',name:'Anglais'},{code:'et',name:'Estonien'},{code:'tl',name:'Filipino'},{code:'fi',name:'Finnois'},{code:'fr',name:'Français'},{code:'gl',name:'Galicien'},{code:'ka',name:'Géorgien'},{code:'de',name:'Allemand'},{code:'el',name:'Grec'},{code:'gu',name:'Gujarati'},{code:'ht',name:'Créole haïtien'},{code:'ha',name:'Haoussa'},{code:'he',name:'Hébreu'},{code:'hi',name:'Hindi'},{code:'hu',name:'Hongrois'},{code:'is',name:'Islandais'},{code:'ig',name:'Igbo'},{code:'id',name:'Indonésien'},{code:'ga',name:'Irlandais'},{code:'it',name:'Italien'},{code:'ja',name:'Japonais'},{code:'jv',name:'Javanais'},{code:'kn',name:'Kannada'},{code:'kk',name:'Kazakh'},{code:'km',name:'Khmer'},{code:'rw',name:'Kinyarwanda'},{code:'ko',name:'Coréen'},{code:'ku',name:'Kurde'},{code:'ky',name:'Kirghiz'},{code:'lo',name:'Lao'},{code:'la',name:'Latin'},{code:'lv',name:'Letton'},{code:'lt',name:'Lituanien'},{code:'lb',name:'Luxembourgeois'},{code:'mk',name:'Macédonien'},{code:'mg',name:'Malgache'},{code:'ms',name:'Malais'},{code:'ml',name:'Malayalam'},{code:'mt',name:'Maltais'},{code:'mi',name:'Maori'},{code:'mr',name:'Marathi'},{code:'mn',name:'Mongol'},{code:'ne',name:'Népalais'},{code:'no',name:'Norvégien'},{code:'or',name:'Odia'},{code:'ps',name:'Pachto'},{code:'fa',name:'Persan'},{code:'pl',name:'Polonais'},{code:'pt',name:'Portugais'},{code:'pa',name:'Pendjabi'},{code:'ro',name:'Roumain'},{code:'ru',name:'Russe'},{code:'sm',name:'Samoan'},{code:'gd',name:'Gaélique écossais'},{code:'sr',name:'Serbe'},{code:'st',name:'Sotho du Sud'},{code:'sn',name:'Shona'},{code:'sd',name:'Sindhi'},{code:'si',name:'Cinghalais'},{code:'sk',name:'Slovaque'},{code:'sl',name:'Slovène'},{code:'so',name:'Somali'},{code:'es',name:'Espagnol'},{code:'su',name:'Soundanais'},{code:'sw',name:'Swahili'},{code:'sv',name:'Suédois'},{code:'tg',name:'Tadjik'},{code:'ta',name:'Tamoul'},{code:'tt',name:'Tatar'},{code:'te',name:'Télougou'},{code:'th',name:'Thaï'},{code:'tr',name:'Turc'},{code:'tk',name:'Turkmène'},{code:'uk',name:'Ukrainien'},{code:'ur',name:'Ourdou'},{code:'ug',name:'Ouïghour'},{code:'uz',name:'Ouzbek'},{code:'vi',name:'Vietnamien'},{code:'cy',name:'Gallois'},{code:'xh',name:'Xhosa'},{code:'yi',name:'Yiddish'},{code:'yo',name:'Yoruba'},{code:'zu',name:'Zoulou'},{code:'as',name:'Assamais'},{code:'br',name:'Breton'},{code:'co',name:'Corse'},{code:'dv',name:'Divehi'},{code:'fo',name:'Féroïen'},{code:'fy',name:'Frison'},{code:'ku',name:'Kurde'},{code:'oc',name:'Occitan'},{code:'sa',name:'Sanskrit'},{code:'ti',name:'Tigrinya'},{code:'bo',name:'Tibétain'},{code:'wa',name:'Wallon'},{code:'wo',name:'Wolof'}];
+  var active = null, original = null, lastTarget = null;
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function ensure(){
+    if(document.getElementById('fn-ct-overlay')) return;
+    var st=document.createElement('style');
+    st.textContent='#fn-ct-overlay{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.48);display:none;align-items:center;justify-content:center;padding:18px;font-family:inherit}#fn-ct-overlay.open{display:flex}#fn-ct-box{background:var(--surface,#fff);color:var(--text,#1c1e21);width:min(100%,440px);max-height:85vh;display:flex;flex-direction:column;border-radius:16px;box-shadow:0 12px 45px #0004;overflow:hidden}#fn-ct-box header{padding:17px 18px 10px;font-weight:750;font-size:17px;display:flex;justify-content:space-between;align-items:center}#fn-ct-close{border:0;border-radius:50%;width:32px;height:32px;background:#f0f2f5;cursor:pointer}#fn-ct-search{margin:4px 16px 10px;padding:11px 13px;border:1px solid #ccd0d5;border-radius:22px;font:inherit;outline-color:#1877f2}#fn-ct-list{overflow:auto;padding:0 10px 12px}#fn-ct-list button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:11px 12px;border-radius:9px;font:inherit;cursor:pointer;color:inherit}#fn-ct-list button:hover{background:#e7f3ff}#fn-ct-result{padding:0 18px 18px;line-height:1.5;white-space:pre-wrap;overflow:auto}#fn-ct-result .meta{font-size:12px;color:#65676b;margin-bottom:6px}#fn-ct-result .original{margin-top:12px;border:0;background:transparent;color:#1877f2;font-weight:700;cursor:pointer;padding:0}#fn-ct-status{padding:0 18px 18px;color:#65676b;font-size:14px}';
+    document.head.appendChild(st);
+    var ov=document.createElement('div'); ov.id='fn-ct-overlay'; ov.innerHTML='<section id="fn-ct-box" role="dialog" aria-modal="true" aria-label="Traduire le commentaire"><header><span id="fn-ct-title">Traduire le commentaire</span><button id="fn-ct-close" type="button" aria-label="Fermer">✕</button></header><input id="fn-ct-search" type="search" placeholder="Rechercher une langue…" autocomplete="off"><div id="fn-ct-list"></div><div id="fn-ct-status" hidden></div><div id="fn-ct-result" hidden></div></section>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click',function(e){if(e.target===ov) close();});
+    document.getElementById('fn-ct-close').addEventListener('click',close);
+    document.getElementById('fn-ct-search').addEventListener('input',renderLangs);
+    document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+  }
+  function close(){var ov=document.getElementById('fn-ct-overlay');if(ov)ov.classList.remove('open');active=null;}
+  function renderLangs(){
+    var q=(document.getElementById('fn-ct-search').value||'').toLocaleLowerCase();
+    var list=document.getElementById('fn-ct-list');
+    var filtered=LANGS.filter(function(l){return l.name.toLocaleLowerCase().indexOf(q)>=0||l.code.toLowerCase().indexOf(q)>=0;});
+    list.innerHTML=filtered.map(function(l){return '<button type="button" data-lang="'+esc(l.code)+'">'+esc(l.name)+' <small style="color:#65676b">('+esc(l.code)+')</small></button>';}).join('')||'<p style="padding:12px;color:#65676b">Aucune langue trouvée.</p>';
+    list.querySelectorAll('button[data-lang]').forEach(function(b){b.addEventListener('click',function(){translate(b.getAttribute('data-lang'));});});
+  }
+  function showStatus(s){var el=document.getElementById('fn-ct-status');el.hidden=false;el.textContent=s;}
+  async function translate(code){
+    if(!active)return;
+    var comment=active;
+    document.getElementById('fn-ct-list').hidden=true;
+    document.getElementById('fn-ct-search').hidden=true;
+    document.getElementById('fn-ct-status').hidden=false;
+    document.getElementById('fn-ct-result').hidden=true;
+    showStatus('Détection de la langue et traduction en cours…');
+    try{
+      var r=await fetch('/api/comment/'+encodeURIComponent(comment.id)+'/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({langue:code})});
+      var d=await r.json();
+      if(!r.ok||!d.success)throw new Error(d.error||'Traduction impossible.');
+      lastTarget=code; original=comment.text;
+      document.getElementById('fn-ct-title').textContent='Traduction · '+((LANGS.find(function(x){return x.code===code;})||{}).name||code);
+      document.getElementById('fn-ct-status').hidden=true;
+      var result=document.getElementById('fn-ct-result');result.hidden=false;
+      result.innerHTML='<div class="meta">Langue détectée : '+esc((LANGS.find(function(x){return x.code===d.source;})||{}).name||d.source||'non déterminée')+'</div><div>'+esc(d.traduction)+'</div><button class="original" type="button">Afficher le commentaire original</button>';
+      result.querySelector('.original').addEventListener('click',function(){result.querySelector('div:last-of-type').textContent=original;});
+    }catch(e){showStatus(e.message||'Erreur de traduction.');}
+  }
+  function open(comment, defaultLang){
+    ensure();active=comment;original=comment.text;lastTarget=null;
+    document.getElementById('fn-ct-title').textContent='Voulez-vous traduire en quelle langue ?';
+    document.getElementById('fn-ct-search').value='';
+    document.getElementById('fn-ct-list').hidden=false;document.getElementById('fn-ct-search').hidden=false;
+    document.getElementById('fn-ct-status').hidden=true;document.getElementById('fn-ct-result').hidden=true;
+    document.getElementById('fn-ct-overlay').classList.add('open');renderLangs();
+    if(defaultLang) translate(defaultLang);
+    else document.getElementById('fn-ct-search').focus();
+  }
+  window.FNCommentTranslation={open:open, close:close, languages:LANGS};
+})();
+
+</script>

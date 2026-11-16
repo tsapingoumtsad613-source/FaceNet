@@ -1,0 +1,312 @@
+{# ======================================================================
+   PATCH POUR profile.html — 3 insertions, rien n'est retiré.
+   ====================================================================== #}
+
+
+{# ─── INSERTION 1 : bouton dans « Paramètres du profil » ───────────────
+   Dans <div id="pm-main">, à l'intérieur du bloc
+   {% if current_user.is_authenticated and current_user.id == user.id %},
+   juste APRÈS la ligne du bouton « Modifier » (celle qui contient
+   onclick="openEditModal(); toggleOptions();"), ajouter : #}
+
+<button type="button" class="options-menu-item" onclick="toggleOptions(); openUneFlow();">
+    <span class="menu-icon"><i class="fa-regular fa-heart"></i></span><span>Ajouter des éléments à la une</span>
+</button>
+
+
+{# ─── INSERTION 2 : la section « À la une » sur le profil ──────────────
+   Dans <div id="publication" class="tab-content active">, juste AVANT la ligne
+   {% if current_user.id == user.id %} qui précède <form action="/ajouter_publication" ... >,
+   ajouter : #}
+
+<div class="une-section" id="une-section" style="display:none;">
+    <div class="une-title">À la une</div>
+    <div class="une-row" id="une-row"></div>
+</div>
+
+
+{# ─── INSERTION 3 : styles, fenêtres et script ─────────────────────────
+   Juste AVANT le {% endblock %} final de profile.html, coller tout ce qui suit. #}
+
+<style>
+/* ===== À LA UNE ===== */
+.une-section { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 16px; margin-bottom: 10px; }
+.une-title { font-weight: 700; font-size: 17px; color: var(--text-dark); margin-bottom: 12px; }
+.une-row { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+.une-card { flex: 0 0 112px; height: 168px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; position: relative; padding: 0; background: var(--gray-bg); cursor: pointer; font-family: inherit; }
+.une-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.une-card .une-card-t { position: absolute; left: 0; right: 0; bottom: 0; padding: 22px 8px 8px; color: #fff; font-weight: 700; font-size: 14px; text-align: left; background: linear-gradient(to top, rgba(0,0,0,.65), transparent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.une-card.une-new { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; gap: 8px; padding: 12px; background: var(--gray-bg); color: var(--text-dark); font-weight: 600; font-size: 14px; text-align: left; }
+.une-card.une-new i { font-size: 26px; color: var(--blue); margin-bottom: auto; }
+
+.une-flow { display: none; position: fixed; inset: 0; z-index: 10300; background: var(--white); flex-direction: column; }
+.une-flow.open { display: flex; }
+.une-flow-in { width: 100%; max-width: 680px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; min-height: 0; }
+.une-bar { display: flex; align-items: center; gap: 8px; padding: 10px; border-bottom: 1px solid var(--border); flex: 0 0 auto; }
+.une-bar button.une-back { width: 40px; height: 40px; border: 0; background: none; border-radius: 50%; font-size: 18px; cursor: pointer; color: var(--text-dark); }
+.une-bar button.une-back:hover { background: var(--gray-bg); }
+.une-bar h3 { flex: 1; text-align: center; margin: 0; padding-right: 40px; font-size: 18px; font-weight: 700; }
+.une-tabs { display: flex; gap: 8px; padding: 12px 14px 8px; flex: 0 0 auto; }
+.une-tab { border: 0; border-radius: 999px; padding: 9px 18px; font: 600 15px inherit; font-family: inherit; cursor: pointer; background: none; color: var(--text-dark); }
+.une-tab.active { background: #e7f3ff; color: var(--blue); }
+.une-grid { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 0 3px 3px; align-content: start; }
+.une-tile { position: relative; aspect-ratio: 3 / 4; background: var(--gray-light); overflow: hidden; cursor: pointer; }
+.une-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.une-tile .une-dot { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid #fff; background: rgba(0,0,0,.18); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 800; }
+.une-tile.sel .une-dot { background: var(--blue); border-color: var(--blue); }
+.une-tile.sel img { filter: brightness(.82); }
+.une-tile.une-add { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--blue); font-weight: 600; font-size: 13px; background: #e7f3ff; }
+.une-tile.une-add i { font-size: 24px; }
+.une-empty { grid-column: 1 / -1; text-align: center; color: var(--gray-mid); padding: 40px 20px; font-size: 14px; }
+.une-foot { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--border); background: var(--white); }
+.une-thumbs { display: flex; min-height: 44px; }
+.une-thumbs img { width: 44px; height: 44px; object-fit: cover; border-radius: 8px; border: 2px solid #fff; margin-left: -10px; background: var(--gray-light); }
+.une-thumbs img:first-child { margin-left: 0; }
+.une-cnt { font-size: 13px; color: var(--gray-mid); margin-left: 8px; align-self: center; }
+.une-btn { border: 0; border-radius: 8px; padding: 12px 26px; font: 700 15px inherit; font-family: inherit; background: var(--blue); color: #fff; cursor: pointer; }
+.une-btn:disabled { background: #e4e6eb; color: #9aa0a6; cursor: not-allowed; }
+.une-btn.une-block { width: 100%; }
+
+.une-step2 { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; padding: 28px 20px 12px; }
+.une-cover { position: relative; width: 210px; height: 350px; border-radius: 18px; overflow: hidden; background: var(--gray-light); flex: 0 0 auto; }
+.une-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.une-cover button { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(0,0,0,.6); color: #fff; font-size: 16px; cursor: pointer; }
+.une-titre { width: 100%; max-width: 360px; margin-top: 26px; border: 0; border-bottom: 2px solid var(--border); outline: 0; background: transparent; text-align: center; font: 600 24px inherit; font-family: inherit; color: var(--text-dark); padding: 8px 4px; }
+.une-titre:focus { border-color: var(--blue); }
+.une-compteur { margin-top: 8px; font-size: 13px; color: var(--gray-mid); }
+.une-erreur { margin-top: 12px; color: #b3261e; font-size: 13.5px; font-weight: 600; text-align: center; display: none; }
+.une-note { font-size: 12.5px; color: var(--gray-mid); text-align: center; padding: 0 20px 6px; }
+
+.une-viewer { display: none; position: fixed; inset: 0; z-index: 10400; background: rgba(0,0,0,.95); flex-direction: column; color: #fff; }
+.une-viewer.open { display: flex; }
+.une-v-top { display: flex; align-items: center; gap: 10px; padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 10px; }
+.une-v-top span { flex: 1; font-weight: 700; }
+.une-v-top button { border: 0; border-radius: 50%; width: 40px; height: 40px; background: rgba(255,255,255,.16); color: #fff; font-size: 16px; cursor: pointer; }
+.une-v-top button.une-del { width: auto; border-radius: 20px; padding: 0 14px; font-size: 13px; font-weight: 700; background: #e41e3f; }
+.une-v-img { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; position: relative; }
+.une-v-img img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.une-v-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 42px; height: 42px; border-radius: 50%; border: 0; background: rgba(255,255,255,.18); color: #fff; font-size: 18px; cursor: pointer; }
+.une-v-nav.prev { left: 8px; } .une-v-nav.next { right: 8px; }
+.une-v-cnt { text-align: center; padding: 8px 0 calc(14px + env(safe-area-inset-bottom, 0px)); font-size: 13px; opacity: .8; }
+@media (max-width: 480px) { .une-card { flex-basis: 104px; height: 156px; } .une-cover { width: 180px; height: 300px; } }
+</style>
+
+<div id="une-flow" class="une-flow" role="dialog" aria-modal="true" aria-label="À la une">
+  <div class="une-flow-in">
+    <div id="une-s1" style="display:flex; flex-direction:column; flex:1; min-height:0;">
+      <div class="une-bar"><button type="button" class="une-back" id="une-close" aria-label="Fermer"><i class="fa-solid fa-arrow-left"></i></button><h3>À la une</h3></div>
+      <div class="une-tabs">
+        <button type="button" class="une-tab active" data-tab="pel">Pellicule</button>
+        <button type="button" class="une-tab" data-tab="imp">Photos importées</button>
+      </div>
+      <div class="une-grid" id="une-grid"></div>
+      <div class="une-foot">
+        <div style="display:flex;"><div class="une-thumbs" id="une-thumbs"></div><span class="une-cnt" id="une-cnt"></span></div>
+        <button type="button" class="une-btn" id="une-next" disabled>Suivant</button>
+      </div>
+      <input type="file" id="une-file" accept="image/*" multiple style="display:none;">
+    </div>
+    <div id="une-s2" style="display:none; flex-direction:column; flex:1; min-height:0;">
+      <div class="une-bar"><button type="button" class="une-back" id="une-back2" aria-label="Retour"><i class="fa-solid fa-arrow-left"></i></button><h3>À la une</h3></div>
+      <div class="une-step2">
+        <div class="une-cover"><img id="une-cover-img" alt="Couverture"><button type="button" id="une-cover-change" aria-label="Changer la couverture"><i class="fa-solid fa-camera"></i></button></div>
+        <input type="text" id="une-titre" class="une-titre" maxlength="18" placeholder="Ajouter un titre" autocomplete="off">
+        <div class="une-compteur" id="une-compteur">0/18</div>
+        <div class="une-erreur" id="une-erreur" role="alert"></div>
+      </div>
+      <div class="une-note"><i class="fa-solid fa-earth-americas"></i> Les éléments à la une sont épinglés sur votre profil et définis sur Public.</div>
+      <div class="une-foot"><button type="button" class="une-btn une-block" id="une-creer" disabled><i class="fa-regular fa-heart"></i> Créer un contenu à la une</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="une-viewer" class="une-viewer" role="dialog" aria-modal="true" aria-label="Contenu à la une">
+  <div class="une-v-top"><button type="button" id="une-v-close" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button><span id="une-v-titre"></span><button type="button" class="une-del" id="une-v-del" style="display:none;">Supprimer</button></div>
+  <div class="une-v-img"><button type="button" class="une-v-nav prev" id="une-v-prev" aria-label="Précédente"><i class="fa-solid fa-chevron-left"></i></button><img id="une-v-img" alt=""><button type="button" class="une-v-nav next" id="une-v-next" aria-label="Suivante"><i class="fa-solid fa-chevron-right"></i></button></div>
+  <div class="une-v-cnt" id="une-v-cnt"></div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+    var OWNER = {{ 'true' if (current_user.is_authenticated and current_user.id == user.id) else 'false' }};
+    var UID = {{ user.id }}, MAX = 20, MAX_OCTETS = 8 * 1024 * 1024;
+    var $ = function (id) { return document.getElementById(id); };
+    function el(tag, cls, txt) { var n = document.createElement(tag); if (cls) n.className = cls; if (txt != null) n.textContent = txt; return n; }
+    function alerte(m) { if (typeof showToast === 'function') showToast(m, '⚠️'); else alert(m); }
+
+    var colls = [], sel = [], locaux = [], importes = null, tab = 'pel', couv = 0, compteur = 0, envoi = false;
+
+    /* ---------- Section sur le profil ---------- */
+    function rendreSection() {
+        var sec = $('une-section'), row = $('une-row');
+        if (!sec || !row) return;
+        row.textContent = '';
+        if (!OWNER && !colls.length) { sec.style.display = 'none'; return; }
+        sec.style.display = 'block';
+        if (OWNER) {
+            var n = el('button', 'une-card une-new'); n.type = 'button';
+            var i = el('i', 'fa-regular fa-heart'); n.appendChild(i);
+            n.appendChild(document.createTextNode('Créer un contenu à la une'));
+            n.onclick = ouvrirFlow; row.appendChild(n);
+        }
+        colls.forEach(function (c, idx) {
+            var b = el('button', 'une-card'); b.type = 'button';
+            if (c.cover_url) { var im = el('img'); im.src = c.cover_url; im.alt = ''; im.loading = 'lazy'; b.appendChild(im); }
+            b.appendChild(el('span', 'une-card-t', c.titre));
+            b.onclick = function () { ouvrirVisionneuse(idx, 0); };
+            row.appendChild(b);
+        });
+    }
+    function charger() {
+        fetch('/api/une/' + UID, { credentials: 'same-origin' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (d) { colls = (d && d.collections) || []; rendreSection(); })
+            .catch(function () { rendreSection(); });
+    }
+
+    /* ---------- Étape 1 : choix des photos ---------- */
+    function ouvrirFlow() {
+        sel = []; locaux = []; couv = 0; tab = 'pel';
+        $('une-titre').value = ''; $('une-compteur').textContent = '0/18'; $('une-erreur').style.display = 'none';
+        majOnglets(); etape(1); rendreGrille(); majPied();
+        $('une-flow').classList.add('open'); document.body.style.overflow = 'hidden';
+    }
+    function fermerFlow() {
+        $('une-flow').classList.remove('open'); document.body.style.overflow = '';
+        locaux.forEach(function (l) { URL.revokeObjectURL(l.url); }); locaux = []; sel = [];
+    }
+    window.openUneFlow = ouvrirFlow;
+    function etape(n) { $('une-s1').style.display = n === 1 ? 'flex' : 'none'; $('une-s2').style.display = n === 2 ? 'flex' : 'none'; }
+    function majOnglets() {
+        Array.prototype.forEach.call(document.querySelectorAll('.une-tab'), function (b) { b.classList.toggle('active', b.getAttribute('data-tab') === tab); });
+    }
+    function estSel(cle) { return sel.some(function (s) { return s.cle === cle; }); }
+    function basculer(item) {
+        var i = sel.findIndex(function (s) { return s.cle === item.cle; });
+        if (i >= 0) sel.splice(i, 1);
+        else if (sel.length >= MAX) { alerte('20 photos au maximum.'); return; }
+        else sel.push(item);
+        rendreGrille(); majPied();
+    }
+    function tuile(item) {
+        var t = el('div', 'une-tile' + (estSel(item.cle) ? ' sel' : ''));
+        var im = el('img'); im.src = item.url; im.alt = ''; im.loading = 'lazy'; t.appendChild(im);
+        var pos = sel.findIndex(function (s) { return s.cle === item.cle; });
+        t.appendChild(el('span', 'une-dot', pos >= 0 ? String(pos + 1) : ''));
+        t.onclick = function () { basculer(item); };
+        return t;
+    }
+    function rendreGrille() {
+        var g = $('une-grid'); g.textContent = '';
+        if (tab === 'pel') {
+            var add = el('div', 'une-tile une-add'); add.appendChild(el('i', 'fa-solid fa-plus')); add.appendChild(el('span', null, 'Ajouter'));
+            add.onclick = function () { $('une-file').click(); }; g.appendChild(add);
+            locaux.forEach(function (l) { g.appendChild(tuile(l)); });
+        } else if (importes === null) {
+            g.appendChild(el('div', 'une-empty', 'Chargement…'));
+        } else if (!importes.length) {
+            g.appendChild(el('div', 'une-empty', "Aucune photo importée pour le moment."));
+        } else {
+            importes.forEach(function (p) { g.appendChild(tuile(p)); });
+        }
+    }
+    function chargerImportes() {
+        if (importes !== null) return;
+        fetch('/api/une/photos-importees', { credentials: 'same-origin' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (d) {
+                importes = ((d && d.photos) || []).map(function (p) { return { cle: 'i:' + p.nom, nom: p.nom, url: p.url, fichier: null }; });
+                rendreGrille();
+            }).catch(function () { importes = []; rendreGrille(); });
+    }
+    function majPied() {
+        var th = $('une-thumbs'); th.textContent = '';
+        sel.slice(0, 4).forEach(function (s) { var im = el('img'); im.src = s.url; im.alt = ''; th.appendChild(im); });
+        $('une-cnt').textContent = sel.length ? sel.length + ' sélectionnée' + (sel.length > 1 ? 's' : '') : '';
+        $('une-next').disabled = !sel.length;
+    }
+
+    /* ---------- Étape 2 : couverture + titre ---------- */
+    function majCouverture() { $('une-cover-img').src = sel[couv] ? sel[couv].url : ''; }
+    function majCreer() { $('une-creer').disabled = envoi || !$('une-titre').value.trim(); }
+    function creer() {
+        if (envoi) return;
+        var titre = $('une-titre').value.replace(/\s+/g, ' ').trim();
+        if (!titre || !sel.length) return;
+        var ordre = sel.slice(); var c = ordre.splice(couv, 1)[0]; ordre.unshift(c);   // la couverture passe en premier
+        var fd = new FormData(), jetons = [], k = 0;
+        ordre.forEach(function (s) {
+            if (s.fichier) { fd.append('files', s.fichier, s.fichier.name); jetons.push('file:' + (k++)); }
+            else jetons.push('imp:' + s.nom);
+        });
+        fd.append('titre', titre); fd.append('ordre', JSON.stringify(jetons));
+        envoi = true; majCreer();
+        var b = $('une-creer'), txt = b.innerHTML; b.textContent = 'Création…'; $('une-erreur').style.display = 'none';
+        fetch('/api/une/creer', { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd })
+            .then(function (r) { return r.json().catch(function () { return null; }); })
+            .then(function (d) {
+                if (d && d.success) { fermerFlow(); charger(); if (typeof showToast === 'function') showToast('Contenu à la une créé', '✅'); return; }
+                throw new Error((d && d.error) || 'Création impossible pour le moment.');
+            })
+            .catch(function (e) { var er = $('une-erreur'); er.textContent = e.message || 'Connexion impossible. Réessayez.'; er.style.display = 'block'; })
+            .then(function () { envoi = false; b.innerHTML = txt; majCreer(); });
+    }
+
+    /* ---------- Visionneuse ---------- */
+    var vc = null, vi = 0;
+    function ouvrirVisionneuse(ci, i) {
+        vc = colls[ci]; vi = i || 0; if (!vc) return;
+        $('une-v-titre').textContent = vc.titre;
+        $('une-v-del').style.display = OWNER ? '' : 'none';
+        $('une-viewer').classList.add('open'); document.body.style.overflow = 'hidden'; montrer();
+    }
+    function montrer() {
+        $('une-v-img').src = vc.images[vi] || ''; $('une-v-cnt').textContent = (vi + 1) + ' / ' + vc.images.length;
+        var seul = vc.images.length < 2; $('une-v-prev').style.display = seul ? 'none' : ''; $('une-v-next').style.display = seul ? 'none' : '';
+    }
+    function fermerVisionneuse() { $('une-viewer').classList.remove('open'); if (!$('une-flow').classList.contains('open')) document.body.style.overflow = ''; vc = null; }
+    function supprimer() {
+        if (!vc || !confirm('Supprimer ce contenu à la une ?')) return;
+        var id = vc.id;
+        fetch('/api/une/' + id + '/supprimer', { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.json().catch(function () { return null; }); })
+            .then(function (d) { if (d && d.success) { fermerVisionneuse(); charger(); } else alerte((d && d.error) || 'Suppression impossible.'); })
+            .catch(function () { alerte('Connexion impossible. Réessayez.'); });
+    }
+
+    /* ---------- Branchements ---------- */
+    function brancher() {
+        $('une-close').onclick = fermerFlow;
+        $('une-back2').onclick = function () { etape(1); };
+        Array.prototype.forEach.call(document.querySelectorAll('.une-tab'), function (b) {
+            b.onclick = function () { tab = b.getAttribute('data-tab'); majOnglets(); if (tab === 'imp') chargerImportes(); rendreGrille(); };
+        });
+        $('une-file').onchange = function () {
+            Array.prototype.forEach.call(this.files, function (f) {
+                if (!/^image\//.test(f.type)) { alerte('« ' + f.name + ' » n\u2019est pas une image.'); return; }
+                if (f.size > MAX_OCTETS) { alerte('« ' + f.name + ' » dépasse 8 Mo.'); return; }
+                var it = { cle: 'f' + (++compteur), fichier: f, url: URL.createObjectURL(f), nom: null };
+                locaux.unshift(it);
+                if (sel.length < MAX) sel.push(it);
+            });
+            this.value = ''; rendreGrille(); majPied();
+        };
+        $('une-next').onclick = function () { couv = 0; majCouverture(); etape(2); majCreer(); };
+        $('une-cover-change').onclick = function () { couv = (couv + 1) % sel.length; majCouverture(); };
+        $('une-titre').oninput = function () { $('une-compteur').textContent = this.value.length + '/18'; majCreer(); };
+        $('une-creer').onclick = creer;
+        $('une-v-close').onclick = fermerVisionneuse; $('une-v-del').onclick = supprimer;
+        $('une-v-prev').onclick = function () { vi = (vi - 1 + vc.images.length) % vc.images.length; montrer(); };
+        $('une-v-next').onclick = function () { vi = (vi + 1) % vc.images.length; montrer(); };
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { if ($('une-viewer').classList.contains('open')) fermerVisionneuse(); else if ($('une-flow').classList.contains('open')) fermerFlow(); }
+            if ($('une-viewer').classList.contains('open') && vc && vc.images.length > 1) {
+                if (e.key === 'ArrowLeft') $('une-v-prev').click(); if (e.key === 'ArrowRight') $('une-v-next').click();
+            }
+        });
+        charger();
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', brancher); else brancher();
+})();
+</script>

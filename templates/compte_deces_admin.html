@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include 'compte_style.html' %}
+<div class="cc-page">
+    <div class="cc-top">
+        <a href="{{ url_for('main.settings') }}" class="cc-back" aria-label="Retour"><i class="fas fa-arrow-left"></i></a>
+        <h1>Décès — vérification</h1>
+    </div>
+    <div class="cc-wrap">
+        <div class="cc-alert info" style="margin-top:14px"><i class="fas fa-info-circle"></i><span>Vérifie la preuve avant de valider. À la validation : « commémoratif » bloque la connexion et garde le profil visible ; « suppression » masque le profil puis le supprime après {{ jours }} jours (annulable ci-dessous).</span></div>
+
+        {% for l in lignes %}
+        {% set d = l.d %}
+        <div class="cc-card" id="dem{{ d.id }}">
+            <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+                <h2 style="margin:0">{{ l.ref }}</h2>
+                <span class="cc-tag {{ 'wait' if d.statut == 'en_attente' else ('ok' if d.statut == 'valide' else 'no') }}">{{ 'En attente' if d.statut == 'en_attente' else ('Validée' if d.statut == 'valide' else 'Refusée') }}</span>
+            </div>
+            <ul class="cc-list">
+                <li><i class="fas fa-user"></i><span><strong>Profil :</strong> {{ l.cible }}{% if l.cible_user %} (@{{ l.cible_user }}){% endif %} · né(e) le {{ l.cible_naissance }}</span></li>
+                <li><i class="fas fa-user-friends"></i><span><strong>Déclarant :</strong> {{ d.declarant_nom }} ({{ d.lien }}) · {{ d.contact }}</span></li>
+                <li><i class="fas fa-calendar"></i><span><strong>Décès :</strong> {{ d.date_deces.strftime('%d/%m/%Y') if d.date_deces else 'non précisé' }} · demande du {{ d.cree_le.strftime('%d/%m/%Y %H:%M') }}</span></li>
+                <li><i class="fas fa-ribbon"></i><span><strong>Souhait :</strong> {{ 'Profil commémoratif' if d.souhait == 'commemoratif' else 'Suppression du profil' }}</span></li>
+                {% if d.personne_confiance %}<li><i class="fas fa-handshake"></i><span><strong>Personne de confiance :</strong> {{ d.personne_confiance }}</span></li>{% endif %}
+                {% if d.instructions %}<li><i class="fas fa-comment"></i><span>{{ d.instructions }}</span></li>{% endif %}
+            </ul>
+            {% set url_p = url_for('main.pdg_deces_preuve', did=d.id) %}
+            {% if d.preuve_type == 'image' %}<a href="{{ url_p }}" target="_blank" rel="noopener"><img src="{{ url_p }}" alt="Preuve" style="max-width:100%;border-radius:10px;border:1px solid var(--cc-border)"></a>
+            {% elif d.preuve_type == 'video' %}<video src="{{ url_p }}" controls preload="metadata" style="max-width:100%;border-radius:10px"></video>
+            {% else %}<a class="cc-btn ghost" href="{{ url_p }}" target="_blank" rel="noopener"><i class="fas fa-file-pdf"></i> Ouvrir le document</a>{% endif %}
+            {% if d.statut == 'en_attente' %}
+            <label class="cc-label" for="mot{{ d.id }}">Motif en cas de refus</label>
+            <input class="cc-input" id="mot{{ d.id }}" type="text" maxlength="300" placeholder="Ex. : preuve illisible">
+            <div class="cc-nav">
+                <button class="cc-btn danger" onclick="decider({{ d.id }}, 'refuse')"><i class="fas fa-times"></i> Refuser</button>
+                <button class="cc-btn primary" onclick="decider({{ d.id }}, 'valide')"><i class="fas fa-check"></i> Valider</button>
+            </div>
+            {% elif d.statut == 'refuse' and d.motif_refus %}<p class="cc-desc" style="margin-top:10px">Motif : {{ d.motif_refus }}</p>{% endif %}
+        </div>
+        {% else %}
+        <div class="cc-card"><p class="cc-desc" style="margin:0">Aucune demande pour le moment.</p></div>
+        {% endfor %}
+
+        <div class="cc-card">
+            <h2>Comptes en suppression / commémoratifs</h2>
+            {% for c in comptes %}
+            <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--cc-border);font-size:14px">
+                <div><strong>{{ c.nom }}</strong> (#{{ c.etat.user_id }})<br><span style="color:var(--cc-gray);font-size:12.5px">{{ 'Commémoratif' if c.etat.etat == 'commemoratif' else ('Suppression le ' ~ c.etat.echeance.strftime('%d/%m/%Y %H:%M') ~ ' UTC') }} · origine : {{ c.etat.origine }}</span></div>
+                <button class="cc-btn ghost" onclick="annuler({{ c.etat.user_id }})">Annuler</button>
+            </div>
+            {% else %}<p class="cc-desc" style="margin:0">Aucun.</p>{% endfor %}
+        </div>
+    </div>
+</div>
+{% include 'compte_js.html' %}
+<script>
+    function decider(id, decision) {
+        var motif = (document.getElementById('mot' + id) || {}).value || '';
+        if (!confirm(decision === 'valide' ? 'Valider cette demande ? Le compte sera bloqué immédiatement.' : 'Refuser cette demande ?')) { return; }
+        ccPost('/api/pdg/deces/' + id + '/decision', { decision: decision, motif: motif }).then(function (r) {
+            if (r.ok) { location.reload(); } else { alert(r.data.error || 'Erreur.'); }
+        });
+    }
+    function annuler(uid) {
+        if (!confirm('Annuler cet état et rendre le compte à la normale ?')) { return; }
+        ccPost('/api/pdg/compte/' + uid + '/annuler', {}).then(function (r) {
+            if (r.ok) { location.reload(); } else { alert(r.data.error || 'Erreur.'); }
+        });
+    }
+</script>
+{% endblock %}

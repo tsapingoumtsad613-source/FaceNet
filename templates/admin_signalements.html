@@ -1,0 +1,156 @@
+{# DÉBUT : style du menu de signalement (visuel uniquement, neutre, sans couleur) #}
+<style>
+.popup-signaler .popup-content { position: relative; max-height: 88vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.popup-signaler .popup-content h3 { margin: 0 32px 6px 0; font-size: 18px; font-weight: 700; line-height: 1.3; color: #050505; }
+.popup-signaler .popup-content .warning { margin: 0 0 12px; font-size: 13px; line-height: 1.4; color: #65676b; }
+.popup-signaler .popup-content .close { position: absolute; top: 10px; right: 12px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 22px; line-height: 1; color: #050505; background: #f0f2f5; cursor: pointer; transition: background .15s ease; }
+.popup-signaler .popup-content .close:hover { background: #e4e6eb; }
+
+.popup-signaler .form-signaler-vertical { display: flex; flex-direction: column; gap: 0; margin: 0; padding: 0; border-top: 1px solid #e4e6eb; }
+.popup-signaler .btn-raison-signaler {
+    -webkit-appearance: none; appearance: none;
+    display: flex; align-items: center; gap: 14px;
+    width: 100%; min-height: 56px; margin: 0; padding: 12px 8px;
+    background: transparent; color: #050505; border: none; border-bottom: 1px solid #e4e6eb; border-radius: 0;
+    box-shadow: none; text-align: left; font: inherit; font-size: 15px; font-weight: 500; line-height: 1.35;
+    cursor: pointer; transition: background .15s ease;
+}
+.popup-signaler .btn-raison-signaler:last-child { border-bottom: none; }
+.popup-signaler .btn-raison-signaler:hover { background: #f5f6f7; }
+.popup-signaler .btn-raison-signaler:active { background: #ebedf0; }
+.popup-signaler .btn-raison-signaler:focus-visible { outline: 2px solid #050505; outline-offset: -2px; }
+.popup-signaler .btn-raison-signaler .raison-icon { flex: 0 0 28px; width: 28px; text-align: center; font-size: 17px; color: #050505; }
+.popup-signaler .btn-raison-signaler .raison-label { flex: 1 1 auto; min-width: 0; }
+.popup-signaler .btn-raison-signaler .raison-chevron { flex: 0 0 auto; font-size: 13px; color: #65676b; }
+
+html[data-fn-theme="dark"] .popup-signaler .popup-content h3,
+html[data-fn-theme="dark"] .popup-signaler .btn-raison-signaler,
+html[data-fn-theme="dark"] .popup-signaler .btn-raison-signaler .raison-icon,
+html[data-fn-theme="dark"] .popup-signaler .popup-content .close { color: #e4e6eb; }
+html[data-fn-theme="dark"] .popup-signaler .popup-content .warning,
+html[data-fn-theme="dark"] .popup-signaler .btn-raison-signaler .raison-chevron { color: #b0b3b8; }
+html[data-fn-theme="dark"] .popup-signaler .form-signaler-vertical,
+html[data-fn-theme="dark"] .popup-signaler .btn-raison-signaler { border-color: #3e4042; }
+html[data-fn-theme="dark"] .popup-signaler .popup-content .close { background: #3a3b3c; }
+html[data-fn-theme="dark"] .popup-signaler .btn-raison-signaler:hover { background: #3a3b3c; }
+html[data-fn-theme="dark"] .popup-signaler .btn-raison-signaler:active { background: #4e4f50; }
+</style>
+{# FIN : style du menu de signalement #}
+
+{# DÉBUT : type de signalement (profil / photo / message / publication / groupe)
+   Variables optionnelles à définir avant l'include (rien n'est obligatoire) :
+     {% set type_signalement = 'photo' %}   -> profil (défaut), photo, message, publication, groupe
+     {% set cible_id = 12 %}                -> id de l'élément signalé (défaut : user.id)
+     {% set signalement_action = url %}     -> URL du formulaire (défaut : main.signaler_publication)
+   Exemple : {% with type_signalement='photo', cible_id=pub.id %}{% include 'signalements.html' %}{% endwith %}
+#}
+{% set _types_libelles = {
+    'profil': 'ce profil',
+    'photo': 'cette photo',
+    'message': 'ce message',
+    'publication': 'cette publication',
+    'groupe': 'ce groupe'
+} %}
+{% set _types_alias = {
+    'profile': 'profil', 'utilisateur': 'profil', 'user': 'profil',
+    'image': 'photo', 'photo_profil': 'photo', 'photo_couverture': 'photo', 'media': 'photo',
+    'msg': 'message', 'post': 'publication', 'pub': 'publication', 'group': 'groupe'
+} %}
+{% set _t = ((type_signalement if type_signalement is defined and type_signalement else 'profil')|string|trim|lower) %}
+{% set _t = _types_alias.get(_t, _t) %}
+{% set _type_signalement = _t if _t in _types_libelles else 'profil' %}
+{% set _libelle_signalement = _types_libelles[_type_signalement] %}
+{% set _cible_signalement = cible_id if cible_id is defined and cible_id is not none else (user.id if user is defined and user.id else 0) %}
+{# FIN : type de signalement #}
+
+<div id="popup-signaler-{{ _cible_signalement }}" class="popup-signaler" data-type-signalement="{{ _type_signalement }}">
+    <div class="popup-content">
+        <span onclick="this.parentElement.parentElement.style.display='none'" class="close">&times;</span>
+        <h3>Pourquoi signalez-vous {{ _libelle_signalement }} ?</h3>
+        <p class="warning">Si une personne est en danger immédiat, demandez de l'aide sans attendre.</p>
+
+        <form action="{{ signalement_action if signalement_action is defined and signalement_action else (url_for('main.signaler_publication', pub_id=_cible_signalement) if _cible_signalement else '#') }}" method="POST" class="form-signaler-vertical">
+            <input type="hidden" name="type_cible" value="{{ _type_signalement }}">
+            <button type="submit" name="raison" value="mineur" class="btn-raison-signaler">
+                <span class="raison-icon"><i class="fa-solid fa-child"></i></span>
+                <span class="raison-label">Problème impliquant une personne de moins de 18 ans</span>
+                <i class="fa-solid fa-chevron-right raison-chevron"></i>
+            </button>
+            <button type="submit" name="raison" value="Harcelement" class="btn-raison-signaler">
+                <span class="raison-icon"><i class="fa-solid fa-user-shield"></i></span>
+                <span class="raison-label">Harcèlement, intimidation ou maltraitance</span>
+                <i class="fa-solid fa-chevron-right raison-chevron"></i>
+            </button>
+            <button type="submit" name="raison" value="insulte" class="btn-raison-signaler">
+                <span class="raison-icon"><i class="fa-solid fa-comment-slash"></i></span>
+                <span class="raison-label">Insulte</span>
+                <i class="fa-solid fa-chevron-right raison-chevron"></i>
+            </button>
+            <button type="submit" name="raison" value="moquerie" class="btn-raison-signaler">
+                <span class="raison-icon"><i class="fa-solid fa-face-grin-tongue"></i></span>
+                <span class="raison-label">Moquerie</span>
+                <i class="fa-solid fa-chevron-right raison-chevron"></i>
+            </button>
+            <button type="submit" name="raison" value="suicide" class="btn-raison-signaler">
+                <span class="raison-icon"><i class="fa-solid fa-heart-pulse"></i></span>
+                <span class="raison-label">Suicide ou automutilation</span>
+                <i class="fa-solid fa-chevron-right raison-chevron"></i>
+            </button>
+            <button type="submit" name="raison" value="violence" class="btn-raison-signaler">
+                <span class="raison-icon"><i class="fa-solid fa-burst"></i></span>
+                <span class="raison-label">Contenu violent, haineux ou dérangeant</span>
+                <i class="fa-solid fa-chevron-right raison-chevron"></i>
+            </button>
+            <button type="submit" name="raison" value="vente_interdite" class="btn-raison-signaler">
+                <span class="raison-icon"><i class="fa-solid fa-box-open"></i></span>
+                <span class="raison-label">Vente ou promotion d'articles soumis à restrictions</span>
+                <i class="fa-solid fa-chevron-right raison-chevron"></i>
+            </button>
+            <button type="submit" name="raison" value="adulte" class="btn-raison-signaler">
+                <span class="raison-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                <span class="raison-label">Contenu réservé aux adultes</span>
+                <i class="fa-solid fa-chevron-right raison-chevron"></i>
+            </button>
+            <button type="submit" name="raison" value="arnaque" class="btn-raison-signaler">
+                <span class="raison-icon"><i class="fa-solid fa-circle-xmark"></i></span>
+                <span class="raison-label">Arnaque, fraude ou fausses informations</span>
+                <i class="fa-solid fa-chevron-right raison-chevron"></i>
+            </button>
+            <button type="submit" name="raison" value="propriete" class="btn-raison-signaler">
+                <span class="raison-icon"><i class="fa-solid fa-copyright"></i></span>
+                <span class="raison-label">Propriété intellectuelle</span>
+                <i class="fa-solid fa-chevron-right raison-chevron"></i>
+            </button>
+            <button type="submit" name="raison" value="spam" class="btn-raison-signaler">
+                <span class="raison-icon"><i class="fa-solid fa-bullhorn"></i></span>
+                <span class="raison-label">Spam ou publicité répétitive</span>
+                <i class="fa-solid fa-chevron-right raison-chevron"></i>
+            </button>
+            <button type="submit" name="raison" value="usurpation" class="btn-raison-signaler">
+                <span class="raison-icon"><i class="fa-solid fa-user-secret"></i></span>
+                <span class="raison-label">Faux compte ou usurpation d'identité</span>
+                <i class="fa-solid fa-chevron-right raison-chevron"></i>
+            </button>
+            <button type="submit" name="raison" value="haine" class="btn-raison-signaler">
+                <span class="raison-icon"><i class="fa-solid fa-hand-fist"></i></span>
+                <span class="raison-label">Discours haineux ou discrimination</span>
+                <i class="fa-solid fa-chevron-right raison-chevron"></i>
+            </button>
+            <button type="submit" name="raison" value="vie_privee" class="btn-raison-signaler">
+                <span class="raison-icon"><i class="fa-solid fa-lock"></i></span>
+                <span class="raison-label">Atteinte à la vie privée ou partage sans consentement</span>
+                <i class="fa-solid fa-chevron-right raison-chevron"></i>
+            </button>
+            <button type="submit" name="raison" value="terrorisme" class="btn-raison-signaler">
+                <span class="raison-icon"><i class="fa-solid fa-bomb"></i></span>
+                <span class="raison-label">Terrorisme ou organisation dangereuse</span>
+                <i class="fa-solid fa-chevron-right raison-chevron"></i>
+            </button>
+            <button type="submit" name="raison" value="ne_veux_pas_voir" class="btn-raison-signaler">
+                <span class="raison-icon"><i class="fa-solid fa-eye-slash"></i></span>
+                <span class="raison-label">Je ne veux pas voir ça</span>
+                <i class="fa-solid fa-chevron-right raison-chevron"></i>
+            </button>
+        </form>
+    </div>
+</div>

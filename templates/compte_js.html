@@ -1,0 +1,56 @@
+<script>
+(function () {
+    var CSRF = {{ csrf_token|tojson }};
+    window.ccEsc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+    /* Envoi JSON ou formulaire (FormData) avec le jeton de sécurité. Renvoie toujours {ok, status, data}. */
+    window.ccPost = function (url, body) {
+        var isForm = (typeof FormData !== 'undefined') && (body instanceof FormData);
+        var headers = { 'Accept': 'application/json', 'X-FN-CSRF': CSRF };
+        if (!isForm) { headers['Content-Type'] = 'application/json'; }
+        return fetch(url, { method: 'POST', credentials: 'same-origin', headers: headers, body: isForm ? body : JSON.stringify(body) })
+            .then(function (r) { return r.json().catch(function () { return { success: false, error: 'Réponse invalide du serveur.' }; }).then(function (d) { return { ok: r.ok && d.success !== false, status: r.status, data: d }; }); })
+            .catch(function () { return { ok: false, status: 0, data: { success: false, error: 'Connexion impossible. Vérifiez votre réseau et réessayez.' } }; });
+    };
+    /* Avant une désactivation / suppression : s'assure que ce profil figure dans « profils enregistrés » de
+       cet appareil, pour que la page de connexion affiche le compte à rebours / le logo de veille devant son nom. */
+    window.ccGarderProfilAppareil = function () {
+        return fetch('/api/appareil/profil', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (d) {
+            if (!d || !d.success || !d.token) { return; }
+            var K = 'facenet_saved_profiles', l = [];
+            try { l = JSON.parse(localStorage.getItem(K) || '[]'); } catch (e) { l = []; }
+            try { sessionStorage.removeItem('fn_classic'); } catch (e) {}
+            if (l.some(function (x) { return x.username === d.username && x.token; })) { return; }
+            var u = d.user || d;
+            function g() { for (var k = 0; k < arguments.length; k++) { var v = d[arguments[k]] || u[arguments[k]]; if (v && String(v).trim()) { return String(v).trim(); } } return ''; }
+            var uname = d.username || u.username || '';
+            var full = g('nom_complet', 'full_name', 'fullname', 'display_name', 'name') || [g('prenom', 'first_name'), g('nom', 'last_name')].filter(Boolean).join(' ');
+            l = l.filter(function (x) { return x.username !== uname; });
+            l.unshift({ username: uname, nom: full || uname, avatar: g('avatar', 'photo', 'avatar_url', 'photo_profil', 'profile_picture'), token: d.token, ident: uname, ts: Date.now() });
+            localStorage.setItem(K, JSON.stringify(l));
+        }).catch(function () {});
+    };
+    /* Assistant en étapes : opts = {validate(i)->message|null, submit(btn), submitLabel, labels:[...]} */
+    window.ccWizard = function (opts) {
+        var steps = [].slice.call(document.querySelectorAll('.cc-step')), cur = 0;
+        var bar = document.getElementById('ccBar'), lab = document.getElementById('ccStepLabel'), name = document.getElementById('ccStepName');
+        var back = document.getElementById('ccBack'), next = document.getElementById('ccNext'), err = document.getElementById('ccErr');
+        function say(m) { if (!err) { return; } err.hidden = !m; err.querySelector('span').textContent = m || ''; if (m) { err.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } }
+        function show(i) {
+            cur = i; steps.forEach(function (s, k) { s.hidden = (k !== i); });
+            bar.style.width = (((i + 1) / steps.length) * 100) + '%';
+            lab.textContent = 'Étape ' + (i + 1) + ' sur ' + steps.length; name.textContent = (opts.labels || [])[i] || '';
+            back.style.display = i ? '' : 'none';
+            next.innerHTML = (i === steps.length - 1) ? opts.submitLabel : 'Continuer <i class="fas fa-arrow-right"></i>';
+            next.className = 'cc-btn ' + ((i === steps.length - 1) ? (opts.submitClass || 'primary') : 'primary');
+            say(''); window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (opts.onShow) { opts.onShow(i); }
+        }
+        next.addEventListener('click', function () {
+            var m = opts.validate(cur); if (m) { say(m); return; }
+            if (cur < steps.length - 1) { show(cur + 1); } else { opts.submit(next, say); }
+        });
+        back.addEventListener('click', function () { if (cur > 0) { show(cur - 1); } });
+        window.ccGoto = show; show(0);
+    };
+})();
+</script>

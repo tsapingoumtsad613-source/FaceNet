@@ -1,0 +1,42 @@
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+    :root, [data-theme="light"] { --cc-blue:#0866FF; --cc-bg:#F0F2F5; --cc-card:#fff; --cc-text:#1c1e21; --cc-gray:#65676B; --cc-border:#e4e6eb; --cc-soft:#f5f6f7; --cc-red:#d92d20; --cc-redbg:#fdecea; --cc-green:#1a7f37; --cc-greenbg:#e7f6ec; --cc-amber:#9a6700; --cc-amberbg:#fff8e1; --cc-shadow:rgba(0,0,0,.08); }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --cc-bg:#18191A; --cc-card:#242526; --cc-text:#E4E6EB; --cc-gray:#B0B3B8; --cc-border:#3E4042; --cc-soft:#2f3031; --cc-redbg:#3a1f1c; --cc-greenbg:#16301f; --cc-amberbg:#3a3118; --cc-shadow:rgba(0,0,0,.35); } }
+    [data-theme="dark"] { --cc-bg:#18191A; --cc-card:#242526; --cc-text:#E4E6EB; --cc-gray:#B0B3B8; --cc-border:#3E4042; --cc-soft:#2f3031; --cc-redbg:#3a1f1c; --cc-greenbg:#16301f; --cc-amberbg:#3a3118; --cc-shadow:rgba(0,0,0,.35); }
+    html { -webkit-text-size-adjust:100%; }
+    body { margin:0; background:var(--cc-bg); color:var(--cc-text); font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; }
+    .cc-page { min-height:100vh; box-sizing:border-box; background:var(--cc-bg); }
+    .cc-wrap { max-width:680px; margin:0 auto; padding:0 14px 40px; box-sizing:border-box; }
+    .cc-top { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:10px; padding:12px 14px; background:var(--cc-card); border-bottom:1px solid var(--cc-border); }
+    .cc-back { display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:50%; background:var(--cc-soft); color:var(--cc-text); text-decoration:none; border:0; cursor:pointer; font-size:16px; }
+    .cc-back:hover { background:var(--cc-border); }
+    .cc-top h1 { font-size:18px; margin:0; font-weight:800; }
+    .cc-card { background:var(--cc-card); border:1px solid var(--cc-border); border-radius:14px; padding:18px; margin-top:14px; box-shadow:0 1px 3px var(--cc-shadow); }
+    .cc-card h2 { margin:0 0 6px; font-size:18px; display:flex; align-items:center; gap:10px; }
+    .cc-card h3 { margin:18px 0 8px; font-size:15px; }
+    .cc-desc { margin:0 0 12px; color:var(--cc-gray); font-size:14px; line-height:1.5; }
+    .cc-ico { width:40px; height:40px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; font-size:18px; flex:none; }
+    .cc-ico.blue { background:#e7f0ff; color:var(--cc-blue); } .cc-ico.red { background:var(--cc-redbg); color:var(--cc-red); } .cc-ico.gray { background:var(--cc-soft); color:var(--cc-gray); }
+    .cc-list { margin:8px 0 14px; padding:0; list-style:none; } .cc-list li { display:flex; gap:10px; padding:5px 0; font-size:14px; line-height:1.45; } .cc-list i { margin-top:3px; color:var(--cc-gray); width:16px; text-align:center; }
+    .cc-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:46px; padding:0 20px; border-radius:10px; border:0; font-size:15px; font-weight:700; cursor:pointer; text-decoration:none; box-sizing:border-box; transition:filter .15s, transform .1s; }
+    .cc-btn:active { transform:scale(.98); } .cc-btn:disabled { opacity:.55; cursor:not-allowed; }
+    .cc-btn.primary { background:var(--cc-blue); color:#fff; } .cc-btn.danger { background:var(--cc-red); color:#fff; } .cc-btn.ghost { background:var(--cc-soft); color:var(--cc-text); } .cc-btn.dark { background:#333; color:#fff; }
+    .cc-btn.block { width:100%; } .cc-btn:focus-visible, .cc-back:focus-visible { outline:2px solid var(--cc-blue); outline-offset:2px; }
+    .cc-alert { display:flex; gap:10px; padding:12px 14px; border-radius:10px; font-size:14px; line-height:1.45; margin:12px 0; }
+    .cc-alert.warn { background:var(--cc-amberbg); color:var(--cc-amber); } .cc-alert.err { background:var(--cc-redbg); color:var(--cc-red); } .cc-alert.ok { background:var(--cc-greenbg); color:var(--cc-green); } .cc-alert.info { background:#e7f0ff; color:#0b43df; }
+    [data-theme="dark"] .cc-alert.info { background:#17283f; color:#8ab4ff; }
+    .cc-alert[hidden], .cc-step[hidden] { display:none !important; }
+    .cc-progress { margin-top:14px; } .cc-progress-top { display:flex; justify-content:space-between; font-size:13px; color:var(--cc-gray); font-weight:600; margin-bottom:6px; }
+    .cc-bar { height:6px; border-radius:6px; background:var(--cc-border); overflow:hidden; } .cc-bar > i { display:block; height:100%; width:0; background:var(--cc-blue); border-radius:6px; transition:width .3s ease; }
+    .cc-choice { display:flex; align-items:center; gap:12px; min-height:48px; padding:10px 12px; margin:6px 0; border:1.5px solid var(--cc-border); border-radius:10px; cursor:pointer; font-size:15px; line-height:1.35; background:var(--cc-card); transition:border-color .15s, background .15s; }
+    .cc-choice:hover { background:var(--cc-soft); } .cc-choice input { width:20px; height:20px; flex:none; accent-color:var(--cc-blue); margin:0; }
+    .cc-choice:has(input:checked) { border-color:var(--cc-blue); background:#e7f0ff22; }
+    .cc-counter { font-size:13px; font-weight:700; color:var(--cc-gray); margin:4px 0 8px; } .cc-counter.ok { color:var(--cc-green); }
+    .cc-label { display:block; font-size:14px; font-weight:700; margin:14px 0 6px; } .cc-hint { font-weight:400; color:var(--cc-gray); font-size:12.5px; }
+    .cc-input, .cc-select, .cc-textarea { width:100%; box-sizing:border-box; min-height:46px; padding:10px 12px; border:1.5px solid var(--cc-border); border-radius:10px; background:var(--cc-card); color:var(--cc-text); font-size:16px; font-family:inherit; }
+    .cc-textarea { min-height:90px; resize:vertical; } .cc-input:focus, .cc-select:focus, .cc-textarea:focus { outline:none; border-color:var(--cc-blue); box-shadow:0 0 0 3px #0866ff22; }
+    .cc-nav { display:flex; gap:10px; margin-top:18px; } .cc-nav .cc-btn { flex:1; }
+    .cc-q { margin:18px 0 4px; font-size:15px; font-weight:700; line-height:1.4; }
+    .cc-tag { display:inline-block; padding:3px 9px; border-radius:20px; font-size:12px; font-weight:700; } .cc-tag.wait { background:var(--cc-amberbg); color:var(--cc-amber); } .cc-tag.ok { background:var(--cc-greenbg); color:var(--cc-green); } .cc-tag.no { background:var(--cc-redbg); color:var(--cc-red); }
+    @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
+</style>

@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+    /* --- DESIGN DU SUPPORT FACENET --- */
+    :root {
+        --fn-blue: #0866FF;
+        --fn-bg: #F0F2F5;
+        --fn-gray: #65676B;
+        --fn-border: #e4e6eb;
+        --white: #ffffff;
+        --text-dark: #1c1e21;
+        --danger: #ff3b30;
+        --success: #4cd964;
+    }
+
+    .support-container {
+        max-width: 1100px;
+        margin: 20px auto;
+        background: var(--white);
+        padding: 30px;
+        border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .support-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 2px solid var(--fn-border);
+        padding-bottom: 15px;
+        margin-bottom: 25px;
+    }
+
+    .support-title {
+        font-size: 24px;
+        font-weight: 800;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .support-title i {
+        color: var(--danger);
+    }
+
+    .mod-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+        font-size: 14px;
+    }
+
+    .mod-table th {
+        background: #f8f9fa;
+        color: var(--fn-gray);
+        font-weight: 700;
+        padding: 12px 16px;
+        border-bottom: 2px solid var(--fn-border);
+        text-transform: uppercase;
+        font-size: 12px;
+    }
+
+    .mod-table td {
+        padding: 16px;
+        border-bottom: 1px solid var(--fn-border);
+        vertical-align: middle;
+    }
+
+    .mod-table tr:hover {
+        background: #fafafa;
+    }
+
+    .raison-badge {
+        font-weight: 600;
+        color: #d92d20;
+        background: rgba(255, 59, 48, 0.1);
+        padding: 4px 8px;
+        border-radius: 6px;
+        display: inline-block;
+    }
+
+    .signaleur-cell {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .btn-mod-action {
+        border: none;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: 0.2s;
+    }
+
+    .btn-valider { background: var(--success); color: white; }
+    .btn-valider:hover { background: #34c759; }
+
+    .no-data {
+        text-align: center;
+        color: var(--fn-gray);
+        padding: 40px !important;
+        font-size: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="support-container">
+    <div class="support-header">
+        <h1 class="support-title">
+            <i class="fas fa-shield-alt"></i> Signalements en attente | Support FaceNet
+        </h1>
+        <span style="color: var(--fn-gray); font-weight: 600;">Total : {{ signalements|length }}</span>
+    </div>
+
+    <table class="mod-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Raison</th>
+                <th>Signaleur</th>
+                <th>Publication ID</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in signalements %}
+            <tr>
+                <td>{{ s.date_signalement.strftime('%d/%m/%Y %H:%M') }}</td>
+
+                <td><span class="raison-badge">{{ s.raison }}</span></td>
+
+                <td>
+                    <span class="signaleur-cell">
+                        <strong>{{ s.signaleur.username }}</strong>
+                        {% if s.signaleur.badge_expire %}
+                        <svg viewBox="0 0 24 24" width="20" height="20" style="vertical-align: middle;">
+                            <path fill="#1877F2" d="M23 12l-2.44-2.78.34-3.68-3.61-.82-1.89-3.18L12 3 8.6 1.54 6.71 4.72l-3.61.81.34 3.68L1 12l2.44 2.78-.34 3.69 3.61.82 1.89 3.18L12 21l3.4 1.46 1.89-3.18 3.61-.82-.34-3.68L23 12z"></path>
+                            <path fill="white" d="M10.5 15.6L6.4 11.8L7.8 10.4L10.2 12.8L16.2 6.8L17.6 8.2L10.2 15.6Z"></path>
+                        </svg>
+                        {% endif %}
+                    </span>
+                </td>
+
+                <td><span style="font-family: monospace; background: #eee; padding: 2px 6px; border-radius: 4px;">#{{ s.publication_id }}</span></td>
+
+                <td>
+                    <a href="/admin/signalement/{{ s.id }}/traiter" class="btn-mod-action btn-valider">
+                        <i class="fas fa-check"></i> Résoudre
+                    </a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" class="no-data">
+                    <i class="fas fa-check-circle" style="color: var(--success); font-size: 30px; display: block; margin-bottom: 10px;"></i>
+                    Aucun signalement en attente. Beau travail !
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

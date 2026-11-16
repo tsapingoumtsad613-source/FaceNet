@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>
+        {%- if etat == 'desactive' %}Compte en veille{% elif etat == 'commemoratif' %}Compte commémoratif{% else %}Suppression programmée{% endif %} | FaceNet
+    </title>
+    {% include 'compte_style.html' %}
+    <style>
+        body { display:flex; align-items:flex-start; justify-content:center; }
+        .gt { width:100%; max-width:460px; margin:0 auto; padding:24px 16px 40px; box-sizing:border-box; text-align:center; }
+        .gt-card { background:var(--cc-card); border:1px solid var(--cc-border); border-radius:18px; padding:26px 20px; box-shadow:0 4px 18px var(--cc-shadow); }
+        .gt-av { width:84px; height:84px; border-radius:50%; object-fit:cover; border:3px solid var(--cc-border); margin:0 auto 10px; display:block; }
+        .gt-av.sleep { filter:grayscale(.85) brightness(.9); }
+        .gt h1 { font-size:21px; margin:6px 0 6px; } .gt p { color:var(--cc-gray); font-size:14.5px; line-height:1.55; margin:6px 0; }
+        .gt-name { font-weight:800; font-size:17px; margin:4px 0 0; }
+        /* logo de mise en veille */
+        .sleep-logo { width:112px; height:112px; margin:6px auto 4px; display:block; }
+        .sleep-logo .z { font-family:Georgia,serif; font-weight:700; fill:var(--cc-blue); opacity:0; animation:zfly 3s infinite; }
+        .sleep-logo .z2 { animation-delay:1s; } .sleep-logo .z3 { animation-delay:2s; }
+        @keyframes zfly { 0% { opacity:0; transform:translate(0,6px); } 30% { opacity:1; } 100% { opacity:0; transform:translate(8px,-14px); } }
+        /* horloge */
+        .clock { position:relative; width:230px; height:230px; margin:10px auto 6px; }
+        .clock svg { width:100%; height:100%; transform:rotate(-90deg); }
+        .clock .bg { stroke:var(--cc-border); } .clock .fg { stroke:var(--cc-red); transition:stroke-dashoffset 1s linear; }
+        .clock-in { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+        .clock-in .big { font-size:38px; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-1px; }
+        .clock-in .sub { font-size:12.5px; color:var(--cc-gray); font-weight:600; text-transform:uppercase; letter-spacing:.6px; }
+        .units { display:flex; justify-content:center; gap:8px; margin:8px 0 2px; }
+        .unit { min-width:62px; background:var(--cc-soft); border-radius:12px; padding:8px 4px; }
+        .unit b { display:block; font-size:24px; font-variant-numeric:tabular-nums; } .unit span { font-size:11px; color:var(--cc-gray); font-weight:700; text-transform:uppercase; }
+        .gt-form { text-align:left; margin-top:14px; } .gt-form .cc-label:first-child { margin-top:0; }
+        .gt-ribbon { width:84px; height:84px; margin:4px auto 8px; border-radius:50%; background:var(--cc-soft); display:flex; align-items:center; justify-content:center; font-size:36px; color:var(--cc-gray); }
+    </style>
+</head>
+<body>
+<main class="gt" role="main">
+    <div class="gt-card">
+    {% if etat == 'commemoratif' %}
+        <div class="gt-ribbon"><i class="fas fa-ribbon"></i></div>
+        <h1>En souvenir de</h1>
+        <p class="gt-name">{{ nom }}</p>
+        <p>Ce profil a été transformé en profil commémoratif à la demande de ses proches. Il n'est plus possible de s'y connecter.</p>
+
+    {% elif etat == 'suppression' %}
+        <img class="gt-av" src="{{ avatar_url }}" alt="" onerror="this.style.display='none'">
+        <p class="gt-name">{{ nom }}</p>
+        <h1>Suppression définitive dans</h1>
+        <div class="clock" role="timer" aria-live="off">
+            <svg viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="54" fill="none" stroke-width="7"/><circle class="fg" id="ring" cx="60" cy="60" r="54" fill="none" stroke-width="7" stroke-linecap="round" stroke-dasharray="339.3" stroke-dashoffset="0"/></svg>
+            <div class="clock-in"><div class="big" id="hms">--:--:--</div><div class="sub" id="jours">jours restants</div></div>
+        </div>
+        <div class="units" aria-hidden="true">
+            <div class="unit"><b id="uJ">0</b><span>jours</span></div><div class="unit"><b id="uH">00</b><span>heures</span></div>
+            <div class="unit"><b id="uM">00</b><span>min</span></div><div class="unit"><b id="uS">00</b><span>sec</span></div>
+        </div>
+        <p id="msgClock">Suppression demandée le {{ demande_txt }}. Passé ce délai, ton profil et toutes tes données seront effacés définitivement.</p>
+        {% if not peut_reactiver %}<div class="cc-alert warn" style="text-align:left"><i class="fas fa-lock"></i><span>Ce profil est en cours de suppression{% if origine == 'deces' %} suite à un signalement de décès validé{% endif %}. Tu ne peux plus accéder à ce profil.</span></div>{% endif %}
+
+    {% else %}
+        <svg class="sleep-logo" viewBox="0 0 120 120" role="img" aria-label="Profil en veille">
+            <circle cx="56" cy="64" r="40" fill="var(--cc-soft)"/>
+            <path d="M74 36a32 32 0 1 0 14 54 26 26 0 0 1-14-54z" fill="var(--cc-blue)"/>
+            <text class="z" x="84" y="42" font-size="20">z</text><text class="z z2" x="92" y="30" font-size="15">z</text><text class="z z3" x="100" y="20" font-size="11">z</text>
+        </svg>
+        <img class="gt-av sleep" src="{{ avatar_url }}" alt="" onerror="this.style.display='none'">
+        <p class="gt-name">{{ nom }}</p>
+        <h1>Tu as mis ton profil en veille</h1>
+        <p>Ce compte est désactivé depuis le {{ demande_txt }}. Tes données sont conservées. Pour revenir, vérifie ton identité : mot de passe, nom d'utilisateur{% if exige_naissance %}, date de naissance{% endif %}{% if exige_contact %} et {{ contact_type }} du compte{% endif %}.</p>
+    {% endif %}
+
+    {% if peut_reactiver %}
+        <button type="button" class="cc-btn {{ 'danger' if etat == 'suppression' else 'primary' }} block" id="btnOuvrir" style="margin-top:14px">
+            <i class="fas {{ 'fa-undo' if etat == 'suppression' else 'fa-sun' }}"></i> {{ 'Annuler la suppression' if etat == 'suppression' else 'Réactiver mon compte' }}
+        </button>
+        <form class="gt-form" id="formVerif" hidden autocomplete="off" onsubmit="return false">
+            <div class="cc-alert info"><i class="fas fa-shield-alt"></i><span>Vérification de sécurité : tous les champs doivent correspondre à ton compte.</span></div>
+            <label class="cc-label" for="vUser">Nom d'utilisateur</label>
+            <input class="cc-input" id="vUser" type="text" autocapitalize="none" autocomplete="username">
+            <label class="cc-label" for="vPass">Mot de passe</label>
+            <input class="cc-input" id="vPass" type="password" autocomplete="current-password">
+            {% if exige_naissance %}
+            <label class="cc-label" for="vDate">Date de naissance</label>
+            <input class="cc-input" id="vDate" type="date" max="9999-12-31">
+            {% endif %}
+            {% if exige_contact %}
+            <label class="cc-label" for="vContact">{{ contact_type|capitalize }} enregistré sur le compte <span class="cc-hint">(en entier)</span></label>
+            <input class="cc-input" id="vContact" type="text" autocapitalize="none" autocomplete="off">
+            {% endif %}
+            <div class="cc-alert err" id="vErr" hidden role="alert"><i class="fas fa-exclamation-circle"></i><span></span></div>
+            <button type="submit" class="cc-btn primary block" id="btnValider" style="margin-top:12px"><i class="fas fa-check"></i> Vérifier et continuer</button>
+        </form>
+    {% endif %}
+        <button type="button" class="cc-btn ghost block" id="btnQuitter" style="margin-top:10px"><i class="fas fa-arrow-left"></i> Retour à la connexion</button>
+    </div>
+</main>
+{% include 'compte_js.html' %}
+<script>
+(function () {
+    function $(i) { return document.getElementById(i); }
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    var ETAT = {{ etat|tojson }};
+    {% if etat == 'suppression' %}
+    var echeance = {{ echeance_ms }}, depart = {{ demande_ms }}, total = {{ total_ms }};
+    var decalage = {{ serveur_ms }} - Date.now();        /* corrige l'heure de l'appareil */
+    var C = 2 * Math.PI * 54;
+    function tick() {
+        var reste = Math.max(0, echeance - (Date.now() + decalage));
+        var s = Math.floor(reste / 1000), j = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+        $('hms').textContent = pad(Math.floor(s / 3600)) + ':' + pad(m) + ':' + pad(sec);
+        $('jours').textContent = j + (j > 1 ? ' jours' : ' jour') + ' et ' + pad(h) + ' h';
+        $('uJ').textContent = j; $('uH').textContent = pad(h); $('uM').textContent = pad(m); $('uS').textContent = pad(sec);
+        var fait = Math.min(1, Math.max(0, 1 - reste / total));
+        $('ring').setAttribute('stroke-dashoffset', String(C * fait));
+        if (reste <= 0) {
+            $('msgClock').textContent = 'Le délai est écoulé : la suppression définitive est en cours. Ce compte ne peut plus être restauré.';
+            var b = $('btnOuvrir'); if (b) { b.hidden = true; } var f = $('formVerif'); if (f) { f.hidden = true; }
+            clearInterval(iv);
+        }
+    }
+    var iv = setInterval(tick, 1000); tick();
+    {% endif %}
+    var ouvrir = $('btnOuvrir');
+    if (ouvrir) { ouvrir.addEventListener('click', function () { ouvrir.hidden = true; $('formVerif').hidden = false; $('vUser').focus(); }); }
+    var form = $('formVerif');
+    if (form) {
+        form.addEventListener('submit', function () {
+            var err = $('vErr'), btn = $('btnValider');
+            err.hidden = true;
+            var body = { action: 'reactiver', username: $('vUser').value.trim(), password: $('vPass').value,
+                         birth_date: $('vDate') ? $('vDate').value : '', contact: $('vContact') ? $('vContact').value.trim() : '' };
+            if (!body.username || !body.password || ($('vDate') && !body.birth_date) || ($('vContact') && !body.contact)) {
+                err.hidden = false; err.querySelector('span').textContent = 'Remplis tous les champs.'; return;
+            }
+            btn.disabled = true;
+            ccPost('/login/compte/action', body).then(function (r) {
+                if (r.ok) { location.href = r.data.redirect; return; }
+                btn.disabled = false; err.hidden = false; err.querySelector('span').textContent = r.data.error || 'Erreur.';
+                if (r.status === 401) { setTimeout(function () { location.href = r.data.redirect || '/login'; }, 1500); }
+            });
+        });
+    }
+    $('btnQuitter').addEventListener('click', function () {
+        ccPost('/login/compte/action', { action: 'quitter' }).then(function (r) { location.href = (r.data && r.data.redirect) || '/login'; });
+    });
+})();
+</script>
+</body>
+</html>

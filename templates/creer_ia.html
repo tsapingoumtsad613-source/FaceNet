@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FaceNet - Créer une IA</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+        .chat-container { max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; height: 640px; position: relative; }
+
+        /* En-tête */
+        .chat-header { background: #fff; padding: 12px 15px; border-bottom: 1px solid #e4e6eb; display: flex; align-items: center; gap: 10px; }
+        .ci-back-btn { background: #f0f2f5; border: none; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #050505; flex-shrink: 0; }
+        .ci-header-title { font-weight: 700; font-size: 17px; color: #050505; }
+        .ci-header-sub { font-size: 12px; color: #65676b; }
+
+        /* ===================== ETAPE 1 : FORMULAIRE DE CREATION ===================== */
+        .ci-form-wrap { flex: 1; overflow-y: auto; padding: 20px 18px; box-sizing: border-box; }
+        .ci-form-wrap.hidden { display: none; }
+
+        .ci-avatar-picker-wrap { display: flex; justify-content: center; margin-bottom: 18px; }
+        .ci-avatar-preview { width: 76px; height: 76px; border-radius: 50%; background: linear-gradient(135deg, #a855f7, #ec4899); display: flex; align-items: center; justify-content: center; font-size: 34px; box-shadow: 0 6px 16px rgba(168,85,247,0.35); position: relative; cursor: pointer; }
+        .ci-avatar-edit-badge { position: absolute; bottom: -2px; right: -2px; width: 26px; height: 26px; background: #0866ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #fff; }
+        .ci-avatar-edit-badge svg { width: 12px; height: 12px; }
+
+        .ci-emoji-row { display: none; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 14px 0 4px; }
+        .ci-emoji-row.show { display: flex; }
+        .ci-emoji-choice { width: 38px; height: 38px; border-radius: 50%; background: #f0f2f5; border: none; font-size: 19px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.15s ease, background 0.15s ease; }
+        .ci-emoji-choice:hover { background: #e4e6eb; transform: scale(1.08); }
+        .ci-emoji-choice.selected { background: #e7f3ff; box-shadow: inset 0 0 0 2px #0866ff; }
+
+        .ci-field { margin-bottom: 16px; }
+        .ci-label { display: block; font-size: 13px; font-weight: 700; color: #050505; margin-bottom: 6px; }
+        .ci-hint { font-size: 12px; color: #8a8d91; margin-top: 5px; line-height: 1.4; }
+        .ci-input, .ci-textarea { width: 100%; box-sizing: border-box; border: 1.5px solid #dfe1e5; border-radius: 12px; padding: 11px 13px; font-size: 14.5px; font-family: inherit; color: #050505; outline: none; transition: border 0.15s ease; }
+        .ci-input:focus, .ci-textarea:focus { border-color: #0866ff; }
+        .ci-textarea { resize: none; min-height: 78px; line-height: 1.45; }
+
+        .ci-level-row { display: flex; gap: 8px; }
+        .ci-level-btn { flex: 1; padding: 10px 6px; border-radius: 12px; border: 1.5px solid #dfe1e5; background: #fff; font-size: 12.5px; font-weight: 600; color: #65676b; cursor: pointer; text-align: center; transition: all 0.15s ease; }
+        .ci-level-btn.selected { border-color: #0866ff; background: #e7f3ff; color: #0866ff; }
+
+        .ci-submit-btn { width: 100%; background: linear-gradient(135deg, #a855f7, #ec4899); color: #fff; border: none; padding: 13px; border-radius: 24px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 6px; transition: filter 0.15s ease, opacity 0.15s ease; }
+        .ci-submit-btn:hover { filter: brightness(1.06); }
+        .ci-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .ci-error { color: #ea4335; font-size: 12.5px; margin-top: 8px; display: none; }
+        .ci-error.show { display: block; }
+
+        /* ===================== ETAPE 2 : CHAT AVEC L'IA CREEE ===================== */
+        .ci-chat-view { flex: 1; display: none; flex-direction: column; min-height: 0; }
+        .ci-chat-view.show { display: flex; }
+
+        .chat-box { flex: 1; padding: 15px; overflow-y: auto; display: block; background: #fff; scroll-behavior: smooth; }
+        .message { max-width: 70%; padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.4; word-wrap: break-word; display: inline-block; }
+        .user-message { background: #0084ff; color: white; align-self: flex-end; border-bottom-right-radius: 4px; clear: both; float: right; margin-bottom: 8px; }
+        .bot-message { background: #e4e6eb; color: black; align-self: flex-start; border-bottom-left-radius: 4px; white-space: pre-wrap; clear: both; float: left; margin-bottom: 8px; }
+        .ci-writing-indicator { display: none; clear: both; float: left; color: #65676b; font-style: italic; font-size: 13px; padding: 5px 14px; margin-bottom: 2px; }
+
+        .input-area { padding: 12px 16px; background: #fff; border-top: 1px solid #f0f0f0; }
+        .controls-row { display: flex; align-items: center; gap: 10px; width: 100%; }
+        .input-wrapper { flex: 1; display: flex; align-items: center; background: #ffffff; border: 1.5px dashed #ccd0d5; border-radius: 20px; padding: 8px 16px; min-height: 22px; }
+        .input-wrapper input[type="text"] { width: 100%; border: none; background: transparent; font-size: 15px; outline: none; color: #050505; padding: 0; margin: 0; }
+        .input-wrapper input[type="text"]::placeholder { color: #898f9c; }
+        .send-btn { color: #0084ff; background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 6px; flex-shrink: 0; }
+        .send-btn svg { width: 24px; height: 24px; }
+        .ai-disclaimer { text-align: center; font-size: 11px; color: #98a2ad; padding: 4px 0 0; user-select: none; }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+
+    <div class="chat-header">
+        <button class="ci-back-btn" onclick="window.history.back()" title="Retour">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div>
+            <div class="ci-header-title" id="ciHeaderTitle">
+                {% if ia %}{{ ia.nom }}{% else %}Créer une IA{% endif %}
+            </div>
+            <div class="ci-header-sub" id="ciHeaderSub">
+                {% if ia %}En ligne{% else %}Personnalise ta propre intelligence artificielle{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== ETAPE 1 : FORMULAIRE ===================== -->
+    <div class="ci-form-wrap {% if ia %}hidden{% endif %}" id="ciFormWrap">
+
+        <div class="ci-avatar-picker-wrap">
+            <div class="ci-avatar-preview" id="ciAvatarPreview" onclick="ciToggleEmojiRow()">
+                <span id="ciAvatarEmoji">🤖</span>
+                <div class="ci-avatar-edit-badge">
+                    <svg viewBox="0 0 24 24" fill="#fff"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="ci-emoji-row" id="ciEmojiRow">
+            <button type="button" class="ci-emoji-choice selected" onclick="ciPickEmoji('🤖', this)">🤖</button>
+            <button type="button" class="ci-emoji-choice" onclick="ciPickEmoji('🦊', this)">🦊</button>
+            <button type="button" class="ci-emoji-choice" onclick="ciPickEmoji('🐱', this)">🐱</button>
+            <button type="button" class="ci-emoji-choice" onclick="ciPickEmoji('🌸', this)">🌸</button>
+            <button type="button" class="ci-emoji-choice" onclick="ciPickEmoji('👾', this)">👾</button>
+            <button type="button" class="ci-emoji-choice" onclick="ciPickEmoji('🧠', this)">🧠</button>
+            <button type="button" class="ci-emoji-choice" onclick="ciPickEmoji('🔥', this)">🔥</button>
+            <button type="button" class="ci-emoji-choice" onclick="ciPickEmoji('⭐', this)">⭐</button>
+        </div>
+
+        <div class="ci-field">
+            <label class="ci-label">Nom de l'IA</label>
+            <input type="text" class="ci-input" id="ciNomInput" placeholder="Ex : Coach Motiv, Mini Tsapi, Ami Poète..." maxlength="40">
+        </div>
+
+        <div class="ci-field">
+            <label class="ci-label">Personnalité</label>
+            <textarea class="ci-textarea" id="ciPersonnaliteInput" placeholder="Décris comment ton IA doit se comporter. Ex : Elle est motivante, parle avec des emojis, encourage toujours l'utilisateur..."></textarea>
+        </div>
+
+        <div class="ci-field">
+            <label class="ci-label">Ce qu'elle doit savoir</label>
+            <textarea class="ci-textarea" id="ciConnaissancesInput" placeholder="Quelques infos ou réponses toutes faites que ton IA doit connaître (facultatif)."></textarea>
+        </div>
+
+        <div class="ci-field">
+            <label class="ci-label">Niveau de réflexion</label>
+            <div class="ci-level-row">
+                <button type="button" class="ci-level-btn selected" id="ciLevelBasique" onclick="ciPickLevel('basique', this)">Basique</button>
+                <button type="button" class="ci-level-btn" id="ciLevelStandard" onclick="ciPickLevel('standard', this)">Standard</button>
+            </div>
+            <p class="ci-hint">Contrairement à Tsapi AI, les IA que tu crées ici réfléchissent de façon plus simple : elles répondent surtout à partir de ce que tu leur as appris, pas d'une intelligence complète.</p>
+        </div>
+
+        <button class="ci-submit-btn" id="ciSubmitBtn" onclick="ciCreerIA()">Créer mon IA</button>
+        <p class="ci-error" id="ciError">Donne au moins un nom à ton IA avant de continuer.</p>
+    </div>
+
+    <!-- ===================== ETAPE 2 : CHAT AVEC L'IA ===================== -->
+    <div class="ci-chat-view {% if ia %}show{% endif %}" id="ciChatView">
+        <div class="chat-box" id="chatBox">
+            <div class="message bot-message" id="ciWelcomeMsg">
+                Salut, je suis {% if ia %}{{ ia.nom }}{% else %}ton IA{% endif %} ! Comment puis-je t'aider ?
+            </div>
+            <div id="ciDynamicMessages">
+                {% if messages %}
+                    {% for msg in messages %}
+                        <div class="message user-message">{{ msg.contenu_utilisateur }}</div>
+                        <div class="message bot-message">{{ msg.reponse_ia }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            <div class="ci-writing-indicator" id="ciWritingIndicator">en train d'écrire...</div>
+        </div>
+
+        <div class="input-area">
+            <div class="controls-row">
+                <div class="input-wrapper">
+                    <input type="text" id="ciMessageInput" placeholder="Aa" onkeypress="if(event.key === 'Enter') ciEnvoyerMessage()">
+                </div>
+                <button class="send-btn" onclick="ciEnvoyerMessage()" title="Envoyer">
+                    <svg viewBox="0 0 24 24" fill="#0084ff" width="26" height="26"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                </button>
+            </div>
+            <div class="ai-disclaimer">Cette IA a une réflexion simplifiée et peut se tromper souvent.</div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    let ciEmojiChoisi = "🤖";
+    let ciNiveauChoisi = "basique";
+    const ciIaId = {{ ia.id if ia else 'null' }};
+
+    function ciToggleEmojiRow() {
+        document.getElementById('ciEmojiRow').classList.toggle('show');
+    }
+
+    function ciPickEmoji(emoji, btn) {
+        ciEmojiChoisi = emoji;
+        document.getElementById('ciAvatarEmoji').innerText = emoji;
+        document.querySelectorAll('.ci-emoji-choice').forEach(function (el) { el.classList.remove('selected'); });
+        btn.classList.add('selected');
+    }
+
+    function ciPickLevel(level, btn) {
+        ciNiveauChoisi = level;
+        document.querySelectorAll('.ci-level-btn').forEach(function (el) { el.classList.remove('selected'); });
+        btn.classList.add('selected');
+    }
+
+    async function ciCreerIA() {
+        const nom = document.getElementById('ciNomInput').value.trim();
+        const personnalite = document.getElementById('ciPersonnaliteInput').value.trim();
+        const connaissances = document.getElementById('ciConnaissancesInput').value.trim();
+        const errorEl = document.getElementById('ciError');
+
+        if (!nom) {
+            errorEl.classList.add('show');
+            return;
+        }
+        errorEl.classList.remove('show');
+
+        const submitBtn = document.getElementById('ciSubmitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Création en cours...";
+
+        try {
+            const response = await fetch("{{ url_for('main.creer_ia') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    nom: nom,
+                    avatar_emoji: ciEmojiChoisi,
+                    personnalite: personnalite,
+                    connaissances: connaissances,
+                    niveau: ciNiveauChoisi
+                })
+            });
+            const data = await response.json();
+
+            if (data.ok) {
+                document.getElementById('ciFormWrap').classList.add('hidden');
+                document.getElementById('ciChatView').classList.add('show');
+                document.getElementById('ciHeaderTitle').innerText = nom;
+                document.getElementById('ciHeaderSub').innerText = "En ligne";
+                document.getElementById('ciWelcomeMsg').innerText = "Salut, je suis " + nom + " ! Comment puis-je t'aider ?";
+                window.ciCurrentIaId = data.ia_id;
+            } else {
+                errorEl.innerText = data.error || "Une erreur est survenue, réessaie.";
+                errorEl.classList.add('show');
+            }
+        } catch (e) {
+            errorEl.innerText = "Impossible de créer l'IA pour le moment.";
+            errorEl.classList.add('show');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Créer mon IA";
+        }
+    }
+
+    async function ciEnvoyerMessage() {
+        const input = document.getElementById('ciMessageInput');
+        const message = input.value.trim();
+        if (!message) return;
+
+        const chatBox = document.getElementById('chatBox');
+        const dynamicZone = document.getElementById('ciDynamicMessages');
+
+        const userDiv = document.createElement('div');
+        userDiv.className = 'message user-message';
+        userDiv.innerText = message;
+        dynamicZone.appendChild(userDiv);
+
+        input.value = '';
+        const indicator = document.getElementById('ciWritingIndicator');
+        indicator.style.display = 'block';
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        const iaId = window.ciCurrentIaId || ciIaId;
+
+        try {
+            const response = await fetch('/mon-ia/' + iaId + '/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message })
+            });
+            const data = await response.json();
+            indicator.style.display = 'none';
+
+            const botDiv = document.createElement('div');
+            botDiv.className = 'message bot-message';
+            botDiv.innerText = data.response || "Je n'ai pas bien compris, tu peux reformuler ?";
+            dynamicZone.appendChild(botDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        } catch (e) {
+            indicator.style.display = 'none';
+            const botDiv = document.createElement('div');
+            botDiv.className = 'message bot-message';
+            botDiv.innerText = "Impossible de joindre cette IA pour le moment.";
+            dynamicZone.appendChild(botDiv);
+        }
+    }
+
+    window.onload = function () {
+        const chatBox = document.getElementById('chatBox');
+        if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+    };
+</script>
+
+</body>
+</html>
