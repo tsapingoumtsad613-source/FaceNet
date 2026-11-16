@@ -1,0 +1,554 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paramètres généraux | FaceNet</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root, [data-theme="light"] {
+            --fn-blue: #0866FF;
+            --fn-bg: #F0F2F5;
+            --fn-gray: #65676B;
+            --fn-border: #e4e6eb;
+            --white: #ffffff;
+            --text-dark: #1c1e21;
+            --card-shadow: rgba(0,0,0,0.1);
+            --input-bg: #fafafa;
+        }
+
+        [data-theme="dark"] {
+            --fn-bg: #18191A;
+            --white: #242526;
+            --text-dark: #E4E6EB;
+            --fn-border: #3E4042;
+            --fn-gray: #B0B3B8;
+            --card-shadow: rgba(0,0,0,0.3);
+            --input-bg: #3A3B3C;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background: var(--fn-bg);
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-dark);
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        /* ---------------- BARRE DU HAUT ---------------- */
+        .pg-topbar {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px 20px;
+            background: var(--white);
+            border-bottom: 1px solid var(--fn-border);
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+
+        .pg-back {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--fn-bg);
+            border: 1px solid var(--fn-border);
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            flex-shrink: 0;
+            font-size: 15px;
+        }
+
+        .pg-topbar h1 {
+            font-size: 18px;
+            margin: 0;
+            font-weight: 800;
+        }
+
+        .pg-container {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 20px 16px 60px;
+        }
+
+        .fn-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px var(--card-shadow);
+            margin-bottom: 20px;
+            transition: background 0.3s;
+        }
+
+        .fn-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--fn-border);
+        }
+
+        .row-label {
+            font-weight: 600;
+        }
+
+        .row-action {
+            color: var(--fn-blue);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        /* Formulaire global */
+        .tsapi-input-group {
+            margin-bottom: 15px;
+            position: relative;
+        }
+        .tsapi-input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        .tsapi-input-group select, 
+        .tsapi-input-group input[type="text"], 
+        .tsapi-input-group input[type="email"], 
+        .tsapi-input-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--fn-border);
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+            background: var(--input-bg);
+            color: var(--text-dark);
+            font-family: inherit;
+        }
+
+        /* Style pour l'indicateur de type de carte */
+        .card-type-icon {
+            position: absolute;
+            right: 15px;
+            top: 38px;
+            font-size: 20px;
+            color: var(--fn-gray);
+            transition: color 0.2s;
+        }
+
+        /* Interrupteur iOS */
+        .fn-switch { position: relative; display: inline-block; width: 46px; height: 24px; }
+        .fn-switch input { opacity: 0; width: 0; height: 0; }
+        .fn-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .fn-slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .fn-slider { background-color: var(--fn-blue); }
+        input:checked + .fn-slider:before { transform: translateX(22px); }
+
+        /* Grille pour aligner Expiration et CVV côte à côte */
+        .tsapi-input-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .tsapi-input-row .tsapi-input-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .file-upload-box {
+            border: 2px dashed #bcc0c4;
+            padding: 18px;
+            border-radius: 8px;
+            text-align: center;
+            background: var(--input-bg);
+            cursor: pointer;
+        }
+        .file-upload-box:hover {
+            border-color: var(--fn-blue);
+            background: #f4f9ff;
+        }
+
+        /* Barres de liens (preuves de notoriété) */
+        .notoriety-links-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .notoriety-link-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid var(--fn-border);
+            border-radius: 8px;
+            padding: 4px 4px 4px 12px;
+            background: var(--input-bg);
+        }
+        .notoriety-link-box i.link-icon {
+            color: var(--fn-gray);
+            font-size: 13px;
+        }
+        .notoriety-link-box input[type="url"] {
+            flex: 1;
+            border: none;
+            outline: none;
+            background: transparent;
+            padding: 10px 4px;
+            font-size: 14px;
+            color: var(--text-dark);
+            font-family: inherit;
+        }
+        .notoriety-link-box .btn-remove-link {
+            border: none;
+            background: transparent;
+            color: var(--fn-gray);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 8px;
+            border-radius: 50%;
+            line-height: 1;
+        }
+        .notoriety-link-box .btn-remove-link:hover {
+            color: #d92d20;
+            background: rgba(217,45,32,0.08);
+        }
+        .btn-add-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px dashed var(--fn-blue);
+            background: transparent;
+            color: var(--fn-blue);
+            font-weight: 600;
+            font-size: 13px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            justify-content: center;
+        }
+        .btn-add-link:hover {
+            background: #f4f9ff;
+        }
+
+        /* --- VÉRIFICATION TÉLÉPHONE / EMAIL --- */
+        .section-desc {
+            color: var(--fn-gray);
+            font-size: 14px;
+            line-height: 1.5;
+            margin: -6px 0 20px 0;
+        }
+
+        .phone-input-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .phone-dialcode {
+            flex: 0 0 auto;
+            padding: 12px 14px;
+            border: 1px solid var(--fn-border);
+            border-radius: 8px;
+            background: var(--fn-border);
+            font-weight: 700;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+        }
+
+        .phone-input-row input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid var(--fn-border);
+            border-radius: 8px;
+            font-size: 14px;
+            background: var(--input-bg);
+            color: var(--text-dark);
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        #phone_country_select {
+            font-size: 14px;
+        }
+
+        .otp-channel-toggle {
+            display: flex;
+            gap: 10px;
+        }
+
+        .channel-btn {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid var(--fn-border);
+            border-radius: 8px;
+            background: var(--input-bg);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            color: var(--text-dark);
+            transition: 0.2s;
+        }
+
+        .channel-btn i { margin-right: 6px; }
+
+        .channel-btn.active {
+            background: #ebf5ff;
+            border-color: var(--fn-blue);
+            color: var(--fn-blue);
+        }
+
+        .otp-code-input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid var(--fn-border);
+            border-radius: 8px;
+            font-size: 22px;
+            letter-spacing: 8px;
+            text-align: center;
+            box-sizing: border-box;
+            font-family: inherit;
+            background: var(--input-bg);
+            color: var(--text-dark);
+        }
+
+        .otp-sent-text {
+            font-size: 14px;
+            color: var(--fn-gray);
+            margin-bottom: 16px;
+        }
+
+        .otp-links {
+            font-size: 13px;
+            margin-top: 14px;
+        }
+
+        .otp-links a {
+            color: var(--fn-blue);
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .otp-links span {
+            color: var(--fn-gray);
+            margin: 0 6px;
+        }
+
+        .verif-success {
+            background: #e9f9ee;
+            color: #17803d;
+            border: 1px solid #bdeecb;
+            border-radius: 10px;
+            padding: 16px;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .verif-success i { margin-right: 8px; }
+
+        .btn-subscribe-tsapi:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* --- STYLISATION DU FORFAIT BLEU ET PLANS DÉFILANTS --- */
+        .tsapi-card-wrapper {
+            max-width: 550px;
+            width: 100%;
+            margin: 0 auto;
+            background: var(--white);
+            border-radius: 22px;
+            box-shadow: 0 12px 40px var(--card-shadow);
+            overflow: hidden;
+            border: 1px solid var(--fn-border);
+        }
+
+        .tsapi-premium-header {
+            height: 180px;
+            background: linear-gradient(135deg, #f5e3ca 0%, #edd2cc 50%, #e3becc 100%);
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-start;
+            padding: 0 0 20px 25px;
+            position: relative;
+        }
+
+        .tsapi-avatar-container {
+            position: relative;
+            width: 85px;
+            height: 85px;
+            border-radius: 50%;
+            border: 4px solid var(--white);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: -50px;
+            z-index: 2;
+        }
+
+        .tsapi-avatar-container .main-badge-icon {
+            width: 55px;
+            height: 55px;
+            object-fit: contain;
+        }
+
+        .tsapi-content-area {
+            padding: 65px 25px 30px 25px;
+            text-align: left;
+        }
+
+        .tsapi-verified-title {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin: 0 0 6px 0;
+            letter-spacing: -0.5px;
+        }
+
+        .tsapi-verified-subtitle {
+            color: var(--fn-gray);
+            font-size: 15px;
+            margin: 0 0 25px 0;
+            line-height: 1.4;
+        }
+
+        .form-section-title {
+            font-weight: 700;
+            font-size: 15px;
+            margin-bottom: 12px;
+            color: var(--text-dark);
+        }
+
+        /* Zone de défilement horizontal pour les cartes de forfaits */
+        
+    </style>
+</head>
+<body>
+
+<div class="pg-topbar">
+    <a href="{{ url_for('main.settings') }}" class="pg-back"><i class="fas fa-chevron-left"></i></a>
+    <h1>Paramètres généraux</h1>
+</div>
+
+<div class="pg-container">
+<div class="fn-card">
+
+                <h2>Informations de base</h2>
+                <div class="fn-row">
+                    <div class="row-label">Nom de profil</div>
+                    <div class="row-value">{{ current_user.nom_complet if current_user is defined else "Utilisateur FaceNet" }}</div>
+                    <a href="{{ url_for('main.edit_profile') }}" class="row-action">Modifier</a>
+                </div>
+                <div class="fn-row">
+                    <div class="row-label">Sécurité FaceNet</div>
+                    <div class="row-value">Configuration active</div>
+                    <a href="{{ url_for('main.update_password') }}" class="row-action">Gérer</a>
+                </div>
+            </div>
+            
+                <div class="fn-row">
+                    <div>
+                        <strong style="display:block;">Notifications Sonores Spéciales</strong>
+                        <span style="font-size:12px; color:var(--fn-gray);">Jouer des tonalités douces lors de la réception de messages ou alertes.</span>
+                    </div>
+                    <div>
+                        <label class="fn-switch">
+                            <input type="checkbox" id="toggle_sons_notif" checked onchange="toggleSonsNotification(this.checked)">
+                            <span class="fn-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+</div>
+
+<div id="google_translate_element" style="display:none;"></div>
+
+<script>
+    function changerThemeGlobal(theme) {
+        if (theme === 'system') {
+            const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        } else {
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+    }
+
+    function changerLangueGlobale(lang) {
+        // Convertit "fr-cm", "en-us", "zh-cn"... en code Google Translate réel
+        const casSpeciaux = { 'zh-cn': 'zh-CN', 'zh-tw': 'zh-TW' };
+        const code = casSpeciaux[lang] || lang.split('-')[0];
+
+        localStorage.setItem('fn_langue_choisie', lang);
+        document.cookie = "googtrans=/fr/" + code + "; path=/";
+
+        const combo = document.querySelector('.goog-te-combo');
+        if (combo) {
+            combo.value = code;
+            combo.dispatchEvent(new Event('change'));
+        } else {
+            location.reload();
+        }
+    }
+
+    /* --- SON DE NOTIFICATION RÉEL (Web Audio, aucun fichier requis) --- */
+    function jouerSonNotificationFaceNet() {
+        if (localStorage.getItem('fn_sons_notifications') === 'off') return;
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.type = 'sine';
+            o.frequency.setValueAtTime(880, ctx.currentTime);
+            o.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.12);
+            g.gain.setValueAtTime(0.0001, ctx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+            o.connect(g).connect(ctx.destination);
+            o.start();
+            o.stop(ctx.currentTime + 0.4);
+        } catch (e) { /* silencieux si le navigateur bloque l'audio sans interaction */ }
+    }
+    window.FaceNetJouerSonNotification = jouerSonNotificationFaceNet;
+    document.addEventListener('facenet:notification', jouerSonNotificationFaceNet);
+
+    function toggleSonsNotification(actif) {
+        localStorage.setItem('fn_sons_notifications', actif ? 'on' : 'off');
+        if (actif) jouerSonNotificationFaceNet(); // aperçu immédiat pour confirmer que ça marche
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const cb = document.getElementById('toggle_sons_notif');
+        if (cb) cb.checked = localStorage.getItem('fn_sons_notifications') !== 'off';
+
+        const langueSauvee = localStorage.getItem('fn_langue_choisie');
+        const select = document.getElementById('app_language_select');
+        if (langueSauvee && select) select.value = langueSauvee;
+
+        // Charge le widget Google Translate (nécessaire pour appliquer réellement la langue)
+        if (!window.googleTranslateElementInit) {
+            window.googleTranslateElementInit = function () {
+                new google.translate.TranslateElement(
+                    { pageLanguage: 'fr', autoDisplay: false },
+                    'google_translate_element'
+                );
+            };
+            const s = document.createElement('script');
+            s.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+            document.body.appendChild(s);
+        }
+    });
+</script>
+
+</body>
+</html>
+{% endblock %}

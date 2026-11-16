@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from '_page_macros.html' import csrf with context %}
+
+{% block title %}Paramètres — {{ page.nom }} — FaceNet{% endblock %}
+
+{% block content %}
+{% include '_page_style.html' %}
+<div class="pg-wrap">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}{% if cat in ('success', 'error') %}<div class="pg-flash {{ cat }}">{{ msg }}</div>{% endif %}{% endfor %}
+    {% endwith %}
+
+    <div class="pg-card" style="display:flex;align-items:center;gap:12px;">
+        <a class="pg-back" href="{{ url_for('main.fnpage_profil', page_id=page.id) }}" aria-label="Retour">←</a>
+        <div style="min-width:0;">
+            <h3 style="margin:0;">Paramètres de la Page</h3>
+            <span style="color:var(--pg-grey);font-size:13px;">{{ page.nom }}</span>
+        </div>
+    </div>
+
+    <div class="pg-card">
+        <div class="pg-nav-param">
+            <a href="{{ url_for('main.fnpage_modifier', page_id=page.id) }}"><span class="ico"><i class="fa-solid fa-pen"></i></span><span>Modifier la Page</span></a>
+            <a href="{{ url_for('main.api_abonnes', page_id=page.id) }}"><span class="ico"><i class="fa-solid fa-users"></i></span><span>Abonnés</span></a>
+            <a href="{{ url_for('main.fnpage_fil', page_id=page.id) }}"><span class="ico"><i class="fa-regular fa-newspaper"></i></span><span>Fil d'actualité de la Page</span></a>
+            <a href="{{ url_for('main.pages.mes_pages') }}"><span class="ico"><i class="fa-regular fa-flag"></i></span><span>Mes Pages</span></a>
+            <a href="{{ url_for('main.avantages_badge') }}"><span class="ico"><i class="fa-solid fa-circle-check"></i></span><span>Badge vérifié</span></a>
+        </div>
+    </div>
+
+    <form class="pg-card" method="POST" action="{{ url_for('main.fnpage_parametres', page_id=page.id) }}">{{ csrf() }}
+        <h3>Notifications et e-mails</h3>
+        <div class="pg-param">
+            <label class="pg-param-ligne">
+                <div><strong>Notifications de la Page</strong><span class="d">Recevoir les notifications liées à l'activité de votre Page.</span></div>
+                <input type="checkbox" class="pg-toggle" name="notif_profil" value="1" {{ 'checked' if page.notif_profil else '' }}>
+            </label>
+            <label class="pg-param-ligne">
+                <div><strong>E-mails promotionnels</strong><span class="d">Recevoir des conseils et des offres pour développer votre Page.</span></div>
+                <input type="checkbox" class="pg-toggle" name="emails_promo" value="1" {{ 'checked' if page.emails_promo else '' }}>
+            </label>
+        </div>
+        <button type="submit" class="pg-btn p" style="width:100%;margin-top:14px;">Enregistrer</button>
+    </form>
+</div>
+{% endblock %}

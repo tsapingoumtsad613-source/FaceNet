@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% from '_reseaux_macros.html' import fn_reseau_icone, fn_url, fn_domaine %}
+
+{# Classement : sites web / réseaux sociaux / contact #}
+{% set L = namespace(sites=[], reseaux=[]) %}
+{% if infos.site_web %}{% set L.sites = L.sites + [('Site web', infos.site_web)] %}{% endif %}
+{% for plat, url in (infos.social_links or {}).items() %}
+    {% if (plat|lower|trim).startswith('site') %}{% set L.sites = L.sites + [(plat, url)] %}
+    {% else %}{% set L.reseaux = L.reseaux + [(plat, url)] %}{% endif %}
+{% endfor %}
+{% set nb_contact = (1 if infos.email else 0) + (1 if infos.phone else 0) %}
+{% set nb_total = L.sites|length + L.reseaux|length + nb_contact %}
+{% set profil_url = url_for('main.profile', username=user.username) %}
+
+<style>
+    .fl-wrap { max-width: 720px; margin: 24px auto 70px; padding: 0 14px; box-sizing: border-box; }
+    .fl-head { display: flex; align-items: center; gap: 14px; background: #fff; border-radius: 16px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+    .fl-back { width: 40px; height: 40px; border-radius: 50%; background: #e4e6eb; color: #050505; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; flex: none; transition: background .15s; }
+    .fl-back:hover { background: #d8dadf; }
+    .fl-avatar { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex: none; border: 2px solid #fff; box-shadow: 0 0 0 2px #1877f2; }
+    .fl-who { min-width: 0; flex: 1; }
+    .fl-who h1 { margin: 0; font-size: 19px; color: #050505; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fl-who p { margin: 2px 0 0; font-size: 13px; color: #65676b; }
+    .fl-edit { flex: none; background: #1877f2; color: #fff; border-radius: 8px; padding: 9px 14px; font-size: 13px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+    .fl-edit:hover { background: #166fe5; }
+    .fl-tools { margin: 16px 0 6px; display: flex; flex-direction: column; gap: 10px; }
+    .fl-search { position: relative; }
+    .fl-search i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #8a8d91; font-size: 14px; }
+    .fl-search input { width: 100%; box-sizing: border-box; padding: 12px 14px 12px 38px; border-radius: 24px; border: 1px solid #ccd0d5; background: #fff; font: inherit; font-size: 14.5px; color: #050505; }
+    .fl-search input:focus { outline: 2px solid #1877f2; border-color: #1877f2; }
+    .fl-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+    .fl-chips::-webkit-scrollbar { display: none; }
+    .fl-chip { flex: none; border: none; cursor: pointer; background: #e4e6eb; color: #050505; border-radius: 20px; padding: 8px 14px; font: inherit; font-size: 13.5px; font-weight: 700; transition: background .15s, color .15s; }
+    .fl-chip b { opacity: .65; font-weight: 700; margin-left: 4px; }
+    .fl-chip.on { background: #1877f2; color: #fff; }
+    .fl-sec { margin-top: 20px; }
+    .fl-sec h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .6px; color: #65676b; margin: 0 0 10px 4px; }
+    .fl-card { display: flex; align-items: center; gap: 14px; background: #fff; border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 1px 6px rgba(0,0,0,.07); animation: flIn .35s ease both; animation-delay: calc(var(--i, 0) * 45ms); transition: transform .15s, box-shadow .15s; }
+    .fl-card:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,0,0,.12); }
+    @keyframes flIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    .fl-logo { width: 46px; height: 46px; border-radius: 50%; background: #f0f2f5; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; flex: none; }
+    .fl-logo svg { width: 1em; height: 1em; }
+    .fl-info { min-width: 0; flex: 1; }
+    .fl-name { font-weight: 700; font-size: 15px; color: #050505; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fl-url { font-size: 13px; color: #65676b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fl-acts { display: flex; gap: 8px; flex: none; }
+    .fl-btn { border: none; cursor: pointer; border-radius: 8px; padding: 8px 12px; font: inherit; font-size: 13px; font-weight: 700; text-decoration: none; background: #1877f2; color: #fff; display: inline-flex; align-items: center; gap: 6px; }
+    .fl-btn:hover { background: #166fe5; }
+    .fl-btn.ghost { background: #e4e6eb; color: #050505; }
+    .fl-btn.ghost:hover { background: #d8dadf; }
+    .fl-vide { display: none; text-align: center; color: #65676b; padding: 40px 10px; }
+    .fl-vide i { font-size: 34px; display: block; margin-bottom: 10px; opacity: .6; }
+    .fl-toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%) translateY(20px); background: #050505; color: #fff; padding: 10px 18px; border-radius: 22px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 9999; }
+    .fl-toast.show { opacity: 1; transform: translateX(-50%); }
+    .fn-b-snap { -webkit-text-stroke: 1px #000; }
+    html[data-theme="dark"] .fl-head, html[data-theme="dark"] .fl-card { background: #242526; box-shadow: 0 1px 8px rgba(0,0,0,.5); }
+    html[data-theme="dark"] .fl-who h1, html[data-theme="dark"] .fl-name { color: #e4e6eb; }
+    html[data-theme="dark"] .fl-who p, html[data-theme="dark"] .fl-url, html[data-theme="dark"] .fl-sec h2, html[data-theme="dark"] .fl-vide { color: #b0b3b8; }
+    html[data-theme="dark"] .fl-back, html[data-theme="dark"] .fl-chip, html[data-theme="dark"] .fl-btn.ghost { background: #3a3b3c; color: #e4e6eb; }
+    html[data-theme="dark"] .fl-chip.on { background: #1877f2; color: #fff; }
+    html[data-theme="dark"] .fl-logo { background: #3a3b3c; }
+    html[data-theme="dark"] .fl-search input { background: #3a3b3c; border-color: #3e4042; color: #e4e6eb; }
+    html[data-theme="dark"] .fn-b-dark { color: #e4e6eb !important; }
+    @media (max-width: 520px) {
+        .fl-card { flex-wrap: wrap; }
+        .fl-acts { width: 100%; }
+        .fl-acts .fl-btn { flex: 1; justify-content: center; }
+        .fl-edit span { display: none; }
+    }
+</style>
+
+<div class="fl-wrap">
+    <div class="fl-head">
+        <a class="fl-back" href="{{ profil_url }}" aria-label="Retour au profil"><i class="fa-solid fa-arrow-left"></i></a>
+        <img class="fl-avatar" src="{{ url_for('static', filename='uploads/' + (user.avatar | default('default.png', true))) }}" alt="">
+        <div class="fl-who">
+            <h1>{{ user.nom_complet or user.username }}</h1>
+            <p>@{{ user.username }} · {{ nb_total }} {{ 'lien' if nb_total <= 1 else 'liens' }}</p>
+        </div>
+        {% if est_proprietaire %}
+        <a class="fl-edit" href="{{ profil_url }}#modifier-liens"><i class="fa-solid fa-pen"></i><span>Modifier</span></a>
+        {% endif %}
+    </div>
+
+    {% if nb_total %}
+    <div class="fl-tools">
+        <div class="fl-search"><i class="fa-solid fa-magnifying-glass"></i><input type="search" id="fl-q" placeholder="Rechercher un site ou un réseau…" autocomplete="off"></div>
+        <div class="fl-chips" id="fl-chips">
+            <button type="button" class="fl-chip on" data-f="all">Tout<b>{{ nb_total }}</b></button>
+            {% if L.sites %}<button type="button" class="fl-chip" data-f="site">Sites web<b>{{ L.sites|length }}</b></button>{% endif %}
+            {% if L.reseaux %}<button type="button" class="fl-chip" data-f="reseau">Réseaux sociaux<b>{{ L.reseaux|length }}</b></button>{% endif %}
+            {% if nb_contact %}<button type="button" class="fl-chip" data-f="contact">Contact<b>{{ nb_contact }}</b></button>{% endif %}
+        </div>
+    </div>
+
+    {% if L.sites %}
+    <section class="fl-sec" data-cat="site">
+        <h2>Sites web</h2>
+        {% for nom, url in L.sites %}
+        <div class="fl-card" data-cat="site" data-txt="{{ (nom ~ ' ' ~ url)|lower }}" style="--i: {{ loop.index0 }}">
+            <span class="fl-logo">{{ fn_reseau_icone(nom) }}</span>
+            <div class="fl-info"><div class="fl-name">{{ nom }}</div><div class="fl-url">{{ fn_domaine(url) }}</div></div>
+            <div class="fl-acts">
+                <a class="fl-btn" href="{{ fn_url(url) }}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-arrow-up-right-from-square"></i> Ouvrir</a>
+                <button type="button" class="fl-btn ghost" data-copy="{{ fn_url(url) }}"><i class="fa-regular fa-copy"></i> Copier</button>
+            </div>
+        </div>
+        {% endfor %}
+    </section>
+    {% endif %}
+
+    {% if L.reseaux %}
+    <section class="fl-sec" data-cat="reseau">
+        <h2>Réseaux sociaux</h2>
+        {% for nom, url in L.reseaux %}
+        <div class="fl-card" data-cat="reseau" data-txt="{{ (nom ~ ' ' ~ url)|lower }}" style="--i: {{ loop.index0 }}">
+            <span class="fl-logo">{{ fn_reseau_icone(nom) }}</span>
+            <div class="fl-info"><div class="fl-name">{{ nom }}</div><div class="fl-url">{{ fn_domaine(url) }}</div></div>
+            <div class="fl-acts">
+                <a class="fl-btn" href="{{ fn_url(url) }}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-arrow-up-right-from-square"></i> Ouvrir</a>
+                <button type="button" class="fl-btn ghost" data-copy="{{ fn_url(url) }}"><i class="fa-regular fa-copy"></i> Copier</button>
+            </div>
+        </div>
+        {% endfor %}
+    </section>
+    {% endif %}
+
+    {% if nb_contact %}
+    <section class="fl-sec" data-cat="contact">
+        <h2>Contact</h2>
+        {% if infos.email %}
+        <div class="fl-card" data-cat="contact" data-txt="e-mail email {{ infos.email|lower }}" style="--i: 0">
+            <span class="fl-logo"><i class="fa-solid fa-envelope" style="color:#EA4335"></i></span>
+            <div class="fl-info"><div class="fl-name">E-mail</div><div class="fl-url">{{ infos.email }}</div></div>
+            <div class="fl-acts">
+                <a class="fl-btn" href="mailto:{{ infos.email }}"><i class="fa-solid fa-paper-plane"></i> Écrire</a>
+                <button type="button" class="fl-btn ghost" data-copy="{{ infos.email }}"><i class="fa-regular fa-copy"></i> Copier</button>
+            </div>
+        </div>
+        {% endif %}
+        {% if infos.phone %}
+        <div class="fl-card" data-cat="contact" data-txt="téléphone telephone {{ infos.phone|lower }}" style="--i: 1">
+            <span class="fl-logo"><i class="fa-solid fa-phone" style="color:#25D366"></i></span>
+            <div class="fl-info"><div class="fl-name">Téléphone</div><div class="fl-url">{{ infos.phone }}</div></div>
+            <div class="fl-acts">
+                <a class="fl-btn" href="tel:{{ infos.phone }}"><i class="fa-solid fa-phone"></i> Appeler</a>
+                <button type="button" class="fl-btn ghost" data-copy="{{ infos.phone }}"><i class="fa-regular fa-copy"></i> Copier</button>
+            </div>
+        </div>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <div class="fl-vide" id="fl-vide"><i class="fa-regular fa-face-frown"></i>Aucun résultat pour cette recherche.</div>
+
+    {% else %}
+    <div class="fl-vide" style="display:block"><i class="fa-solid fa-link"></i>
+        Aucun site web ni réseau social à afficher.
+        {% if est_proprietaire %}<br><br><a class="fl-edit" style="display:inline-flex" href="{{ profil_url }}#modifier-liens"><i class="fa-solid fa-plus"></i><span>&nbsp;Ajouter des liens</span></a>{% endif %}
+    </div>
+    {% endif %}
+</div>
+<div class="fl-toast" id="fl-toast"></div>
+
+<script>
+(function () {
+    var q = document.getElementById('fl-q');
+    var chips = document.querySelectorAll('.fl-chip');
+    var cards = document.querySelectorAll('.fl-card[data-cat]');
+    var secs = document.querySelectorAll('.fl-sec');
+    var vide = document.getElementById('fl-vide');
+    var toast = document.getElementById('fl-toast');
+    var filtre = 'all';
+
+    function appliquer() {
+        var t = q ? q.value.trim().toLowerCase() : '';
+        var visibles = 0;
+        cards.forEach(function (c) {
+            var ok = (filtre === 'all' || c.getAttribute('data-cat') === filtre) && (!t || (c.getAttribute('data-txt') || '').indexOf(t) !== -1);
+            c.style.display = ok ? '' : 'none';
+            if (ok) visibles++;
+        });
+        secs.forEach(function (s) {
+            var any = s.querySelectorAll('.fl-card[data-cat]:not([style*="display: none"])').length;
+            s.style.display = any ? '' : 'none';
+        });
+        if (vide && cards.length) vide.style.display = visibles ? 'none' : 'block';
+    }
+    if (q) q.addEventListener('input', appliquer);
+    chips.forEach(function (b) {
+        b.addEventListener('click', function () {
+            chips.forEach(function (x) { x.classList.remove('on'); });
+            b.classList.add('on');
+            filtre = b.getAttribute('data-f');
+            appliquer();
+        });
+    });
+
+    function montrer(msg) {
+        toast.textContent = msg; toast.classList.add('show');
+        clearTimeout(montrer._t); montrer._t = setTimeout(function () { toast.classList.remove('show'); }, 1800);
+    }
+    function copier(txt) {
+        if (navigator.clipboard && window.isSecureContext) { return navigator.clipboard.writeText(txt); }
+        return new Promise(function (ok, ko) {
+            try {
+                var ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+                document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); ok();
+            } catch (e) { ko(e); }
+        });
+    }
+    document.addEventListener('click', function (e) {
+        var b = e.target.closest ? e.target.closest('[data-copy]') : null;
+        if (!b) return;
+        copier(b.getAttribute('data-copy')).then(function () { montrer('Lien copié !'); }, function () { montrer('Copie impossible'); });
+    });
+})();
+</script>
+{% endblock %}

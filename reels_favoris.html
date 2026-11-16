@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2><i class="fa-solid fa-bookmark"></i> Mes vidéos favorites</h2>
+    <hr>
+    
+    {% if favoris %}
+        <div class="row">
+            {% for item in favoris %}
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <p>Reel favori</p>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-muted">Vous n'avez aucun Reel enregistré en favori pour le moment.</p>
+    {% endif %}
+</div>
+{% endblock %}

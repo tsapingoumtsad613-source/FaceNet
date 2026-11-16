@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .pt-page {
+        --pt-blue: var(--fn-blue, #0866FF);
+        --pt-bg: var(--fn-bg, #F0F2F5);
+        --pt-card: var(--white, #ffffff);
+        --pt-text: var(--text-dark, #1c1e21);
+        --pt-muted: var(--fn-gray, #65676B);
+        --pt-border: var(--fn-border, #e4e6eb);
+        --pt-shadow: var(--card-shadow, rgba(0, 0, 0, 0.1));
+        background: var(--pt-bg);
+        color: var(--pt-text);
+        min-height: 100vh;
+        box-sizing: border-box;
+        padding: 28px clamp(16px, 4vw, 56px) 64px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .pt-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border: 1px solid var(--pt-border);
+        border-radius: 20px;
+        background: var(--pt-card);
+        color: var(--pt-text);
+        font: 600 13px/1 inherit;
+        font-family: inherit;
+        cursor: pointer;
+        text-decoration: none;
+    }
+    .pt-back:hover { background: var(--pt-bg); }
+    .pt-back:focus-visible,
+    .pt-card:focus-visible { outline: 3px solid var(--pt-blue); outline-offset: 2px; }
+
+    .pt-hero { max-width: 760px; margin: 28px 0 8px; }
+    .pt-hero h1 {
+        margin: 0 0 10px;
+        font-size: clamp(26px, 4vw, 38px);
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        line-height: 1.15;
+    }
+    .pt-hero p {
+        margin: 0;
+        font-size: 16px;
+        line-height: 1.6;
+        color: var(--pt-muted);
+    }
+
+    .pt-group { margin-top: 44px; }
+    .pt-group-head {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 6px;
+    }
+    .pt-group-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        background: rgba(8, 102, 255, 0.12);
+        color: var(--pt-blue);
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+    .pt-group-head h2 { margin: 0; font-size: 22px; font-weight: 800; }
+    .pt-group-intro {
+        margin: 0 0 22px 54px;
+        max-width: 640px;
+        font-size: 14px;
+        line-height: 1.55;
+        color: var(--pt-muted);
+    }
+
+    .pt-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+        gap: 20px;
+        align-items: stretch;
+    }
+
+    .pt-card {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding: 22px;
+        background: var(--pt-card);
+        border: 1px solid var(--pt-border);
+        border-radius: 16px;
+        box-shadow: 0 1px 3px var(--pt-shadow);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .pt-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 26px var(--pt-shadow);
+        border-color: var(--pt-blue);
+    }
+
+    .pt-logos { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    /* Les logos officiels sont conçus pour fond clair : la pastille reste blanche en mode sombre */
+    .pt-logo {
+        position: relative;
+        width: 96px;
+        height: 60px;
+        display: grid;
+        place-items: center;
+        background: #ffffff;
+        border: 1px solid var(--pt-border);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .pt-logo img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        box-sizing: border-box;
+        padding: 9px 12px;
+        object-fit: contain;
+        background: #ffffff;
+    }
+    /* Visible seulement si l'image ne charge pas (l'image est retirée par onerror) */
+    .pt-logo-fb {
+        font-size: 20px;
+        font-weight: 800;
+        color: var(--pt-blue);
+        letter-spacing: 0.02em;
+    }
+
+    .pt-name { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.3; }
+    .pt-role {
+        align-self: flex-start;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(8, 102, 255, 0.12);
+        color: var(--pt-blue);
+        font-size: 12.5px;
+        font-weight: 700;
+    }
+    [data-theme="dark"] .pt-role { color: #4599ff; background: #263951; }
+
+    .pt-text {
+        margin: 0;
+        font-size: 14.5px;
+        line-height: 1.65;
+        color: var(--pt-text);
+    }
+
+    @media (max-width: 600px) {
+        .pt-group-intro { margin-left: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .pt-card { transition: none; }
+        .pt-card:hover { transform: none; }
+    }
+</style>
+
+{% macro logo(src, alt, ini) %}
+<span class="pt-logo"><span class="pt-logo-fb" aria-hidden="true">{{ ini }}</span><img src="{{ src }}" alt="{{ alt }}" loading="lazy" onerror="this.remove()"></span>
+{% endmacro %}
+
+{# Logos locaux : à déposer dans static/images/partenaires/ (voir noms ci-dessous). #}
+{% set groupes = [
+    {
+        'titre': 'Solutions de paiement & banques',
+        'icone': 'fa-wallet',
+        'intro': 'Les acteurs qui permettent de payer, de recharger son solde et d\'utiliser les fonctionnalités payantes de FaceNet.',
+        'cartes': [
+            {
+                'nom': 'Fapshi',
+                'role': 'Agrégateur de paiement principal',
+                'logos': [{'src': url_for('static', filename='images/partenaires/fapshi.png'), 'alt': 'Logo Fapshi', 'ini': 'F'}],
+                'texte': 'Passerelle de paiement sécurisée centrale de FaceNet. Elle permet aux utilisateurs de réaliser des transactions fluides, de recharger leur solde et d\'accéder aux fonctionnalités payantes en toute sécurité via une API hautement protégée.'
+            },
+            {
+                'nom': 'UBC Bank - Union Bank of Cameroon',
+                'role': 'Partenaire bancaire',
+                'logos': [{'src': url_for('static', filename='images/partenaires/ubc.png'), 'alt': 'Logo UBC Bank', 'ini': 'UBC'}],
+                'texte': 'Établissement bancaire partenaire assurant la gestion des flux financiers, la garantie des fonds et la conformité bancaire de la plateforme au niveau national. Il facilite la liaison des comptes bancaires et le traitement des transactions institutionnelles.'
+            },
+            {
+                'nom': 'MTN Mobile Money & Orange Money',
+                'role': 'Paiements mobiles locaux',
+                'logos': [
+                    {'src': url_for('static', filename='images/partenaires/mtn-momo.png'), 'alt': 'Logo MTN MoMo', 'ini': 'MTN'},
+                    {'src': url_for('static', filename='images/partenaires/orange-money.png'), 'alt': 'Logo Orange Money', 'ini': 'OM'}
+                ],
+                'texte': 'Solutions de paiement mobile indispensables au Cameroun. Elles permettent aux utilisateurs de FaceNet de procéder instantanément au dépôt, au retrait ou à l\'achat de services directement depuis leur téléphone mobile, sans nécessiter de carte bancaire.'
+            },
+            {
+                'nom': 'Visa & Mastercard',
+                'role': 'Réseaux de cartes internationales',
+                'logos': [
+                    {'src': 'https://cdn.simpleicons.org/visa', 'alt': 'Logo Visa', 'ini': 'VISA'},
+                    {'src': 'https://cdn.simpleicons.org/mastercard', 'alt': 'Logo Mastercard', 'ini': 'MC'}
+                ],
+                'texte': 'Réseaux monétiques internationaux assurant la compatibilité avec toutes les cartes de débit et de crédit internationales. Ils permettent aux utilisateurs de la diaspora ou disposant de cartes bancaires de faire des transactions sécurisées partout dans le monde.'
+            }
+        ]
+    },
+    {
+        'titre': 'Infrastructure, cloud & sécurité',
+        'icone': 'fa-cloud',
+        'intro': 'Les services qui hébergent FaceNet, le protègent et le gardent rapide et disponible.',
+        'cartes': [
+            {
+                'nom': 'Cloudflare',
+                'role': 'Protection web & CDN',
+                'logos': [{'src': 'https://cdn.simpleicons.org/cloudflare', 'alt': 'Logo Cloudflare', 'ini': 'CF'}],
+                'texte': 'Infrastructure globale de sécurité et de performance web. Cloudflare protège FaceNet contre les attaques DDoS, chiffre le trafic utilisateur et accélère le chargement des pages et des contenus grâce à son réseau de distribution mondial.'
+            },
+            {
+                'nom': 'AWS / Google Cloud',
+                'role': 'Hébergement & serveurs',
+                'logos': [
+                    {'src': url_for('static', filename='images/partenaires/aws.png'), 'alt': 'Logo AWS', 'ini': 'AWS'},
+                    {'src': 'https://cdn.simpleicons.org/googlecloud', 'alt': 'Logo Google Cloud', 'ini': 'GC'}
+                ],
+                'texte': 'Serveurs cloud de haute performance hébergeant la base de données, la logique applicative et le stockage des fichiers médias de FaceNet. Ils garantissent une disponibilité 24/7 et une grande fluidité lors des connexions simultanées.'
+            },
+            {
+                'nom': 'Google Services',
+                'role': 'Documents officiels, licences & CGU',
+                'logos': [{'src': 'https://cdn.simpleicons.org/google', 'alt': 'Logo Google', 'ini': 'G'}],
+                'texte': 'Plateforme d\'hébergement et d\'indexation des documents légaux de FaceNet. Elle héberge de manière transparente les Conditions Générales d\'Utilisation (CGU), les politiques de confidentialité et la documentation de la Licence utilisateur.'
+            }
+        ]
+    },
+    {
+        'titre': 'Télécoms, sécurité & modération',
+        'icone': 'fa-shield-halved',
+        'intro': 'Le réseau qui relie FaceNet à ses utilisateurs et l\'équipe qui veille sur la communauté.',
+        'cartes': [
+            {
+                'nom': 'Camtel - Cameroon Telecommunications',
+                'role': 'Infrastructure réseau',
+                'logos': [{'src': url_for('static', filename='images/partenaires/camtel.png'), 'alt': 'Logo Camtel', 'ini': 'CT'}],
+                'texte': 'Opérateur historique des télécommunications garantissant l\'interconnexion au réseau national et la stabilité des infrastructures fibre optique pour l\'accès aux serveurs locaux.'
+            },
+            {
+                'nom': 'Centre d\'Assistance & Modération FaceNet',
+                'role': 'Sécurité & équipe interne',
+                'logos': [{'src': url_for('static', filename='images/partenaires/facenet-securite.png'), 'alt': 'Badge de sécurité FaceNet', 'ini': 'FN'}],
+                'texte': 'Organe interne chargé du traitement anonyme des signalements, de la protection des utilisateurs contre le harcèlement, de la vérification de la santé des comptes et du maintien d\'un environnement numérique sain et respectueux.'
+            }
+        ]
+    }
+] %}
+
+<div class="pt-page">
+    <button type="button" class="pt-back" onclick="if (history.length > 1) { history.back(); } else { location.href = '/'; }">
+        <i class="fas fa-arrow-left"></i> Retour aux paramètres
+    </button>
+
+    <header class="pt-hero">
+        <h1>Nos Partenaires &amp; Services Associés</h1>
+        <p>Derrière FaceNet, plusieurs services et organismes assurent vos paiements, la sécurité de vos données et la stabilité de la plateforme. Voici le rôle exact de chacun.</p>
+    </header>
+
+    {% for g in groupes %}
+    <section class="pt-group" aria-labelledby="pt-g{{ loop.index }}">
+        <div class="pt-group-head">
+            <span class="pt-group-icon"><i class="fas {{ g.icone }}"></i></span>
+            <h2 id="pt-g{{ loop.index }}">{{ g.titre }}</h2>
+        </div>
+        <p class="pt-group-intro">{{ g.intro }}</p>
+
+        <div class="pt-grid">
+            {% for c in g.cartes %}
+            <article class="pt-card" tabindex="0">
+                <div class="pt-logos">
+                    {% for l in c.logos %}{{ logo(l.src, l.alt, l.ini) }}{% endfor %}
+                </div>
+                <h3 class="pt-name">{{ c.nom }}</h3>
+                <span class="pt-role">{{ c.role }}</span>
+                <p class="pt-text">{{ c.texte }}</p>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+    {% endfor %}
+</div>
+{% endblock %}

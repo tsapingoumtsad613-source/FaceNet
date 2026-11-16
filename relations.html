@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .fnrel-page { max-width: 880px; margin: 0 auto; padding: 12px 12px 90px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1c1e21; }
+    .fnrel-top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .fnrel-back { width: 38px; height: 38px; flex: 0 0 auto; border-radius: 50%; background: #e4e6eb; color: #1c1e21; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 15px; }
+    .fnrel-title { font-weight: 800; font-size: 19px; line-height: 1.2; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fnrel-layout { display: flex; gap: 14px; align-items: flex-start; }
+    .fnrel-side { flex: 0 0 240px; background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.12); padding: 10px; position: sticky; top: 70px; }
+    .fnrel-side-title { font-weight: 800; font-size: 17px; padding: 6px 10px 10px; }
+    .fnrel-tab { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; font: inherit; font-weight: 700; font-size: 15px; color: #1c1e21; text-align: left; padding: 10px; border-radius: 10px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .fnrel-tab i { width: 34px; height: 34px; border-radius: 50%; background: #e4e6eb; display: flex; align-items: center; justify-content: center; font-size: 15px; flex: 0 0 auto; }
+    .fnrel-tab .fnrel-n { margin-left: auto; font-weight: 600; font-size: 13px; color: #65676b; }
+    .fnrel-tab.active { background: #e7f0fd; color: #1877f2; }
+    .fnrel-tab.active i { background: #1877f2; color: #fff; }
+    .fnrel-main { flex: 1; min-width: 0; background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.12); padding: 6px 12px 12px; min-height: 240px; }
+    .fnrel-head { font-weight: 800; font-size: 17px; padding: 10px 2px; }
+    .fnrel-row { display: flex; align-items: center; gap: 12px; padding: 9px 4px; text-decoration: none; color: inherit; border-radius: 10px; -webkit-tap-highlight-color: transparent; }
+    .fnrel-row:active { background: #f0f2f5; }
+    .fnrel-row img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; background: #e4e6eb; flex: 0 0 auto; }
+    .fnrel-name { font-weight: 700; font-size: 15px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fnrel-sub { font-size: 13px; color: #65676b; margin-top: 2px; }
+    .fnrel-empty { text-align: center; color: #65676b; padding: 40px 10px; font-size: 14px; }
+    .fnrel-more { display: block; margin: 8px auto 0; border: 0; background: #e7f0fd; color: #1877f2; font-weight: 700; font-size: 14px; padding: 10px 22px; border-radius: 10px; cursor: pointer; }
+    .fnrel-item { display: flex; align-items: center; gap: 6px; }
+    .fnrel-item .fnrel-row { flex: 1; min-width: 0; }
+    .fnrel-dots { width: 38px; height: 38px; flex: 0 0 auto; border: 0; border-radius: 50%; background: #e4e6eb; color: #1c1e21; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+    .fnrel-dots:active { background: #d0d3d8; }
+    .fnrel-sheet-bg { position: fixed; inset: 0; z-index: 10060; background: rgba(15,20,30,.45); display: none; align-items: flex-end; justify-content: center; }
+    .fnrel-sheet-bg.open { display: flex; }
+    .fnrel-sheet { width: 100%; max-width: 520px; background: #fff; border-radius: 22px 22px 0 0; padding: 14px 14px calc(16px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -10px 40px rgba(0,0,0,.25); max-height: 85vh; overflow-y: auto; color: #1c1e21; }
+    @media (min-width: 641px) { .fnrel-sheet-bg { align-items: center; } .fnrel-sheet { border-radius: 18px; } }
+    .fnrel-sheet-t { font-weight: 800; font-size: 16px; text-align: center; padding: 4px 6px 12px; }
+    .fnrel-opt { display: flex; align-items: center; gap: 12px; width: 100%; border: 0; background: #f0f2f5; border-radius: 14px; padding: 13px 14px; margin-bottom: 8px; font: inherit; font-weight: 700; font-size: 15px; color: #1c1e21; text-align: left; cursor: pointer; }
+    .fnrel-opt i { width: 22px; text-align: center; color: #65676b; }
+    .fnrel-opt.danger, .fnrel-opt.danger i { color: #e0245e; }
+    .fnrel-opt:disabled { opacity: .6; }
+    .fnrel-cancel { width: 100%; border: 0; background: transparent; padding: 11px; font: inherit; font-weight: 700; font-size: 15px; color: #65676b; cursor: pointer; }
+    .fnrel-toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); z-index: 10070; background: #323436; color: #fff; padding: 10px 16px; border-radius: 12px; font-size: 14px; font-weight: 600; max-width: 90vw; text-align: center; }
+    html[data-theme="dark"] .fnrel-dots, html[data-fn-theme="dark"] .fnrel-dots { background: #3a3b3c; color: #e4e6eb; }
+    html[data-theme="dark"] .fnrel-sheet, html[data-fn-theme="dark"] .fnrel-sheet { background: #242526; color: #e4e6eb; }
+    html[data-theme="dark"] .fnrel-opt, html[data-fn-theme="dark"] .fnrel-opt { background: #3a3b3c; color: #e4e6eb; }
+    html[data-theme="dark"] .fnrel-opt.danger, html[data-fn-theme="dark"] .fnrel-opt.danger { color: #ff5c7a; }
+    @media (max-width: 640px) {
+        .fnrel-layout { flex-direction: column; gap: 10px; }
+        .fnrel-side { flex: none; width: 100%; position: static; display: flex; gap: 6px; padding: 6px; }
+        .fnrel-side-title { display: none; }
+        .fnrel-tab { flex: 1; justify-content: center; padding: 8px 6px; font-size: 14px; }
+        .fnrel-tab i { display: none; }
+        .fnrel-tab .fnrel-n { margin-left: 4px; }
+        .fnrel-main { width: 100%; }
+    }
+    html[data-theme="dark"] .fnrel-page, html[data-fn-theme="dark"] .fnrel-page { color: #e4e6eb; }
+    html[data-theme="dark"] .fnrel-side, html[data-theme="dark"] .fnrel-main, html[data-fn-theme="dark"] .fnrel-side, html[data-fn-theme="dark"] .fnrel-main { background: #242526; }
+    html[data-theme="dark"] .fnrel-tab, html[data-fn-theme="dark"] .fnrel-tab { color: #e4e6eb; }
+    html[data-theme="dark"] .fnrel-tab i, html[data-fn-theme="dark"] .fnrel-tab i, html[data-theme="dark"] .fnrel-back, html[data-fn-theme="dark"] .fnrel-back { background: #3a3b3c; color: #e4e6eb; }
+    html[data-theme="dark"] .fnrel-tab.active, html[data-fn-theme="dark"] .fnrel-tab.active { background: #263951; color: #8ab4ff; }
+    html[data-theme="dark"] .fnrel-tab.active i, html[data-fn-theme="dark"] .fnrel-tab.active i { background: #1877f2; color: #fff; }
+    html[data-theme="dark"] .fnrel-row:active, html[data-fn-theme="dark"] .fnrel-row:active { background: #3a3b3c; }
+</style>
+
+<div class="fnrel-page">
+    <div class="fnrel-top">
+        <a class="fnrel-back" href="{{ url_for('main.profile', username=user.username) }}" aria-label="Retour au profil"><i class="fa-solid fa-arrow-left"></i></a>
+        <div class="fnrel-title">{{ user.nom_complet or user.username }}</div>
+    </div>
+    <div class="fnrel-layout">
+        <aside class="fnrel-side">
+            <div class="fnrel-side-title">Relations</div>
+            <button type="button" class="fnrel-tab active" id="fnrel-tab-amis" onclick="fnRelOnglet('amis')"><i class="fa-solid fa-user-group"></i><span>Amis</span><span class="fnrel-n" id="fnrel-n-amis"></span></button>
+            <button type="button" class="fnrel-tab" id="fnrel-tab-suivis" onclick="fnRelOnglet('suivis')"><i class="fa-solid fa-user-check"></i><span>Suivi(e)s</span><span class="fnrel-n" id="fnrel-n-suivis"></span></button>
+        </aside>
+        <section class="fnrel-main">
+            <div class="fnrel-head" id="fnrel-head">Amis</div>
+            <div id="fnrel-list"><div class="fnrel-empty">Chargement…</div></div>
+            <button type="button" class="fnrel-more" id="fnrel-more" style="display:none;" onclick="fnRelPlus()">Voir plus</button>
+        </section>
+    </div>
+</div>
+
+<div class="fnrel-sheet-bg" id="fnrel-sheet-bg" onclick="fnRelFermer()">
+    <div class="fnrel-sheet" onclick="event.stopPropagation()">
+        <div class="fnrel-sheet-t" id="fnrel-sheet-t"></div>
+        <div id="fnrel-sheet-body"></div>
+        <button type="button" class="fnrel-cancel" onclick="fnRelFermer()">Annuler</button>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+    var UID = {{ user.id }};
+    var PROPRIO = {{ 'true' if (current_user.is_authenticated and current_user.id == user.id) else 'false' }};
+    var PAGE = 30;
+    var etat = { amis: { items: null, shown: 0 }, suivis: { items: [], offset: 0, plus: false, charge: false } };
+    var courant = 'amis';
+
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+    function ligne(u, sous, type) {
+        var av = encodeURIComponent(u.avatar || 'default_avatar.png').replace(/%2F/gi, '/');
+        var nom = esc(u.nom_complet || u.username);
+        var lien = '<a class="fnrel-row" href="/profil-id/' + encodeURIComponent(u.id) + '">' +
+            '<img src="/static/uploads/' + av + '" alt="" loading="lazy" onerror="this.onerror=null;this.src=\'/static/uploads/default_avatar.png\';">' +
+            '<div style="min-width:0;"><div class="fnrel-name">' + nom + '</div>' +
+            (sous ? '<div class="fnrel-sub">' + esc(sous) + '</div>' : '') + '</div></a>';
+        var pts = PROPRIO ? '<button type="button" class="fnrel-dots" data-id="' + u.id + '" data-type="' + type + '" data-nom="' + nom + '" aria-label="Plus d\'options" onclick="fnRelMenu(this)"><i class="fa-solid fa-ellipsis"></i></button>' : '';
+        return '<div class="fnrel-item" data-uid="' + u.id + '">' + lien + pts + '</div>';
+    }
+    var liste = document.getElementById('fnrel-list');
+    var plus = document.getElementById('fnrel-more');
+    function vide(msg) { liste.innerHTML = '<div class="fnrel-empty">' + esc(msg) + '</div>'; plus.style.display = 'none'; }
+
+    function dessinerAmis() {
+        var e = etat.amis;
+        if (!e.items.length) return vide('Aucun ami à afficher.');
+        e.shown = Math.min(e.shown || PAGE, e.items.length);
+        liste.innerHTML = e.items.slice(0, e.shown).map(function (u) { return ligne(u, u.en_commun ? 'Ami en commun' : '', 'amis'); }).join('');
+        plus.style.display = e.shown < e.items.length ? 'block' : 'none';
+    }
+    function dessinerSuivis() {
+        var e = etat.suivis;
+        if (!e.items.length) return vide('Aucune personne suivie pour le moment.');
+        liste.innerHTML = e.items.map(function (u) { return ligne(u, '', 'suivis'); }).join('');
+        plus.style.display = e.plus ? 'block' : 'none';
+    }
+    function chargerAmis() {
+        fetch('/api/amis/' + UID, { credentials: 'same-origin' })
+            .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+            .then(function (d) {
+                etat.amis.items = d.amis || [];
+                document.getElementById('fnrel-n-amis').textContent = etat.amis.items.length;
+                if (courant === 'amis') dessinerAmis();
+            })
+            .catch(function () { if (courant === 'amis') vide('Impossible de charger les amis pour le moment.'); });
+    }
+    function chargerSuivis(reset) {
+        var e = etat.suivis;
+        if (e.charge) return;
+        e.charge = true;
+        fetch('/api/suivis/' + UID + '?offset=' + e.offset + '&limit=' + PAGE, { credentials: 'same-origin' })
+            .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+            .then(function (d) {
+                e.items = e.items.concat(d.suivis || []);
+                e.offset = e.items.length;
+                e.plus = !!d.a_plus;
+                e.charge = false;
+                e.fait = true;
+                document.getElementById('fnrel-n-suivis').textContent = d.total != null ? d.total : e.items.length;
+                if (courant === 'suivis') dessinerSuivis();
+            })
+            .catch(function () { e.charge = false; if (courant === 'suivis') vide('Impossible de charger la liste pour le moment.'); });
+    }
+    window.fnRelOnglet = function (nom) {
+        courant = nom;
+        document.getElementById('fnrel-tab-amis').classList.toggle('active', nom === 'amis');
+        document.getElementById('fnrel-tab-suivis').classList.toggle('active', nom === 'suivis');
+        document.getElementById('fnrel-head').textContent = nom === 'amis' ? 'Amis' : 'Suivi(e)s';
+        try { history.replaceState(null, '', nom === 'suivis' ? '?onglet=suivis' : location.pathname); } catch (e) {}
+        if (nom === 'amis') { etat.amis.items ? dessinerAmis() : (vide('Chargement…'), chargerAmis()); }
+        else { etat.suivis.fait ? dessinerSuivis() : (vide('Chargement…'), chargerSuivis()); }
+    };
+    window.fnRelPlus = function () {
+        if (courant === 'amis') { etat.amis.shown += PAGE; dessinerAmis(); }
+        else chargerSuivis();
+    };
+
+    /* ── Menu trois points : retirer / ne plus suivre, bloquer, signaler (API existantes) ── */
+    var MOTIFS = [['faux_compte','Faux compte'],['usurpation',"Usurpation d'identité"],['harcelement','Harcèlement ou intimidation'],['spam','Spam ou arnaque'],['contenu_inapproprie','Contenu inapproprié'],['autre','Autre']];
+    var cible = null;
+    var bg = document.getElementById('fnrel-sheet-bg');
+    function toast(m) {
+        var t = document.createElement('div'); t.className = 'fnrel-toast'; t.textContent = m;
+        document.body.appendChild(t); setTimeout(function () { t.remove(); }, 2600);
+    }
+    function post(url, corps) {
+        var o = { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } };
+        if (corps) { o.headers['Content-Type'] = 'application/json'; o.body = JSON.stringify(corps); }
+        return fetch(url, o).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok || d.success === false) throw new Error(d.error || 'Action impossible pour le moment.'); return d; }); });
+    }
+    function ouvrir(titre, html) { document.getElementById('fnrel-sheet-t').innerHTML = titre; document.getElementById('fnrel-sheet-body').innerHTML = html; bg.classList.add('open'); }
+    window.fnRelFermer = function () { bg.classList.remove('open'); };
+    window.fnRelMenu = function (btn) {
+        cible = { id: btn.getAttribute('data-id'), type: btn.getAttribute('data-type'), nom: btn.getAttribute('data-nom') };
+        var n = cible.nom;
+        var premier = cible.type === 'amis'
+            ? '<button type="button" class="fnrel-opt" onclick="fnRelAct(\'retirer\')"><i class="fa-solid fa-user-minus"></i><span>Retirer ' + n + ' des amis</span></button>'
+            : '<button type="button" class="fnrel-opt" onclick="fnRelAct(\'unfollow\')"><i class="fa-solid fa-user-xmark"></i><span>Ne plus suivre ' + n + '</span></button>';
+        ouvrir(n, premier +
+            '<button type="button" class="fnrel-opt danger" onclick="fnRelAct(\'bloquer\')"><i class="fa-solid fa-ban"></i><span>Bloquer ' + n + '</span></button>' +
+            '<button type="button" class="fnrel-opt danger" onclick="fnRelAct(\'signaler\')"><i class="fa-solid fa-flag"></i><span>Signaler le profil de ' + n + '</span></button>');
+    };
+    function retirerDeLaListe(id) {
+        var el = document.querySelector('.fnrel-item[data-uid="' + id + '"]');
+        if (el) el.remove();
+        [['amis', 'fnrel-n-amis'], ['suivis', 'fnrel-n-suivis']].forEach(function (p) {
+            var arr = p[0] === 'amis' ? etat.amis.items : etat.suivis.items;
+            if (!arr) return;
+            var i = arr.findIndex(function (x) { return String(x.id) === String(id); });
+            if (i > -1) { arr.splice(i, 1); document.getElementById(p[1]).textContent = arr.length; }
+        });
+        if (!liste.querySelector('.fnrel-item')) { courant === 'amis' ? dessinerAmis() : dessinerSuivis(); }
+    }
+    window.fnRelAct = function (act) {
+        if (!cible) return;
+        var c = cible, n = c.nom;
+        if (act === 'signaler') {
+            ouvrir('Signaler le profil de ' + n, MOTIFS.map(function (m) {
+                return '<button type="button" class="fnrel-opt" onclick="fnRelSignaler(\'' + m[0] + '\')"><i class="fa-solid fa-flag"></i><span>' + esc(m[1]) + '</span></button>';
+            }).join(''));
+            return;
+        }
+        var q = act === 'retirer' ? 'Retirer ' + n + ' de vos amis ?' : act === 'unfollow' ? 'Ne plus suivre ' + n + ' ?' : 'Bloquer ' + n + ' ? Cette personne ne pourra plus interagir avec vous.';
+        if (!window.confirm(q.replace(/&amp;|&lt;|&gt;|&quot;|&#39;/g, function (x) { return ({'&amp;':'&','&lt;':'<','&gt;':'>','&quot;':'"','&#39;':"'"})[x]; }))) return;
+        var url = act === 'retirer' ? '/api/ami/' + c.id + '/retirer' : act === 'unfollow' ? '/api/suivre/' + c.id : '/api/ami/' + c.id + '/bloquer';
+        post(url).then(function (d) {
+            if (act === 'unfollow' && d.suivi === true) { /* déjà non suivi : la bascule a re-suivi, on annule */ return post('/api/suivre/' + c.id).then(function () { throw new Error('Cette personne n\'était déjà plus suivie.'); }); }
+            fnRelFermer();
+            if (act === 'bloquer') { retirerDeLaListe(c.id); etat.amis.items && (etat.amis.items = etat.amis.items.filter(function (x) { return String(x.id) !== String(c.id); })); toast('Utilisateur bloqué.'); }
+            else { retirerDeLaListe(c.id); toast(act === 'retirer' ? 'Ami retiré.' : 'Vous ne suivez plus cette personne.'); }
+        }).catch(function (e) { fnRelFermer(); toast(e.message || 'Action impossible pour le moment.'); });
+    };
+    window.fnRelSignaler = function (motif) {
+        if (!cible) return;
+        var c = cible;
+        post('/api/ami/' + c.id + '/signaler', { motif: motif }).then(function () { fnRelFermer(); toast('Signalement envoyé. Merci.'); })
+            .catch(function (e) { fnRelFermer(); toast(e.message || 'Signalement impossible pour le moment.'); });
+    };
+    chargerAmis();
+    chargerSuivis();
+    if (new URLSearchParams(location.search).get('onglet') === 'suivis') window.fnRelOnglet('suivis');
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,421 @@
+<style id="reel-reactions-css">
+/* ── RÉACTIONS AU MAINTIEN DU BOUTON J'AIME (même rendu que feed.html) ── */
+.reel-circle-btn[onclick^="toggleLike("] { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; position: relative; }
+.rr-popup {
+    position: fixed; display: flex; align-items: flex-end; gap: 2px; padding: 10px 12px; border-radius: 46px;
+    background: linear-gradient(180deg, #ffffff 0%, #edf1f7 100%);
+    border: 1px solid rgba(15, 23, 42, .06);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, .45), 0 3px 8px rgba(0, 0, 0, .25), inset 0 1px 0 #fff;
+    z-index: 4300; transform: translateY(12px) scale(.82); transform-origin: 100% 100%;
+    opacity: 0; pointer-events: none; transition: transform .16s ease, opacity .16s ease;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none;
+}
+.rr-popup.show { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
+.rr-popup button {
+    position: relative; width: 40px; height: 40px; padding: 0; margin: 0 1px; border: none; background: none;
+    cursor: pointer; font-size: 0; line-height: 0; transform-origin: 50% 100%;
+    transition: transform .2s cubic-bezier(.3, 1.7, .5, 1); filter: drop-shadow(0 4px 3px rgba(0, 0, 0, .32));
+    -webkit-tap-highlight-color: transparent;
+}
+.rr-popup.show button { animation: rrRise .5s cubic-bezier(.2, 1.6, .4, 1) backwards; animation-delay: calc(var(--i, 0) * 38ms); }
+.rr-popup button:hover, .rr-popup button.hot { transform: translateY(-16px) scale(1.6); z-index: 2; }
+.rr-popup.has-hot button:not(.hot) { transform: scale(.9); }
+.rr-popup .rr-tip {
+    position: absolute; bottom: 100%; left: 50%; transform: translate(-50%, 2px) scale(.62); opacity: 0; pointer-events: none;
+    transition: opacity .12s; background: rgba(20, 24, 33, .92); color: #fff; padding: 6px 9px; border-radius: 14px; white-space: nowrap;
+    font: 700 11px/1 system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+.rr-popup button:hover .rr-tip, .rr-popup button.hot .rr-tip { opacity: 1; }
+@keyframes rrRise { from { transform: translateY(34px) scale(.2) rotate(-18deg); opacity: 0; } to { transform: none; opacity: 1; } }
+.rr-svg { display: block; width: 100%; height: 100%; }
+.rr-fly { position: fixed; z-index: 4400; pointer-events: none; will-change: transform, opacity; filter: drop-shadow(0 8px 8px rgba(0, 0, 0, .35)); }
+.rr-btnicon { display: none; width: 28px; height: 28px; }
+.reel-circle-btn.rr-has-emoji > i { display: none; }
+.reel-circle-btn.rr-has-emoji > .rr-btnicon { display: block; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .35)); }
+.rr-btnicon.rr-land { animation: rrLand .45s cubic-bezier(.2, 1.8, .4, 1); }
+@keyframes rrLand { 0% { transform: scale(.3) rotate(-20deg); } 60% { transform: scale(1.35) rotate(6deg); } 100% { transform: none; } }
+/* Émojis animés dans le menu */
+.rr-an .rr-an-face { transform-box: view-box; transform-origin: 32px 34px; }
+.rr-an-like .rr-an-face { animation: rrAnLike 1.1s ease-in-out infinite; }
+.rr-an-love .rr-an-face { animation: rrAnBeat .9s ease-in-out infinite; }
+.rr-an-care .rr-an-face { animation: rrAnBeat 1.2s ease-in-out infinite; }
+.rr-an-haha { animation: rrAnWiggle .55s ease-in-out infinite; }
+.rr-an-haha .rr-an-face { animation: rrAnLaugh .55s ease-in-out infinite; }
+.rr-an-wow .rr-an-face { animation: rrAnWow 1.2s ease-in-out infinite; }
+.rr-an-sad .rr-an-face { animation: rrAnSad 1.9s ease-in-out infinite; }
+.rr-an-angry { animation: rrAnShake .4s linear infinite; }
+@keyframes rrAnLike { 0%, 100% { transform: rotate(0) translateY(0) scale(1); } 28% { transform: rotate(-18deg) translateY(-4px) scale(1.1); } 55% { transform: rotate(5deg) translateY(1px) scale(1); } 75% { transform: rotate(-4deg) translateY(-1px); } }
+@keyframes rrAnBeat { 0%, 100% { transform: scale(1); } 22% { transform: scale(1.22); } 42% { transform: scale(.96); } 62% { transform: scale(1.15); } }
+@keyframes rrAnWiggle { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+@keyframes rrAnLaugh { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-2.5px) scale(1.05); } }
+@keyframes rrAnWow { 0%, 100% { transform: scale(1) translateY(0); } 40% { transform: scale(1.16) translateY(-1px); } 70% { transform: scale(1.04); } }
+@keyframes rrAnSad { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(3px) scale(.96); } }
+@keyframes rrAnShake { 0%, 100% { transform: translateX(0) rotate(0); } 25% { transform: translateX(-1.6px) rotate(-3deg); } 75% { transform: translateX(1.6px) rotate(3deg); } }
+/* Double-tap : l'émoji de ta réaction remplace le pouce */
+.reel-heart-burst.rr-burst { width: 80px; height: 80px; font-size: 0; color: transparent; text-shadow: none; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .45)); }
+.reel-thumb-rise.rr-burst { width: var(--rv-size, 44px); height: var(--rv-size, 44px); font-size: 0; color: transparent; text-shadow: none; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .4)); }
+@media (prefers-reduced-motion: reduce) {
+    .rr-popup.show button, .rr-btnicon.rr-land, .rr-an, .rr-an .rr-an-face { animation: none !important; }
+}
+</style>
+
+<script id="reel-reactions-js">
+(function () {
+    'use strict';
+    var ORDRE = ['like', 'love', 'care', 'haha', 'wow', 'sad', 'angry'];
+    var LABELS = { like: "J'aime", love: "J'adore", care: 'Solidaire', haha: 'Haha', wow: 'Wouah', sad: 'Triste', angry: 'Grrr' };
+    var COLORS = { like: '#1877f2', love: '#f33e58', care: '#e8a200', haha: '#e8a200', wow: '#e8a200', sad: '#e8a200', angry: '#e9710f' };
+
+    /* Emojis 3D vectoriels (identiques à feed.html) */
+    const FN_REAC_SPRITE = `<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><radialGradient id="fnr-y" cx=".36" cy=".24" r=".9"><stop offset="0" stop-color="#FFF8B8"/><stop offset=".4" stop-color="#FFE352"/><stop offset=".8" stop-color="#FFC41C"/><stop offset="1" stop-color="#F5A300"/></radialGradient><radialGradient id="fnr-b" cx=".36" cy=".24" r=".95"><stop offset="0" stop-color="#9DD0FF"/><stop offset=".45" stop-color="#2F8BFF"/><stop offset="1" stop-color="#0A4FCB"/></radialGradient><radialGradient id="fnr-r" cx=".36" cy=".24" r=".95"><stop offset="0" stop-color="#FF9DB0"/><stop offset=".45" stop-color="#F8344F"/><stop offset="1" stop-color="#B00E2A"/></radialGradient><radialGradient id="fnr-a" cx=".36" cy=".24" r=".95"><stop offset="0" stop-color="#FFA877"/><stop offset=".45" stop-color="#F2552B"/><stop offset="1" stop-color="#B0200F"/></radialGradient><radialGradient id="fnr-shade" cx=".5" cy=".5" r=".5"><stop offset=".68" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></radialGradient><linearGradient id="fnr-gloss" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><linearGradient id="fnr-mouth" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8E2C1F"/><stop offset="1" stop-color="#4A0D09"/></linearGradient><linearGradient id="fnr-tongue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF8B99"/><stop offset="1" stop-color="#DE3F57"/></linearGradient><linearGradient id="fnr-tear" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D4EEFF"/><stop offset="1" stop-color="#37A0F2"/></linearGradient><linearGradient id="fnr-heart" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF8CA0"/><stop offset="1" stop-color="#E0183F"/></linearGradient><g id="fnr-base-y"><circle cx="32" cy="32" r="30" fill="url(#fnr-y)"/><circle cx="32" cy="32" r="30" fill="url(#fnr-shade)"/><ellipse cx="24" cy="14.5" rx="15" ry="8.5" transform="rotate(-20 24 14.5)" fill="url(#fnr-gloss)"/></g><g id="fnr-base-b"><circle cx="32" cy="32" r="30" fill="url(#fnr-b)"/><circle cx="32" cy="32" r="30" fill="url(#fnr-shade)"/><ellipse cx="24" cy="14.5" rx="15" ry="8.5" transform="rotate(-20 24 14.5)" fill="url(#fnr-gloss)"/></g><g id="fnr-base-r"><circle cx="32" cy="32" r="30" fill="url(#fnr-r)"/><circle cx="32" cy="32" r="30" fill="url(#fnr-shade)"/><ellipse cx="24" cy="14.5" rx="15" ry="8.5" transform="rotate(-20 24 14.5)" fill="url(#fnr-gloss)"/></g><g id="fnr-base-a"><circle cx="32" cy="32" r="30" fill="url(#fnr-a)"/><circle cx="32" cy="32" r="30" fill="url(#fnr-shade)"/><ellipse cx="24" cy="14.5" rx="15" ry="8.5" transform="rotate(-20 24 14.5)" fill="url(#fnr-gloss)"/></g></defs><symbol id="fn-reac-like" viewBox="0 0 64 64"><use href="#fnr-base-b"/><g transform="translate(0 1.4)" opacity=".28"><rect x="15" y="29" width="9" height="19" rx="2.4" fill="#06307E"/><path d="M27 30 L33.5 17.5 C35 14.6 38.8 15.2 39.2 18.8 L37.6 26.6 H47 C50.2 26.6 52.4 29.6 51.5 32.6 L48.2 44.8 C47.5 47.4 45.2 49 42.6 49 H27 Z" fill="#06307E"/></g><rect x="15" y="28" width="9" height="19" rx="2.4" fill="#fff"/><path d="M27 29 L33.5 16.5 C35 13.6 38.8 14.2 39.2 17.8 L37.6 25.6 H47 C50.2 25.6 52.4 28.6 51.5 31.6 L48.2 43.8 C47.5 46.4 45.2 48 42.6 48 H27 Z" fill="#fff"/><path d="M29 31 H46.5 M29.6 36 H47.3 M29.6 41 H46" stroke="#BFD9FF" stroke-width="1.1" stroke-linecap="round" opacity=".7"/></symbol><symbol id="fn-reac-love" viewBox="0 0 64 64"><use href="#fnr-base-r"/><path d="M32 48.5 C18.5 39 16.5 29 22.2 24.8 C26.4 21.8 30.6 23.2 32 27 C33.4 23.2 37.6 21.8 41.8 24.8 C47.5 29 45.5 39 32 48.5Z" fill="#7A0A1E" opacity=".3" transform="translate(0 1.6)"/><path d="M32 47 C18.5 37.5 16.5 27.5 22.2 23.3 C26.4 20.3 30.6 21.7 32 25.5 C33.4 21.7 37.6 20.3 41.8 23.3 C47.5 27.5 45.5 37.5 32 47Z" fill="#fff"/></symbol><symbol id="fn-reac-care" viewBox="0 0 64 64"><use href="#fnr-base-y"/><ellipse cx="15.5" cy="35" rx="5" ry="3.2" fill="#FF7A6B" opacity=".55"/><ellipse cx="48.5" cy="35" rx="5" ry="3.2" fill="#FF7A6B" opacity=".55"/><path d="M14 27 Q19.5 33 25 27 M39 27 Q44.5 33 50 27" fill="none" stroke="#4A2B00" stroke-width="3.2" stroke-linecap="round"/><path d="M22 38.5 Q30 45 38 38.5" fill="none" stroke="#4A2B00" stroke-width="3" stroke-linecap="round"/><g transform="translate(33.5 34.5) scale(.66)"><path d="M20 36 C4 24 0 14 5 7 C9 2 17 3 20 9 C23 3 31 2 35 7 C40 14 36 24 20 36Z" fill="#7A0A1E" opacity=".3" transform="translate(0 2)"/><path d="M20 36 C4 24 0 14 5 7 C9 2 17 3 20 9 C23 3 31 2 35 7 C40 14 36 24 20 36Z" fill="url(#fnr-heart)" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/><ellipse cx="12.5" cy="12" rx="4.2" ry="2.6" transform="rotate(-35 12.5 12)" fill="#fff" opacity=".75"/></g></symbol><symbol id="fn-reac-haha" viewBox="0 0 64 64"><use href="#fnr-base-y"/><path d="M13.5 26 Q19.5 17 25.5 26 M38.5 26 Q44.5 17 50.5 26" fill="none" stroke="#4A2B00" stroke-width="3.4" stroke-linecap="round"/><path d="M12.5 34 Q32 41 51.5 34 Q50 55 32 55 Q14 55 12.5 34Z" fill="url(#fnr-mouth)"/><path d="M14.6 35.2 Q32 41.6 49.4 35.2 Q48.9 40.4 47.8 42 Q32 47 16.2 42 Q15.1 40.4 14.6 35.2Z" fill="#fff"/><path d="M21.5 51.5 Q32 43.5 42.5 51.5 Q38.5 55 32 55 Q25.5 55 21.5 51.5Z" fill="url(#fnr-tongue)"/></symbol><symbol id="fn-reac-wow" viewBox="0 0 64 64"><use href="#fnr-base-y"/><path d="M13.5 18 Q19.5 11 26 16.5 M38 16.5 Q44.5 11 50.5 18" fill="none" stroke="#4A2B00" stroke-width="2.8" stroke-linecap="round"/><ellipse cx="21" cy="28.5" rx="4.4" ry="5.8" fill="#3B2300"/><ellipse cx="43" cy="28.5" rx="4.4" ry="5.8" fill="#3B2300"/><circle cx="22.6" cy="26" r="1.7" fill="#fff"/><circle cx="44.6" cy="26" r="1.7" fill="#fff"/><ellipse cx="32" cy="46" rx="6.2" ry="8.4" fill="url(#fnr-mouth)"/><ellipse cx="32" cy="50.5" rx="3.6" ry="3.2" fill="url(#fnr-tongue)" opacity=".9"/></symbol><symbol id="fn-reac-sad" viewBox="0 0 64 64"><use href="#fnr-base-y"/><path d="M13 21.5 Q19 19.5 26 15.5 M38 15.5 Q45 19.5 51 21.5" fill="none" stroke="#4A2B00" stroke-width="2.8" stroke-linecap="round"/><ellipse cx="21" cy="29.5" rx="4" ry="5" fill="#3B2300"/><ellipse cx="43" cy="29.5" rx="4" ry="5" fill="#3B2300"/><circle cx="22.4" cy="27.5" r="1.5" fill="#fff"/><circle cx="44.4" cy="27.5" r="1.5" fill="#fff"/><path d="M22 48 Q32 39.5 42 48" fill="none" stroke="#4A2B00" stroke-width="3.2" stroke-linecap="round"/><path d="M16.5 36.5 C12.5 42 12 46.5 15 49 C18 51.5 21.8 48.6 20.8 44.5 C20.2 41.8 18.4 39.4 16.5 36.5Z" fill="url(#fnr-tear)" stroke="#2A86D9" stroke-width=".7"/><ellipse cx="15.8" cy="44.6" rx="1.2" ry="2" transform="rotate(20 15.8 44.6)" fill="#fff" opacity=".8"/></symbol><symbol id="fn-reac-angry" viewBox="0 0 64 64"><use href="#fnr-base-a"/><path d="M11.5 20 L27 28.5 M52.5 20 L37 28.5" fill="none" stroke="#2B1200" stroke-width="4.4" stroke-linecap="round"/><ellipse cx="22" cy="34" rx="3.8" ry="4.2" fill="#2B1200"/><ellipse cx="42" cy="34" rx="3.8" ry="4.2" fill="#2B1200"/><circle cx="23.2" cy="32.4" r="1.3" fill="#fff"/><circle cx="43.2" cy="32.4" r="1.3" fill="#fff"/><path d="M21 50 Q32 41.5 43 50" fill="none" stroke="#2B1200" stroke-width="3.8" stroke-linecap="round"/></symbol></svg>`;
+    function sprite() {
+        if (document.getElementById('fn-reac-sprite')) return;
+        var parent = document.body || document.documentElement;
+        if (!parent) return;
+        var d = document.createElement('div');
+        d.id = 'fn-reac-sprite';
+        d.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;pointer-events:none;';
+        d.innerHTML = FN_REAC_SPRITE;
+        parent.appendChild(d);
+    }
+    function icone(type) {
+        var t = LABELS[type] ? type : 'like';
+        return '<svg class="rr-svg" viewBox="0 0 64 64" width="100%" height="100%" aria-hidden="true" focusable="false"><use href="#fn-reac-' + t + '"/></svg>';
+    }
+    function iconeAnimee(type) {
+        var t = LABELS[type] ? type : 'like';
+        try {
+            sprite();
+            var sym = document.getElementById('fn-reac-' + t);
+            if (!sym || !sym.children || sym.children.length < 2) return icone(t);
+            var base = sym.children[0].outerHTML, reste = '';
+            for (var i = 1; i < sym.children.length; i++) reste += sym.children[i].outerHTML;
+            return '<svg class="rr-svg rr-an rr-an-' + t + '" viewBox="0 0 64 64" width="100%" height="100%" aria-hidden="true" focusable="false">' +
+                   base + '<g class="rr-an-face">' + reste + '</g></svg>';
+        } catch (e) { return icone(t); }
+    }
+
+    /* ── État du bouton J'aime d'un reel (non destructif : le pouce FontAwesome reste en place) ── */
+    function appliquer(pubId, data, animer) {
+        var btn = document.getElementById('like-btn-' + pubId);
+        if (!btn || !data) return;
+        sprite();
+        var type = data.active_type;
+        var span = btn.querySelector('.rr-btnicon');
+        if (type && LABELS[type] && type !== 'like') {
+            if (!span) { span = document.createElement('span'); span.className = 'rr-btnicon'; btn.appendChild(span); }
+            span.innerHTML = icone(type);
+            span.classList.remove('rr-land');
+            if (animer) { void span.offsetWidth; span.classList.add('rr-land'); }
+            btn.classList.add('liked', 'rr-has-emoji');
+            btn.dataset.reaction = type;
+            btn.style.color = COLORS[type];
+            btn.style.borderColor = COLORS[type];
+            btn.style.background = 'rgba(0,0,0,.55)';
+        } else {
+            btn.classList.remove('rr-has-emoji');
+            if (span) span.innerHTML = '';
+            btn.style.color = ''; btn.style.borderColor = ''; btn.style.background = '';
+            if (type === 'like') { btn.classList.add('liked'); btn.dataset.reaction = 'like'; }
+            else { btn.classList.remove('liked'); delete btn.dataset.reaction; }
+        }
+    }
+    window.reelApplyReaction = appliquer;
+
+    /* Reels déjà aimés au chargement : on récupère le type de réaction (emoji) une seule fois */
+    var hydrateObs = null;
+    function hydrater(btn) {
+        var pubId = (btn.id || '').replace('like-btn-', '');
+        if (!pubId || btn.dataset.rrHydrated === '1') return;
+        btn.dataset.rrHydrated = '1';
+        fetch('/api/reaction/' + pubId + '/etat', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (d) { if (d && d.success && d.connecte !== false && d.active_type && d.active_type !== 'like') appliquer(pubId, d); })
+            .catch(function () {});
+    }
+    function observerBoutons(scope) {
+        if (!('IntersectionObserver' in window)) return;
+        if (!hydrateObs) {
+            hydrateObs = new IntersectionObserver(function (entries) {
+                entries.forEach(function (en) {
+                    if (!en.isIntersecting) return;
+                    hydrateObs.unobserve(en.target);
+                    hydrater(en.target);
+                });
+            }, { rootMargin: '200px' });
+        }
+        (scope || document).querySelectorAll('.reel-circle-btn.liked[id^="like-btn-"]:not([data-rr-obs])').forEach(function (b) {
+            b.setAttribute('data-rr-obs', '1');
+            hydrateObs.observe(b);
+        });
+    }
+
+    /* ── Petit son « pop » ── */
+    var ctxAudio = null;
+    function amorcerAudio() {
+        try {
+            var AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return;
+            if (!ctxAudio) ctxAudio = new AC();
+            if (ctxAudio.state === 'suspended') ctxAudio.resume();
+        } catch (e) {}
+    }
+    function jouerPop() {
+        try {
+            if (!ctxAudio) return;
+            var t = ctxAudio.currentTime;
+            var ton = function (f0, f1, debut, duree, vol) {
+                var o = ctxAudio.createOscillator(), g = ctxAudio.createGain();
+                o.type = 'sine';
+                o.frequency.setValueAtTime(f0, t + debut);
+                o.frequency.exponentialRampToValueAtTime(f1, t + debut + duree * 0.55);
+                g.gain.setValueAtTime(0.0001, t + debut);
+                g.gain.exponentialRampToValueAtTime(vol, t + debut + 0.012);
+                g.gain.exponentialRampToValueAtTime(0.0001, t + debut + duree);
+                o.connect(g); g.connect(ctxAudio.destination);
+                o.start(t + debut); o.stop(t + debut + duree + 0.02);
+            };
+            ton(380, 920, 0, 0.14, 0.28);
+            ton(1500, 2100, 0.045, 0.11, 0.07);
+        } catch (e) {}
+    }
+    function vibrer(p) { try { if ('vibrate' in navigator) navigator.vibrate(p); } catch (e) {} }
+
+    /* ── Menu de réactions ── */
+    var popup = null, pressTimer = null, longPress = false, popupPubId = null, popupBtn = null;
+    var hotType = null, doigtAppuye = false, ouvertLe = 0, startX = 0, startY = 0;
+    var SEUIL = 10;
+
+    function fermer() {
+        if (popup) popup.classList.remove('show', 'has-hot');
+        hotType = null;
+    }
+    function ouvrir(btn, pubId) {
+        sprite();
+        if (!popup) {
+            popup = document.createElement('div');
+            popup.className = 'rr-popup';
+            document.body.appendChild(popup);
+        }
+        popupPubId = pubId; popupBtn = btn;
+        popup.classList.remove('show', 'has-hot');
+        popup.innerHTML = ORDRE.map(function (type, i) {
+            return '<button type="button" data-type="' + type + '" aria-label="' + LABELS[type] + '" style="--i:' + i + '"><span class="rr-tip">' + LABELS[type] + '</span>' + iconeAnimee(type) + '</button>';
+        }).join('');
+        var rect = btn.getBoundingClientRect();
+        var w = popup.offsetWidth || 320, h = popup.offsetHeight || 64;
+        var vw = document.documentElement.clientWidth;
+        var left = Math.max(8, Math.min(rect.right + 6 - w, vw - w - 8));   /* bord droit calé sur le bouton (sidebar à droite) */
+        var top = rect.top - h - 14;
+        if (top < 8) top = rect.bottom + 10;
+        popup.style.left = left + 'px';
+        popup.style.top = top + 'px';
+        void popup.offsetWidth;
+        popup.classList.add('show');
+        ouvertLe = Date.now();
+        vibrer(18);
+        popup.querySelectorAll('button').forEach(function (b) {
+            b.onclick = function (ev) { ev.stopPropagation(); choisir(b.dataset.type, b); };
+        });
+    }
+
+    function voler(type, depart, btn) {
+        return new Promise(function (resolve) {
+            if (!depart || !btn) { resolve(); return; }
+            var rc = btn.getBoundingClientRect();
+            var t0 = Math.max(32, depart.width), t1 = 26;
+            var sx = depart.left + depart.width / 2, sy = depart.top + depart.height / 2;
+            var dx = rc.left + rc.width / 2 - sx, dy = rc.top + rc.height / 2 - sy;
+            var k = t1 / t0;
+            var levee = -Math.min(110, Math.max(46, Math.abs(dx) * 0.25 + 30));
+            var clones = [], fini = false;
+            function terminer() {
+                if (fini) return; fini = true;
+                clones.forEach(function (n) { if (n.parentNode) n.parentNode.removeChild(n); });
+                resolve();
+            }
+            [{ retard: 0, op: 1 }, { retard: 55, op: .38 }, { retard: 110, op: .2 }].forEach(function (tr, idx) {
+                var el = document.createElement('div');
+                el.className = 'rr-fly';
+                el.style.width = t0 + 'px'; el.style.height = t0 + 'px';
+                el.style.left = (sx - t0 / 2) + 'px'; el.style.top = (sy - t0 / 2) + 'px';
+                el.innerHTML = icone(type);
+                document.body.appendChild(el);
+                clones.push(el);
+                if (typeof el.animate !== 'function') { terminer(); return; }
+                var fin = idx === 0 ? 1 : 0;
+                var anim = el.animate([
+                    { transform: 'translate(0px, 0px) scale(1) rotate(0deg)', opacity: tr.op },
+                    { transform: 'translate(' + (dx * 0.5) + 'px, ' + (dy * 0.5 + levee) + 'px) scale(' + (((1 + k) / 2) * 1.25) + ') rotate(-14deg)', opacity: tr.op, offset: 0.55 },
+                    { transform: 'translate(' + dx + 'px, ' + dy + 'px) scale(' + k + ') rotate(0deg)', opacity: fin }
+                ], { duration: 460, delay: tr.retard, easing: 'cubic-bezier(.45,.05,.35,1)', fill: 'both' });
+                if (idx === 0) anim.onfinish = terminer;
+            });
+            setTimeout(terminer, 1100);
+        });
+    }
+
+    function envoyer(pubId, type) {
+        return fetch('/api/reaction/' + pubId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            body: JSON.stringify({ type: type })
+        })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (res) { return (res.ok && res.data && res.data.success) ? res.data : null; })
+        .catch(function () { return null; });
+    }
+
+    function choisir(type, source) {
+        var pubId = popupPubId, btn = popupBtn;
+        if (!pubId || !btn) return;
+        amorcerAudio();
+        var actuel = btn.classList.contains('liked') ? (btn.dataset.reaction || 'like') : '';
+        var retire = (actuel === type);
+        var depart = source ? source.getBoundingClientRect() : null;
+        fermer();
+        setTimeout(function () { longPress = false; }, 400);
+        var requete = envoyer(pubId, type);
+        var vol = retire ? Promise.resolve() : voler(type, depart, btn);
+        vol.then(function () {
+            if (!retire) { jouerPop(); vibrer([40, 30, 60]); }
+            return requete;
+        }).then(function (data) {
+            if (!data) { if (typeof window.showReelToast === 'function') window.showReelToast("Impossible d'enregistrer la réaction."); return; }
+            appliquer(pubId, data, true);
+            var count = document.getElementById('like-count-' + pubId);
+            if (count) count.innerHTML = '<i class="fa-solid fa-thumbs-up"></i> ' + data.total + " J'aime";
+            if (window.reelLibRecord && window.reelLibRemove) {
+                if (data.active_type) window.reelLibRecord('liked', pubId); else window.reelLibRemove('liked', pubId);
+            }
+        });
+    }
+
+    /* Glisser le doigt sur le menu : l'emoji survolé grossit, relâcher le choisit */
+    function survoler(x, y) {
+        if (!popup || !popup.classList.contains('show')) return;
+        var el = document.elementFromPoint(x, y);
+        var b = (el && el.closest) ? el.closest('.rr-popup button') : null;
+        var nouveau = b ? b.dataset.type : null;
+        if (nouveau === hotType) return;
+        hotType = nouveau;
+        popup.querySelectorAll('button').forEach(function (o) { o.classList.toggle('hot', o === b); });
+        popup.classList.toggle('has-hot', !!b);
+        if (b) vibrer(8);
+    }
+    document.addEventListener('touchmove', function (e) {
+        if (!doigtAppuye || !longPress || !popup || !popup.classList.contains('show')) return;
+        var p = e.touches && e.touches[0];
+        if (!p) return;
+        if (e.cancelable) e.preventDefault();
+        survoler(p.clientX, p.clientY);
+    }, { passive: false });
+    document.addEventListener('mousemove', function (e) {
+        if (!longPress || !popup || !popup.classList.contains('show')) return;
+        survoler(e.clientX, e.clientY);
+    });
+    document.addEventListener('touchend', function () {
+        if (!longPress || !popup || !popup.classList.contains('show')) return;
+        var b = hotType ? popup.querySelector('button.hot') : null;
+        if (b) choisir(hotType, b);
+    });
+    document.addEventListener('mouseup', function () {
+        if (!longPress || !popup || !popup.classList.contains('show')) return;
+        var b = hotType ? popup.querySelector('button.hot') : null;
+        if (b) choisir(hotType, b);
+    });
+
+    function demarrer(e, btn) {
+        clearTimeout(pressTimer);
+        longPress = false;
+        doigtAppuye = !!(e.touches && e.touches.length);
+        var pt = (e.touches && e.touches[0]) ? e.touches[0] : e;
+        startX = pt.clientX; startY = pt.clientY;
+        amorcerAudio();
+        pressTimer = setTimeout(function () {
+            longPress = true;
+            var m = (btn.getAttribute('onclick') || '').match(/toggleLike\((\d+)/);
+            if (m) ouvrir(btn, m[1]);
+        }, 450);
+    }
+    document.addEventListener('mousedown', function (e) {
+        if (e.button !== 0) return;
+        var btn = e.target.closest('[onclick^="toggleLike("]');
+        if (btn) demarrer(e, btn);
+    });
+    document.addEventListener('touchstart', function (e) {
+        var btn = e.target.closest('[onclick^="toggleLike("]');
+        if (btn) demarrer(e, btn);
+    }, { passive: true });
+    document.addEventListener('touchmove', function (e) {
+        if (!pressTimer) return;
+        var pt = e.touches && e.touches[0];
+        if (!pt) return;
+        if (Math.abs(pt.clientX - startX) > SEUIL || Math.abs(pt.clientY - startY) > SEUIL) clearTimeout(pressTimer);
+    }, { passive: true });
+    ['mouseup', 'touchend', 'touchcancel'].forEach(function (evt) {
+        document.addEventListener(evt, function () { clearTimeout(pressTimer); });
+    });
+    ['touchend', 'touchcancel'].forEach(function (evt) {
+        document.addEventListener(evt, function () { doigtAppuye = false; });
+    });
+    /* Pas de menu contextuel du navigateur sur le bouton J'aime (appui long mobile / clic droit) */
+    document.addEventListener('contextmenu', function (e) {
+        if (e.target.closest && e.target.closest('[onclick^="toggleLike("]')) e.preventDefault();
+    });
+
+    /* Le menu se ferme si on fait défiler les reels sans rien choisir */
+    function fermerSiScroll() {
+        if (!popup || !popup.classList.contains('show')) return;
+        if (doigtAppuye) return;
+        if (Date.now() - ouvertLe < 350) return;
+        fermer();
+    }
+    document.addEventListener('scroll', fermerSiScroll, { passive: true, capture: true });
+    window.addEventListener('wheel', fermerSiScroll, { passive: true });
+    document.addEventListener('touchmove', function (e) {
+        if (!popup || !popup.classList.contains('show') || doigtAppuye) return;
+        if (e.target && e.target.closest && e.target.closest('.rr-popup')) return;
+        fermerSiScroll();
+    }, { passive: true });
+
+    /* Après un appui long, le « click » qui suit ne doit pas relancer toggleLike() */
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('[onclick^="toggleLike("]');
+        if (btn && longPress) {
+            e.stopPropagation();
+            e.preventDefault();
+            longPress = false;
+        }
+        if (popup && !e.target.closest('.rr-popup') && !btn) fermer();
+    }, true);
+
+    /* ── Double-tap sur la vidéo : si tu as déjà une réaction, son emoji remplace le pouce ── */
+    var burstOrig = window.spawnReelLikeBurst;
+    if (typeof burstOrig === 'function') {
+        window.spawnReelLikeBurst = function (container) {
+            burstOrig.apply(this, arguments);
+            try {
+                var carte = container && container.closest ? container.closest('.reel-fullscreen-card') : null;
+                var btn = carte ? carte.querySelector('[id^="like-btn-"]') : null;
+                var type = btn && btn.classList.contains('liked') ? btn.dataset.reaction : '';
+                if (!type || type === 'like' || !LABELS[type]) return;
+                sprite();
+                container.querySelectorAll('.reel-heart-burst:not(.rr-burst), .reel-thumb-rise:not(.rr-burst)').forEach(function (el) {
+                    el.classList.remove('fa-solid', 'fa-thumbs-up');
+                    el.classList.add('rr-burst');
+                    el.innerHTML = icone(type);
+                });
+            } catch (e) {}
+        };
+    }
+
+    /* Reels chargés par le défilement infini */
+    document.addEventListener('DOMContentLoaded', function () { observerBoutons(); });
+    if (document.readyState !== 'loading') observerBoutons();
+    var conteneur = document.getElementById('reels-container');
+    if (conteneur && 'MutationObserver' in window) {
+        new MutationObserver(function () { observerBoutons(conteneur); }).observe(conteneur, { childList: true });
+    }
+})();
+</script>

@@ -1,0 +1,174 @@
+<style>
+    /* Structure Globale */
+    .fn-recovery-wrapper { 
+        display: flex; 
+        flex-direction: column;
+        justify-content: center; 
+        align-items: center; 
+        min-height: 100vh; 
+        background-color: #f0f2f5; 
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    /* Carte de Récupération */
+    .fn-recovery-card { 
+        background: #ffffff; 
+        border-radius: 10px; 
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); 
+        width: 100%; 
+        max-width: 500px; 
+        overflow: hidden; 
+        border: 1px solid #e4e6eb; 
+        margin-top: auto;
+        margin-bottom: auto;
+    }
+
+    /* En-tête de la carte */
+    .fn-card-header { 
+        padding: 20px 24px; 
+        border-bottom: 1px solid #e4e6eb; 
+        background-color: #ffffff;
+    }
+    .fn-app-title {
+        margin: 0 0 6px 0;
+        font-size: 26px;
+        font-weight: 800;
+        color: #1877f2;
+        letter-spacing: -0.5px;
+    }
+    .fn-card-header h2 { 
+        margin: 0; 
+        font-size: 18px; 
+        color: #1c1e21; 
+        font-weight: 600;
+    }
+
+    /* Corps de la carte */
+    .fn-card-body { 
+        padding: 24px; 
+    }
+    .fn-instruction-text { 
+        font-size: 15px; 
+        color: #606770; 
+        margin-top: 0;
+        margin-bottom: 20px; 
+        line-height: 1.5; 
+    }
+
+    /* Champs de saisie standards */
+    .fn-input-container input { 
+        width: 100%; 
+        padding: 14px; 
+        border: 1px solid #ccd0d5; 
+        border-radius: 8px; 
+        font-size: 16px; 
+        box-sizing: border-box; 
+        background-color: #f5f6f7;
+        transition: border-color 0.2s, background-color 0.2s;
+    }
+    .fn-input-container input:focus { 
+        border-color: #1877f2; 
+        background-color: #ffffff;
+        outline: none; 
+        box-shadow: 0 0 0 2px #e7f3ff; 
+    }
+
+    /* Champ de saisie spécifique pour le Code Secret */
+    .fn-input-code {
+        text-align: center; 
+        font-size: 24px !important; 
+        font-weight: 700;
+        letter-spacing: 6px;
+        color: #1c1e21;
+    }
+
+    /* Pied de la carte */
+    .fn-card-footer { 
+        background-color: #f0f2f5; 
+        border-top: 1px solid #e4e6eb; 
+        padding: 16px 24px; 
+    }
+    .fn-action-buttons { 
+        display: flex; 
+        justify-content: flex-end; 
+        gap: 12px; 
+    }
+
+    /* Boutons de contrôle */
+    .fn-btn { 
+        text-decoration: none; 
+        padding: 0 24px; 
+        border-radius: 6px; 
+        font-weight: 600; 
+        font-size: 14px; 
+        height: 40px; 
+        display: inline-flex; 
+        align-items: center; 
+        justify-content: center; 
+        transition: background-color 0.2s, color 0.2s;
+        border: none;
+        cursor: pointer;
+    }
+    .fn-btn-secondary { 
+        background-color: #e4e6eb; 
+        color: #4b4f56; 
+    }
+    .fn-btn-secondary:hover { 
+        background-color: #d8dadf; 
+    }
+    .fn-btn-primary { 
+        background-color: #1877f2; 
+        color: #ffffff; 
+    }
+    .fn-btn-primary:hover { 
+        background-color: #166fe5; 
+    }
+
+    /* Alertes Flash */
+    .fn-flash-message {
+        padding: 12px 24px;
+        font-size: 14px;
+        font-weight: 500;
+        border-bottom: 1px solid #e4e6eb;
+    }
+    .fn-flash-message.error {
+        background-color: #ffebe9;
+        color: #ce1212;
+    }
+    .fn-flash-message.success {
+        background-color: #e6f4ea;
+        color: #137333;
+    }
+
+    /* Signature Tsapi unique */
+    .tsapi-clean-signature {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        padding-top: 20px;
+        padding-bottom: 10px;
+        background: transparent;
+        margin-top: auto;
+    }
+    .tsapi-brand-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+    .tsapi-logo-svg {
+        width: 32px;
+        height: auto;
+        display: block;
+    }
+    .tsapi-name-text {
+        font-size: 24px;
+        font-weight: 600;
+        color: #0064e0;
+        letter-spacing: -0.5px;
+        line-height: 1;
+    }
+</style>
