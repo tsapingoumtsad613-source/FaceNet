@@ -1,0 +1,200 @@
+<script>
+/* ═══ JS des Pages FaceNet : menu, fenêtres, abonnement, J'aime, commentaires, partage ═══ */
+(function () {
+    function csrf() {
+        var m = document.querySelector('meta[name="csrf-token"]');
+        if (m) return m.getAttribute('content');
+        var i = document.querySelector('input[name="csrf_token"]');
+        return i ? i.value : '';
+    }
+    function post(url, data) {
+        var h = {'X-Requested-With': 'XMLHttpRequest'};
+        var t = csrf();
+        if (t) { h['X-CSRFToken'] = t; h['X-CSRF-Token'] = t; }
+        var opts = {method: 'POST', credentials: 'same-origin', headers: h};
+        if (data) { h['Content-Type'] = 'application/json'; opts.body = JSON.stringify(data); }
+        return fetch(url, opts).then(function (r) {
+            return r.json().catch(function () { return {success: false, message: 'Réponse invalide du serveur.'}; });
+        });
+    }
+    /* ── Notifications visuelles (remplacent alert) ── */
+    window.pgToast = function (msg, type) {
+        var zone = document.getElementById('pg-toasts');
+        if (!zone) { zone = document.createElement('div'); zone.id = 'pg-toasts'; zone.className = 'pg-toasts'; zone.setAttribute('aria-live', 'polite'); document.body.appendChild(zone); }
+        var t = document.createElement('div');
+        t.className = 'pg-toast' + (type ? ' ' + type : '');
+        t.textContent = msg;
+        zone.appendChild(t);
+        while (zone.children.length > 3) zone.removeChild(zone.firstChild);
+        setTimeout(function () { t.classList.add('sortie'); setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 320); }, 2600);
+    };
+    function erreurReseau() { window.pgToast('Connexion impossible. Réessayez.', 'err'); }
+    function article(pubId) { return document.getElementById('pgpub-' + pubId); }
+    function maj(sel, root, val) {
+        var e = root && root.querySelector(sel);
+        if (e) e.textContent = val;
+    }
+
+    /* ── Menu ••• ── */
+    window.pgMenu = function (ev) {
+        ev.stopPropagation();
+        var m = document.getElementById('pg-menu');
+        if (m) m.classList.toggle('ouvert');
+    };
+    document.addEventListener('click', function () {
+        var m = document.getElementById('pg-menu');
+        if (m) m.classList.remove('ouvert');
+    });
+
+    /* ── Fenêtres (modales) ── */
+    window.pgModal = function (id, ouvrir) {
+        var e = document.getElementById(id);
+        if (e) e.classList.toggle('ouvert', !!ouvrir);
+    };
+
+    /* ── Partager la Page (lien) ── */
+    function copier(texte) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(texte).then(function () { return true; }, function () { return false; });
+        }
+        var t = document.createElement('textarea');
+        t.value = texte; document.body.appendChild(t); t.select();
+        var ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(t);
+        return Promise.resolve(ok);
+    }
+    function partagerLien(url, titre) {
+        if (navigator.share) {
+            return navigator.share({title: titre || document.title, url: url}).then(function () { return true; }, function () { return false; });
+        }
+        return copier(url).then(function (ok) {
+            window.pgToast(ok ? 'Lien copié ✔' : 'Copiez ce lien : ' + url, ok ? 'ok' : '');
+            return ok;
+        });
+    }
+    window.pgPartager = function () {
+        var m = document.getElementById('pg-menu');
+        if (m) m.classList.remove('ouvert');
+        partagerLien(location.origin + location.pathname, document.title);
+    };
+
+    /* ── S'abonner / se désabonner d'une Page ── */
+    window.pgSuivre = function (pageId, bouton) {
+        if (bouton) bouton.disabled = true;
+        post('/page/' + pageId + '/suivre').then(function (d) {
+            if (bouton) bouton.disabled = false;
+            if (!d.success) { if (d.message) window.pgToast(d.message, 'err'); return; }
+            if (bouton) {
+                bouton.className = 'pg-btn ' + (d.abonne ? 's' : 'p');
+                bouton.textContent = d.abonne ? '✔️ Abonné(e)' : '➕ Suivre';
+            }
+            document.querySelectorAll('.pg-nb-abonnes').forEach(function (e) { e.textContent = d.nb_abonnes; });
+            var inv = document.getElementById('pg-invit');
+            if (inv && d.abonne) inv.remove();
+            window.pgToast(d.abonne ? 'Vous suivez cette Page 🎉' : 'Vous ne suivez plus cette Page', d.abonne ? 'ok' : '');
+        }).catch(function () { if (bouton) bouton.disabled = false; erreurReseau(); });
+    };
+
+    /* ── Une Page (dans le fil) suit une autre Page ── */
+    window.pgSuivrePage = function (pageId, autreId, bouton) {
+        bouton.disabled = true;
+        post('/page/' + pageId + '/suivre-page/' + autreId).then(function (d) {
+            bouton.disabled = false;
+            if (!d.success) { if (d.message) window.pgToast(d.message, 'err'); return; }
+            bouton.className = 'pg-btn ' + (d.suivie ? 's' : 'p');
+            bouton.textContent = d.suivie ? 'Suivie' : 'Suivre';
+        }).catch(function () { bouton.disabled = false; erreurReseau(); });
+    };
+
+    /* ── J'aime ── */
+    window.pgLike = function (pubId, bouton) {
+        bouton.disabled = true;
+        post('/page/publication/' + pubId + '/like').then(function (d) {
+            bouton.disabled = false;
+            if (!d.success) { if (d.message) window.pgToast(d.message, 'err'); return; }
+            bouton.classList.toggle('on', d.aime);
+            if (d.aime) { bouton.classList.remove('pop'); void bouton.offsetWidth; bouton.classList.add('pop'); }
+            var ic = bouton.querySelector('i');
+            if (ic) ic.className = 'fa-' + (d.aime ? 'solid' : 'regular') + ' fa-thumbs-up';
+            maj('.pg-nb-likes', article(pubId), d.nb_likes);
+        }).catch(function () { bouton.disabled = false; erreurReseau(); });
+    };
+
+    /* ── Commentaires ── */
+    window.pgToggleCom = function (pubId) {
+        var z = document.getElementById('pgcoms-' + pubId);
+        if (!z) return;
+        z.hidden = !z.hidden;
+        if (!z.hidden) { var i = z.querySelector('input'); if (i) i.focus(); }
+    };
+    window.pgCommenter = function (pubId, champ) {
+        var texte = (champ.value || '').trim();
+        if (!texte) return;
+        champ.disabled = true;
+        post('/page/publication/' + pubId + '/commenter', {contenu: texte}).then(function (d) {
+            champ.disabled = false;
+            if (!d.success) { window.pgToast(d.message || 'Erreur.', 'err'); return; }
+            var c = d.commentaire, a = article(pubId);
+            var ligne = document.createElement('div'); ligne.className = 'pg-com';
+            var img = document.createElement('img'); img.src = c.avatar; img.alt = '';
+            var bulle = document.createElement('div'); bulle.className = 'pg-com-bulle';
+            var nom = document.createElement('b'); nom.textContent = c.auteur;
+            var txt = document.createElement('span'); txt.textContent = c.contenu;
+            bulle.appendChild(nom); bulle.appendChild(txt);
+            ligne.appendChild(img); ligne.appendChild(bulle);
+            var liste = a && a.querySelector('.pg-coms-liste');
+            if (liste) liste.appendChild(ligne);
+            maj('.pg-nb-com', a, d.nb_commentaires);
+            champ.value = '';
+            champ.focus();
+        }).catch(function () { champ.disabled = false; erreurReseau(); });
+    };
+
+    /* ── Partager une publication (compte réellement) ── */
+    window.pgPartagerPub = function (pubId) {
+        post('/page/publication/' + pubId + '/partager').then(function (d) {
+            if (!d.success) { window.pgToast(d.message || 'Erreur.', 'err'); return; }
+            maj('.pg-nb-part', article(pubId), d.nb_partages);
+            partagerLien(d.url, document.title);
+        }).catch(erreurReseau);
+    };
+
+    /* ── Supprimer une publication (propriétaire) ── */
+    window.pgSupprimerPub = function (pubId) {
+        if (!confirm('Supprimer cette publication ?')) return;
+        post('/page/publication/' + pubId + '/supprimer').then(function (d) {
+            if (!d.success) { window.pgToast(d.message || 'Erreur.', 'err'); return; }
+            var a = article(pubId);
+            if (a) a.remove();
+        }).catch(erreurReseau);
+    };
+
+    /* ── Double-clic / double-tap sur une image : J'aime ── */
+    document.addEventListener('dblclick', function (ev) {
+        var m = ev.target.closest && ev.target.closest('.pg-post-media');
+        if (!m) return;
+        var a = m.closest('.pg-post');
+        var b = a && a.querySelector('.pg-act');
+        if (b && !b.classList.contains('on')) b.click();
+    });
+
+    /* ── Onglets : met en avant la section visible ── */
+    var bar = document.getElementById('pg-onglets');
+    if (bar && 'IntersectionObserver' in window) {
+        var liens = bar.querySelectorAll('a[data-ong]');
+        var obs = new IntersectionObserver(function (items) {
+            items.forEach(function (it) {
+                if (!it.isIntersecting) return;
+                liens.forEach(function (l) { l.classList.toggle('on', l.getAttribute('data-ong') === it.target.id); });
+            });
+        }, {rootMargin: '-35% 0px -55% 0px'});
+        liens.forEach(function (l) { var c = document.getElementById(l.getAttribute('data-ong')); if (c) obs.observe(c); });
+        bar.addEventListener('click', function (ev) {
+            var l = ev.target.closest('a[data-ong]');
+            if (!l) return;
+            liens.forEach(function (x) { x.classList.toggle('on', x === l); });
+        });
+    }
+})();
+</script>

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activité | FaceNet</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* Mêmes tokens de thème que settings.html, pour rester cohérent
+           visuellement (clair/sombre) sans rien dupliquer d'inutile. */
+        :root, [data-theme="light"] {
+            --fn-blue: #0866FF;
+            --fn-bg: #F0F2F5;
+            --fn-gray: #65676B;
+            --fn-border: #e4e6eb;
+            --white: #ffffff;
+            --text-dark: #1c1e21;
+        }
+        [data-theme="dark"] {
+            --fn-bg: #18191A;
+            --white: #242526;
+            --text-dark: #E4E6EB;
+            --fn-border: #3E4042;
+            --fn-gray: #B0B3B8;
+        }
+        body {
+            background: var(--fn-bg);
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-dark);
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+        .activite-container { max-width: 560px; margin: 0 auto; padding: 20px 16px 60px; }
+        .activite-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+        .activite-back-btn {
+            width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; border: none;
+            background: var(--white); color: var(--text-dark); font-size: 16px;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .activite-back-btn:hover { background: rgba(0,0,0,0.05); }
+        .activite-title { margin: 0; font-size: 22px; font-weight: 800; }
+
+        .activite-list { background: var(--white); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+        .activite-item {
+            display: flex; align-items: center; gap: 14px; padding: 16px;
+            text-decoration: none; color: var(--text-dark);
+            border-bottom: 1px solid var(--fn-border);
+            transition: background 0.15s;
+        }
+        .activite-item:last-child { border-bottom: none; }
+        .activite-item:hover { background: rgba(0,0,0,0.03); }
+        .activite-item i.activite-icon {
+            width: 40px; height: 40px; border-radius: 50%; background: rgba(8,102,255,0.1);
+            color: var(--fn-blue); font-size: 17px; display: flex; align-items: center; justify-content: center;
+        }
+        .activite-item-text { flex: 1; min-width: 0; }
+        .activite-item-text strong { display: block; font-size: 15px; font-weight: 700; }
+        .activite-item-text span { display: block; font-size: 12px; color: var(--fn-gray); margin-top: 2px; }
+        .activite-item .fa-chevron-right { color: var(--fn-gray); font-size: 13px; }
+    </style>
+</head>
+<body>
+
+<div class="activite-container">
+    <div class="activite-header">
+        <button type="button" class="activite-back-btn" onclick="history.length > 1 ? history.back() : (window.location.href = '{{ url_for('main.parametres_generaux') }}')" title="Retour" aria-label="Retour">
+            <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <h1 class="activite-title">Activité</h1>
+    </div>
+
+    <div class="activite-list">
+        <!-- Vidéos mises en favori : alimentée directement par les favoris
+             ajoutés depuis reel.html (bouton favori sous "Partager"). -->
+        <a href="{{ url_for('main.reels_favoris') }}" class="activite-item">
+            <i class="fa-solid fa-bookmark activite-icon"></i>
+            <div class="activite-item-text">
+                <strong>Vidéos mises en favori</strong>
+                <span>Retrouve toutes les vidéos que tu as enregistrées</span>
+            </div>
+            <i class="fa-solid fa-chevron-right"></i>
+        </a>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        let themeSauve;
+        try { themeSauve = localStorage.getItem('facenet_theme'); } catch (e) {}
+        const theme = themeSauve || 'system';
+        const themeApplique = theme === 'system'
+            ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+            : theme;
+        document.documentElement.setAttribute('data-theme', themeApplique);
+    });
+</script>
+
+</body>
+</html>
+{% endblock %}

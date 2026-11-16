@@ -1,0 +1,95 @@
+ {% extends "base.html" %}
+
+{% block content %}
+<div class="marketplace-container">
+    <div class="form-card">
+        <h2>Vendre un article</h2>
+        <p class="subtitle">Créez une annonce pour la communauté FaceNet</p>
+
+        <form action="{{ url_for('ajouter_produit') }}" method="POST" enctype="multipart/form-data">
+            
+            <div class="input-group">
+                <label>Nom de l'article</label>
+                <input type="text" name="nom_produit" placeholder="Que vendez-vous ?" required>
+            </div>
+
+            <div class="input-group">
+                <label>Prix (FCFA)</label>
+                <input type="number" name="prix" placeholder="0" required>
+            </div>
+
+            <div class="input-group">
+                <label>Catégorie</label>
+                <select name="categorie">
+                    <option value="Electronique">Électronique</option>
+                    <option value="Vetements">Vêtements</option>
+                    <option value="Vehicules">Véhicules</option>
+                    <option value="Immobilier">Immobilier</option>
+                    <option value="Autres">Autres</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label>Description</label>
+                <textarea name="description" rows="4" placeholder="Décrivez l'état de l'article..."></textarea>
+            </div>
+
+            <div class="input-group">
+                <label>Photo de l'article</label>
+                <div class="file-upload">
+                    <input type="file" name="photo_produit" id="photo_produit" accept="image/*" required>
+                    <label for="photo_produit" class="file-label">
+                        <span>📸 Choisir une photo</span>
+                    </label>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-publish">Mettre en vente</button>
+        </form>
+    </div>
+</div>
+
+<style>
+    .marketplace-container {
+        display: flex;
+        justify-content: center;
+        padding: 20px;
+        background-color: #f0f2f5;
+        min-height: 100vh;
+    }
+    .form-card {
+        background: white;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        width: 100%;
+        max-width: 500px;
+    }
+    h2 { color: #1c1e21; margin-bottom: 5px; }
+    .subtitle { color: #65676b; margin-bottom: 20px; font-size: 14px; }
+    .input-group { margin-bottom: 15px; }
+    .input-group label { display: block; font-weight: bold; margin-bottom: 5px; color: #4b4f56; }
+    input, select, textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #dddfe2;
+        border-radius: 6px;
+        font-size: 16px;
+    }
+    .btn-publish {
+        width: 100%;
+        background-color: #42b72a;
+        color: white;
+        border: none;
+        padding: 12px;
+        border-radius: 6px;
+        font-weight: bold;
+        font-size: 17px;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+    .btn-publish:hover { background-color: #36a420; }
+    .file-upload { border: 2px dashed #dddfe2; padding: 10px; text-align: center; border-radius: 6px; }
+</style>
+{% endblock %}
+ 

@@ -1,0 +1,30 @@
+{# ══ Abonné Tsapi Verified : feuille « Modifier la photo de profil » (profil) ══ #}
+<style>
+#fnrv-sheet{position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center}
+#fnrv-sheet.on{display:flex}
+.fnrv-card{background:var(--surface,#fff);color:var(--text,#050505);width:100%;max-width:680px;border-radius:18px 18px 0 0;padding:12px 20px calc(24px + env(safe-area-inset-bottom,0px))}
+.fnrv-grab{width:40px;height:4px;background:#ccc;border-radius:2px;margin:0 auto 18px}
+.fnrv-card h3{text-align:center;font-size:19px;margin:0 0 16px}
+.fnrv-card p{font-size:16px;line-height:1.5;margin:0 0 18px}
+.fnrv-card p a{color:#1877f2;font-weight:700;text-decoration:none}
+.fnrv-btns{display:flex;gap:12px}
+.fnrv-btns a,.fnrv-btns button{flex:1;text-align:center;border:0;border-radius:10px;padding:14px;font:inherit;font-size:16px;font-weight:600;cursor:pointer;text-decoration:none}
+.fnrv-ok{background:#1877f2;color:#fff}.fnrv-no{background:var(--bg,#e4e6eb);color:inherit}
+</style>
+<div id="fnrv-sheet" role="dialog" aria-modal="true" aria-label="Modifier la photo de profil">
+  <div class="fnrv-card" onclick="event.stopPropagation()">
+    <div class="fnrv-grab"></div>
+    <h3>Modifier la photo de profil</h3>
+    <p>En tant qu'abonné(e) Tsapi Verified, toutes les modifications que vous apportez à votre nom ou à votre photo de profil devront être revérifiées. <a href="#" onclick="fnRvFermer();fnOuvrirAssistant();return false;">En savoir plus</a></p>
+    <div class="fnrv-btns">
+      <a class="fnrv-ok" href="{{ url_for('main.reverif_choix') }}">Modifier</a>
+      <button type="button" class="fnrv-no" onclick="fnRvFermer()">Annuler</button>
+    </div>
+  </div>
+</div>
+<script>
+function fnOuvrirReverifSheet() { var s = document.getElementById('fnrv-sheet'); if (s) s.classList.add('on'); }
+function fnRvFermer() { var s = document.getElementById('fnrv-sheet'); if (s) s.classList.remove('on'); }
+(function () { var s = document.getElementById('fnrv-sheet'); if (s) s.addEventListener('click', fnRvFermer); })();
+</script>
+{% include '_assistant_support.html' %}

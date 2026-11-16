@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="fr" data-theme="{{ theme_actuel }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apparence | FaceNet</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root, [data-theme="light"] { --fn-blue: #0866FF; --fn-bg: #F0F2F5; --fn-gray: #65676B; --fn-border: #e4e6eb; --white: #ffffff; --text-dark: #1c1e21; }
+        [data-theme="dark"] { --fn-bg: #18191A; --white: #242526; --text-dark: #E4E6EB; --fn-border: #3E4042; --fn-gray: #B0B3B8; }
+        body { background: var(--fn-bg); margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: var(--text-dark); transition: background .2s, color .2s; }
+        .fn-page { max-width: 640px; margin: 0 auto; padding: 16px; }
+        .fn-topbar { display: flex; align-items: center; gap: 14px; padding: 8px 0 18px; }
+        .fn-topbar a { color: var(--text-dark); font-size: 20px; text-decoration: none; }
+        .fn-topbar h1 { font-size: 20px; margin: 0; }
+        .fn-card { background: var(--white); border-radius: 12px; padding: 6px 0; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+        .fn-row { padding: 14px 18px; border-bottom: 1px solid var(--fn-border); }
+        .fn-row:last-child { border-bottom: none; }
+        .fn-row-label { font-weight: 600; font-size: 0.95rem; margin-bottom: 10px; }
+        .fn-theme-options, .fn-size-options { display: flex; gap: 10px; }
+        .fn-option { flex: 1; text-align: center; padding: 12px 8px; border-radius: 10px; border: 2px solid var(--fn-border); cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+        .fn-option.actif { border-color: var(--fn-blue); color: var(--fn-blue); }
+        .fn-note { font-size: 0.8rem; color: var(--fn-gray); margin-top: 8px; }
+        .fn-group-title { font-size: 0.8rem; text-transform: uppercase; color: var(--fn-gray); font-weight: 700; margin: 18px 4px 8px; }
+    </style>
+</head>
+<body>
+<div class="fn-page">
+    <div class="fn-topbar">
+        <a href="{{ url_for('main.settings') }}"><i class="fas fa-arrow-left"></i></a>
+        <h1>Apparence</h1>
+    </div>
+
+    <div class="fn-card">
+        <div class="fn-row">
+            <div class="fn-row-label">Thème</div>
+            <div class="fn-theme-options" id="fn-theme-options">
+                <div class="fn-option {% if theme_actuel == 'light' %}actif{% endif %}" data-value="light">
+                    <i class="fas fa-sun"></i><br>Clair
+                </div>
+                <div class="fn-option {% if theme_actuel == 'dark' %}actif{% endif %}" data-value="dark">
+                    <i class="fas fa-moon"></i><br>Sombre
+                </div>
+            </div>
+        </div>
+        <div class="fn-row">
+            <div class="fn-row-label">Taille du texte</div>
+            <div class="fn-size-options" id="fn-size-options">
+                <div class="fn-option {% if taille_texte_actuelle == 'small' %}actif{% endif %}" data-value="small" style="font-size:0.8rem;">Petit</div>
+                <div class="fn-option {% if taille_texte_actuelle == 'normal' %}actif{% endif %}" data-value="normal" style="font-size:1rem;">Normal</div>
+                <div class="fn-option {% if taille_texte_actuelle == 'large' %}actif{% endif %}" data-value="large" style="font-size:1.2rem;">Grand</div>
+            </div>
+            <div class="fn-note">S'applique à cette page. Pour que le thème s'applique à tout le site, il faudrait relier cette préférence à ton fichier <code>base.html</code> — dis-moi si tu veux que je le fasse.</div>
+        </div>
+    </div>
+</div>
+
+<script>
+function envoyer(theme, taille) {
+    const params = new URLSearchParams();
+    if (theme) params.append('theme', theme);
+    if (taille) params.append('taille_texte', taille);
+    fetch(window.location.pathname, { method: 'POST', body: params })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                document.documentElement.setAttribute('data-theme', data.theme);
+            }
+        });
+}
+
+document.querySelectorAll('#fn-theme-options .fn-option').forEach(el => {
+    el.addEventListener('click', function () {
+        document.querySelectorAll('#fn-theme-options .fn-option').forEach(o => o.classList.remove('actif'));
+        this.classList.add('actif');
+        envoyer(this.dataset.value, null);
+    });
+});
+
+document.querySelectorAll('#fn-size-options .fn-option').forEach(el => {
+    el.addEventListener('click', function () {
+        document.querySelectorAll('#fn-size-options .fn-option').forEach(o => o.classList.remove('actif'));
+        this.classList.add('actif');
+        envoyer(null, this.dataset.value);
+    });
+});
+</script>
+</body>
+</html>
+{% endblock %}

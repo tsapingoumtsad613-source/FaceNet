@@ -1,0 +1,393 @@
+{% extends "base.html" %}
+
+{% block content %}
+{# Variables optionnelles dans comparatif : date_activation, date_renouvellement, date_expiration,
+   nom_utilisateur, photo_utilisateur, url_aide, url_annulation, url_paiement #}
+{% set date_activ = comparatif.date_activation %}
+{% set date_activ_txt = (date_activ.strftime('%d/%m/%Y') if date_activ.strftime is defined else date_activ) if date_activ else '' %}
+{% set date_renouv = comparatif.date_renouvellement or comparatif.date_expiration %}
+{% set date_renouv_txt = (date_renouv.strftime('%d/%m/%Y') if date_renouv.strftime is defined else date_renouv) if date_renouv else '' %}
+{% set nom_profil = comparatif.nom_utilisateur or '' %}
+{% set nb_total = comparatif.lignes|length %}
+{% set cpt = namespace(n=0) %}
+{% for l in comparatif.lignes %}{% if l.inclus[comparatif.forfait_actuel] %}{% set cpt.n = cpt.n + 1 %}{% endif %}{% endfor %}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    .badgeadv-page {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        max-width: 720px;
+        margin: 0 auto;
+        min-height: 100vh;
+        background: #0b1220;
+        padding-bottom: 40px;
+    }
+
+    /* ---------- BARRE DU HAUT ---------- */
+    .badgeadv-topbar {
+        display: flex; align-items: center; gap: 12px;
+        padding: 16px 18px;
+        color: #fff;
+    }
+    .badgeadv-back {
+        width: 34px; height: 34px; border-radius: 50%;
+        background: rgba(255,255,255,0.1);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; text-decoration: none; flex-shrink: 0;
+    }
+    .badgeadv-topbar h1 { font-size: 16px; font-weight: 700; margin: 0; }
+
+    /* ---------- HERO ---------- */
+    .badgeadv-hero {
+        text-align: center;
+        padding: 8px 24px 34px;
+        background: radial-gradient(circle at 50% 0%, rgba(24,119,242,0.35), transparent 60%);
+    }
+    .badgeadv-hero-badge {
+        width: 72px; height: 72px; margin: 0 auto 14px;
+        filter: drop-shadow(0 6px 18px rgba(24,119,242,0.55));
+    }
+    .badgeadv-hero h2 {
+        color: #fff; font-size: 22px; font-weight: 800; margin: 0 0 6px;
+        letter-spacing: -0.02em;
+    }
+    .badgeadv-hero p { color: #9aa5b8; font-size: 14px; margin: 0; line-height: 1.5; }
+    .badgeadv-hero .badgeadv-plan-pill {
+        display: inline-flex; align-items: center; gap: 6px;
+        margin-top: 16px; padding: 7px 16px; border-radius: 999px;
+        background: linear-gradient(90deg, #1877F2, #6a5cf5);
+        color: #fff; font-weight: 700; font-size: 13px;
+    }
+    .badgeadv-hero .badgeadv-plan-pill small { font-weight: 500; opacity: 0.85; }
+
+    /* ---------- CONTENU (fond clair) ---------- */
+    .badgeadv-sheet {
+        background: #f5f7fb;
+        border-radius: 24px 24px 0 0;
+        padding: 26px 16px 10px;
+    }
+
+    /* ---------- BANDEAU FORFAITS (scroll horizontal) ---------- */
+    .badgeadv-plans-scroll {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: 84px;
+        gap: 8px;
+        overflow-x: auto;
+        padding: 4px 4px 18px;
+        scrollbar-width: none;
+    }
+    .badgeadv-plans-scroll::-webkit-scrollbar { display: none; }
+    .badgeadv-plan-chip {
+        border-radius: 14px;
+        padding: 12px 6px;
+        text-align: center;
+        background: #fff;
+        border: 2px solid #e6e9f0;
+    }
+    .badgeadv-plan-chip.is-current {
+        border-color: #1877F2;
+        background: linear-gradient(160deg, #eef4ff, #ffffff);
+        box-shadow: 0 6px 16px rgba(24,119,242,0.18);
+    }
+    .badgeadv-plan-chip .nom { font-size: 12px; font-weight: 800; color: #1c1e21; }
+    .badgeadv-plan-chip .prix { font-size: 10.5px; color: #65676B; margin-top: 2px; }
+    .badgeadv-plan-chip .tag {
+        margin-top: 6px; font-size: 9px; font-weight: 700; color: #1877F2;
+        text-transform: uppercase; letter-spacing: 0.03em;
+    }
+
+    /* ---------- TABLEAU COMPARATIF ---------- */
+    .badgeadv-table-wrap {
+        overflow-x: auto;
+        border-radius: 18px;
+        background: #fff;
+        box-shadow: 0 2px 14px rgba(20,25,40,0.06);
+        -webkit-overflow-scrolling: touch;
+    }
+    table.badgeadv-table {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 560px;
+        font-size: 13px;
+    }
+    table.badgeadv-table thead th {
+        position: sticky; top: 0; background: #fff; z-index: 2;
+        padding: 14px 8px 12px; text-align: center;
+        font-size: 12px; font-weight: 800; color: #1c1e21;
+        border-bottom: 1px solid #eef0f4;
+    }
+    table.badgeadv-table thead th:first-child {
+        text-align: left; position: sticky; left: 0; z-index: 3;
+        min-width: 210px; padding-left: 16px;
+    }
+    table.badgeadv-table thead th.is-current { color: #1877F2; background: #f3f8ff; }
+    table.badgeadv-table td {
+        padding: 12px 8px; text-align: center;
+        border-bottom: 1px solid #f1f2f5;
+    }
+    table.badgeadv-table td:first-child {
+        text-align: left; position: sticky; left: 0; background: #fff;
+        color: #1c1e21; font-weight: 600; padding-left: 16px;
+        display: flex; align-items: center; gap: 8px; min-width: 210px;
+    }
+    table.badgeadv-table td:first-child .emoji { font-size: 15px; }
+    table.badgeadv-table td.is-current { background: #f8fbff; }
+    table.badgeadv-table tbody tr:last-child td { border-bottom: none; }
+    .badgeadv-check { color: #16a34a; font-size: 16px; }
+    .badgeadv-cross { color: #d0d3d9; font-size: 15px; }
+
+    .badgeadv-footnote {
+        text-align: center; color: #8a90a0; font-size: 12px;
+        margin: 16px 8px 4px; line-height: 1.5;
+    }
+
+    /* ====== AJOUTS : style type Facebook / Meta One ====== */
+    .badgeadv-hero-date { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; color: #cfd8ea; font-size: 12.5px; font-weight: 600; }
+    .badgeadv-hero-date i { color: #5aa0ff; }
+
+    .badgeadv-h { font-size: 16px; font-weight: 700; color: #1c1e21; margin: 24px 4px 4px; }
+    .badgeadv-sub { font-size: 13px; color: #65676B; margin: 0 4px 10px; }
+
+    .badgeadv-profile { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid #dfe3ea; border-radius: 18px; padding: 12px 14px; margin: 0 0 6px; }
+    .badgeadv-avatar { position: relative; width: 46px; height: 46px; flex-shrink: 0; }
+    .badgeadv-avatar .pic { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; background: linear-gradient(135deg, #1877F2, #6a5cf5); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; }
+    .badgeadv-avatar .fb { position: absolute; right: -3px; bottom: -3px; width: 20px; height: 20px; border-radius: 50%; background: #1877F2; border: 2px solid #fff; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; }
+    .badgeadv-profile .t { font-size: 15px; font-weight: 700; color: #1c1e21; }
+    .badgeadv-profile .s { font-size: 13px; color: #65676B; }
+
+    .badgeadv-list { background: #fff; border: 1px solid #dfe3ea; border-radius: 18px; overflow: hidden; }
+    .badgeadv-row { width: 100%; display: flex; align-items: center; gap: 14px; padding: 15px 14px; background: none; border: 0; border-bottom: 1px solid #eceef2; text-align: left; font: inherit; color: #1c1e21; cursor: pointer; }
+    .badgeadv-row:last-child { border-bottom: 0; }
+    .badgeadv-row .ic { width: 30px; text-align: center; font-size: 20px; flex-shrink: 0; }
+    .badgeadv-row .tx { flex: 1; font-size: 15px; line-height: 1.3; }
+    .badgeadv-row .ch { color: #65676B; font-size: 14px; }
+    .badgeadv-row.is-off { color: #8a90a0; cursor: default; }
+    .badgeadv-row.is-off .ch { color: #b6bbc6; }
+
+    details.badgeadv-acc { background: #fff; border: 1px solid #dfe3ea; border-radius: 18px; overflow: hidden; }
+    details.badgeadv-acc summary { list-style: none; display: flex; align-items: center; gap: 12px; padding: 15px 14px; font-weight: 700; font-size: 15px; color: #1c1e21; cursor: pointer; }
+    details.badgeadv-acc summary::-webkit-details-marker { display: none; }
+    details.badgeadv-acc summary .ch { margin-left: auto; color: #65676B; transition: transform .2s; }
+    details.badgeadv-acc[open] summary .ch { transform: rotate(180deg); }
+    details.badgeadv-acc .badgeadv-row { border-top: 1px solid #eceef2; border-bottom: 0; }
+
+    .badgeadv-sub-row { display: flex; align-items: center; gap: 14px; padding: 15px 14px; border-bottom: 1px solid #eceef2; color: #1c1e21; text-decoration: none; }
+    .badgeadv-sub-row:last-child { border-bottom: 0; }
+    .badgeadv-sub-row .ic { width: 30px; text-align: center; font-size: 20px; flex-shrink: 0; }
+    .badgeadv-sub-row .l { flex: 1; font-size: 15px; line-height: 1.3; }
+    .badgeadv-sub-row .l small { display: block; color: #65676B; font-size: 13px; margin-top: 2px; }
+    .badgeadv-sub-row .r { color: #65676B; font-size: 14px; text-align: right; }
+    .badgeadv-sub-row .r .old { text-decoration: line-through; margin-right: 6px; }
+    .badgeadv-cancel { display: block; text-align: left; background: #fff; border: 1px solid #dfe3ea; border-radius: 18px; padding: 15px 18px; margin-top: 18px; color: #1c1e21; font-size: 15px; font-weight: 600; text-decoration: none; }
+
+    /* Fenêtres de détail (illustrations) */
+    .badgeadv-detail { display: none; position: fixed; inset: 0; z-index: 9999; background: #fff; overflow-y: auto; }
+    .badgeadv-detail.is-open { display: block; }
+    .badgeadv-detail-inner { max-width: 720px; margin: 0 auto; padding: 16px 20px 40px; }
+    .badgeadv-detail-back { width: 38px; height: 38px; border-radius: 50%; border: 0; background: #f0f2f5; color: #1c1e21; font-size: 16px; cursor: pointer; }
+    .badgeadv-illus { display: block; width: 200px; height: 200px; margin: 14px auto 10px; }
+    .badgeadv-detail h3 { font-size: 26px; font-weight: 700; color: #1c1e21; margin: 14px 0 10px; line-height: 1.2; }
+    .badgeadv-detail p { font-size: 16px; color: #1c1e21; line-height: 1.45; margin: 0 0 14px; }
+    .badgeadv-detail .note { font-size: 13.5px; color: #65676B; }
+</style>
+
+<div class="badgeadv-page">
+    <div class="badgeadv-topbar">
+        <a href="javascript:history.back()" class="badgeadv-back">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <h1>Votre badge vérifié</h1>
+    </div>
+
+    <div class="badgeadv-hero">
+        <svg class="badgeadv-hero-badge" viewBox="0 0 24 24">
+            <path fill="#1877F2" d="M 12.00,0.85 C 12.45,0.85 12.94,1.45 13.34,1.79 C 13.75,2.13 14.01,2.76 14.45,2.87 C 14.88,2.99 15.42,2.57 15.94,2.48 C 16.46,2.40 17.19,2.12 17.57,2.34 C 17.96,2.57 18.09,3.33 18.27,3.83 C 18.45,4.32 18.37,5.00 18.68,5.32 C 19.00,5.63 19.68,5.55 20.17,5.73 C 20.67,5.91 21.43,6.04 21.66,6.42 C 21.88,6.81 21.60,7.54 21.52,8.06 C 21.43,8.58 21.01,9.12 21.13,9.55 C 21.24,9.99 21.87,10.25 22.21,10.66 C 22.55,11.06 23.15,11.55 23.15,12.00 C 23.15,12.45 22.55,12.94 22.21,13.34 C 21.87,13.75 21.24,14.01 21.13,14.45 C 21.01,14.88 21.43,15.42 21.52,15.94 C 21.60,16.46 21.88,17.19 21.66,17.57 C 21.43,17.96 20.67,18.09 20.17,18.27 C 19.68,18.45 19.00,18.37 18.68,18.68 C 18.37,19.00 18.45,19.68 18.27,20.17 C 18.09,20.67 17.96,21.43 17.57,21.66 C 17.19,21.88 16.46,21.60 15.94,21.52 C 15.42,21.43 14.88,21.01 14.45,21.13 C 14.01,21.24 13.75,21.87 13.34,22.21 C 12.94,22.55 12.45,23.15 12.00,23.15 C 11.55,23.15 11.06,22.55 10.66,22.21 C 10.25,21.87 9.99,21.24 9.55,21.13 C 9.12,21.01 8.58,21.43 8.06,21.52 C 7.54,21.60 6.81,21.88 6.43,21.66 C 6.04,21.43 5.91,20.67 5.73,20.17 C 5.55,19.68 5.63,19.00 5.32,18.68 C 5.00,18.37 4.32,18.45 3.83,18.27 C 3.33,18.09 2.57,17.96 2.34,17.58 C 2.12,17.19 2.40,16.46 2.48,15.94 C 2.57,15.42 2.99,14.88 2.87,14.45 C 2.76,14.01 2.13,13.75 1.79,13.34 C 1.45,12.94 0.85,12.45 0.85,12.00 C 0.85,11.55 1.45,11.06 1.79,10.66 C 2.13,10.25 2.76,9.99 2.87,9.55 C 2.99,9.12 2.57,8.58 2.48,8.06 C 2.40,7.54 2.12,6.81 2.34,6.42 C 2.57,6.04 3.33,5.91 3.83,5.73 C 4.32,5.55 5.00,5.63 5.32,5.32 C 5.63,5.00 5.55,4.32 5.73,3.83 C 5.91,3.33 6.04,2.57 6.42,2.34 C 6.81,2.12 7.54,2.40 8.06,2.48 C 8.58,2.57 9.12,2.99 9.55,2.87 C 9.99,2.76 10.25,2.13 10.66,1.79 C 11.06,1.45 11.55,0.85 12.00,0.85 Z"/>
+            <path fill="none" stroke="#0b1220" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" d="M7.3 12.2l3 3 6.2-6.6"/>
+        </svg>
+        <h2>Votre profil est vérifié</h2>
+        <p>Voici tout ce que votre forfait vous donne aujourd'hui — et ce que débloquent les forfaits supérieurs.</p>
+        <div class="badgeadv-plan-pill">
+            Forfait {{ comparatif.noms.get(comparatif.forfait_actuel, comparatif.forfait_actuel) }}
+            <small>· {{ comparatif.montants.get(comparatif.forfait_actuel, '') }} FCFA/mois</small>
+        </div>
+        {% if date_activ_txt %}
+        <div class="badgeadv-hero-date"><i class="far fa-calendar-check"></i> Actif depuis le {{ date_activ_txt }}</div>
+        {% endif %}
+    </div>
+
+    <div class="badgeadv-sheet">
+        <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+            <defs>
+                <linearGradient id="badgeadv-ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d9c8ff"/><stop offset="1" stop-color="#8fe3e6"/></linearGradient>
+                <linearGradient id="badgeadv-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd6a5"/><stop offset=".5" stop-color="#ff9cc2"/><stop offset="1" stop-color="#5aa9ff"/></linearGradient>
+            </defs>
+        </svg>
+
+        {% if nom_profil %}
+        <div class="badgeadv-profile">
+            <div class="badgeadv-avatar">
+                {% if comparatif.photo_utilisateur %}<img class="pic" src="{{ comparatif.photo_utilisateur }}" alt="">{% else %}<div class="pic">{{ nom_profil[:1]|upper }}</div>{% endif %}
+                <span class="fb"><i class="fas fa-check"></i></span>
+            </div>
+            <div><div class="t">Profil abonné</div><div class="s">{{ nom_profil }}</div></div>
+        </div>
+        {% endif %}
+
+        <div class="badgeadv-h">Vos avantages</div>
+        <div class="badgeadv-sub">Ce que contient votre forfait {{ comparatif.noms.get(comparatif.forfait_actuel, comparatif.forfait_actuel) }}</div>
+        <div class="badgeadv-list">
+            {% for ligne in comparatif.lignes %}
+            {% if ligne.inclus[comparatif.forfait_actuel] %}
+            <button type="button" class="badgeadv-row" data-badgeadv-open="badgeadv-d-{{ loop.index }}">
+                <span class="ic">{{ ligne.icone }}</span><span class="tx">{{ ligne.label }}</span><i class="fas fa-chevron-right ch"></i>
+            </button>
+            {% endif %}
+            {% endfor %}
+        </div>
+
+        {% if nb_total - cpt.n > 0 %}
+        <div class="badgeadv-h">Pas encore inclus</div>
+        <details class="badgeadv-acc">
+            <summary><i class="fas fa-lock" style="color:#1877F2"></i> Débloquez-les avec un forfait supérieur <i class="fas fa-chevron-down ch"></i></summary>
+            {% for ligne in comparatif.lignes %}
+            {% if not ligne.inclus[comparatif.forfait_actuel] %}
+            <div class="badgeadv-row is-off"><span class="ic">{{ ligne.icone }}</span><span class="tx">{{ ligne.label }}</span><i class="fas fa-lock ch"></i></div>
+            {% endif %}
+            {% endfor %}
+        </details>
+        {% endif %}
+
+        <div class="badgeadv-h" id="badgeadv-forfaits">Comparer les forfaits</div>
+
+        <div class="badgeadv-plans-scroll">
+            {% for f in comparatif.ordre_forfaits %}
+            <div class="badgeadv-plan-chip {% if f == comparatif.forfait_actuel %}is-current{% endif %}">
+                <div class="nom">{{ comparatif.noms[f] }}</div>
+                <div class="prix">{{ comparatif.montants[f] }} F</div>
+                {% if f == comparatif.forfait_actuel %}<div class="tag">Actuel</div>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="badgeadv-table-wrap">
+            <table class="badgeadv-table">
+                <thead>
+                    <tr>
+                        <th>Avantage</th>
+                        {% for f in comparatif.ordre_forfaits %}
+                        <th class="{% if f == comparatif.forfait_actuel %}is-current{% endif %}">{{ comparatif.noms[f] }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ligne in comparatif.lignes %}
+                    <tr>
+                        <td><span class="emoji">{{ ligne.icone }}</span> {{ ligne.label }}</td>
+                        {% for f in comparatif.ordre_forfaits %}
+                        <td class="{% if f == comparatif.forfait_actuel %}is-current{% endif %}">
+                            {% if ligne.inclus[f] %}<i class="fas fa-check badgeadv-check"></i>{% else %}<i class="fas fa-times badgeadv-cross"></i>{% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        
+        <div class="badgeadv-h">Votre abonnement</div>
+        <div class="badgeadv-list">
+            <a class="badgeadv-sub-row" href="#badgeadv-forfaits">
+                <span class="ic"><i class="fas fa-rotate"></i></span>
+                <span class="l">Formule d'abonnement<small>{{ comparatif.noms.get(comparatif.forfait_actuel, comparatif.forfait_actuel) }}</small></span>
+                <span class="r">Découvrir les forfaits <i class="fas fa-chevron-right"></i></span>
+            </a>
+            <div class="badgeadv-sub-row">
+                <span class="ic"><i class="fas fa-receipt"></i></span>
+                <span class="l">Informations de facturation
+                    <small>{% if date_activ_txt %}Actif depuis le {{ date_activ_txt }}{% endif %}{% if date_renouv_txt %}<br>Renouvellement le {{ date_renouv_txt }}{% endif %}</small>
+                </span>
+                <span class="r">{{ comparatif.montants.get(comparatif.forfait_actuel, '') }} FCFA</span>
+            </div>
+            <a class="badgeadv-sub-row" href="{{ comparatif.url_paiement or '#' }}">
+                <span class="ic"><i class="far fa-credit-card"></i></span>
+                <span class="l">Moyen de paiement</span>
+                <span class="r"><i class="fas fa-arrow-up-right-from-square"></i></span>
+            </a>
+        </div>
+
+        <div class="badgeadv-h">Besoin d'aide ?</div>
+        <div class="badgeadv-list">
+            <a class="badgeadv-sub-row" href="{{ comparatif.url_aide or '#' }}">
+                <span class="ic"><i class="far fa-circle-question"></i></span>
+                <span class="l">Obtenir de l'aide</span>
+                <span class="r"><i class="fas fa-chevron-right"></i></span>
+            </a>
+        </div>
+        <a class="badgeadv-cancel" href="{{ comparatif.url_annulation or '#' }}">Annuler l'abonnement</a>
+
+        {% for ligne in comparatif.lignes %}
+        {% set lab = ligne.label|lower %}
+        {% set kind = 'badge' if ('badge' in lab or 'vérif' in lab or 'verif' in lab) else ('shield' if ('usurp' in lab or 'protection' in lab) else 'star') %}
+        <div class="badgeadv-detail" id="badgeadv-d-{{ loop.index }}" aria-hidden="true">
+            <div class="badgeadv-detail-inner">
+                <button type="button" class="badgeadv-detail-back" data-badgeadv-close aria-label="Retour"><i class="fas fa-arrow-left"></i></button>
+                <svg class="badgeadv-illus" viewBox="0 0 200 200" aria-hidden="true">
+                    <circle cx="100" cy="100" r="94" fill="url(#badgeadv-ring)"/>
+                    <circle cx="100" cy="100" r="82" fill="url(#badgeadv-bg)"/>
+                    <path d="M30 168c6-30 34-44 70-44s64 14 70 44a82 82 0 0 1-140 0z" fill="#fff3ea"/>
+                    <rect x="88" y="104" width="24" height="26" rx="10" fill="#c46a46"/>
+                    <ellipse cx="100" cy="82" rx="27" ry="31" fill="#d9825b"/>
+                    <path d="M71 80c-4-30 14-44 32-44 20 0 31 15 26 44-4-12-10-18-18-20-12 6-28 6-40 20z" fill="#5a1d12"/>
+                    <circle cx="90" cy="84" r="2.6" fill="#2b1209"/><circle cx="110" cy="84" r="2.6" fill="#2b1209"/>
+                    <path d="M92 99q8 6 16 0" stroke="#7a2e1c" stroke-width="3" fill="none" stroke-linecap="round"/>
+                    {% if kind == 'shield' %}
+                    <g transform="translate(150 148)"><path d="M0-30 L26-21 V6 C26 20 12 29 0 35 C-12 29 -26 20 -26 6 V-21Z" fill="#1877F2"/></g>
+                    {% else %}
+                    <g transform="translate(152 150)"><rect x="-24" y="-24" width="48" height="48" rx="12" fill="#1877F2"/><rect x="-24" y="-24" width="48" height="48" rx="12" fill="#1877F2" transform="rotate(45)"/><path d="M-11 1l8 8 15-16" stroke="#fff" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>
+                    {% endif %}
+                </svg>
+                <h3>{{ ligne.label }}</h3>
+                {% if kind == 'badge' %}
+                <p>Votre badge vérifié s'affiche sur votre profil pour montrer aux autres qu'il est authentique et rassurer ceux qui interagissent avec vous.</p>
+                {% elif kind == 'shield' %}
+                <p>Nous surveillons les profils qui se font passer pour vous. Si une usurpation d'identité est constatée, le profil concerné peut être supprimé.</p>
+                {% else %}
+                <p>Cet avantage est inclus dans votre forfait {{ comparatif.noms.get(comparatif.forfait_actuel, comparatif.forfait_actuel) }}{% if date_activ_txt %}, actif depuis le {{ date_activ_txt }}{% endif %}.</p>
+                {% endif %}
+                {% if nom_profil %}
+                <div class="badgeadv-profile">
+                    <div class="badgeadv-avatar">
+                        {% if comparatif.photo_utilisateur %}<img class="pic" src="{{ comparatif.photo_utilisateur }}" alt="">{% else %}<div class="pic">{{ nom_profil[:1]|upper }}</div>{% endif %}
+                        <span class="fb"><i class="fas fa-check"></i></span>
+                    </div>
+                    <div><div class="t">{{ nom_profil }} <i class="fas fa-circle-check" style="color:#1877F2;font-size:13px"></i></div><div class="s">FaceNet</div></div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <script>
+        (function () {
+            document.querySelectorAll('[data-badgeadv-open]').forEach(function (b) {
+                b.addEventListener('click', function () {
+                    var d = document.getElementById(b.getAttribute('data-badgeadv-open'));
+                    if (d) { d.classList.add('is-open'); document.body.style.overflow = 'hidden'; }
+                });
+            });
+            document.querySelectorAll('[data-badgeadv-close]').forEach(function (b) {
+                b.addEventListener('click', function () {
+                    var d = b.closest('.badgeadv-detail');
+                    if (d) { d.classList.remove('is-open'); document.body.style.overflow = ''; }
+                });
+            });
+        })();
+        </script>
+<p class="badgeadv-footnote">Envie de plus d'avantages ? Vous pouvez changer de forfait à tout moment depuis les paramètres de votre badge.</p>
+    </div>
+</div>
+{% endblock %}

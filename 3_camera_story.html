@@ -1,0 +1,231 @@
+<!-- ===== REMPLACE tout le bloc caméra : de "DÉBUT : Caméra story" jusqu'à "FIN : Caméra story" (lignes 1289 à 1437 de ton story.html) ===== -->
+<!-- DÉBUT : Caméra story (photo/vidéo, filtres, effets visage) -->
+<style>
+#camScreen{display:none;position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100vh;height:100dvh;z-index:250;background:#000;color:#fff;flex-direction:column;font-family:sans-serif;user-select:none;-webkit-user-select:none;touch-action:none;overscroll-behavior:none}
+.cam-top{display:flex;justify-content:space-between;align-items:center;padding:max(14px,env(safe-area-inset-top)) 12px 14px;position:absolute;top:0;left:0;right:0;z-index:3;background:linear-gradient(rgba(0,0,0,.5),transparent)}
+.cam-ib{width:44px;height:44px;border-radius:50%;border:none;background:rgba(40,40,40,.75);color:#fff;font-size:18px;font-weight:700;cursor:pointer}
+#camWrap{position:absolute;top:0;left:0;right:0;bottom:0;background:#000;overflow:hidden}
+#camCanvas{display:block;width:100%;height:100%;background:#000}
+#camTime{display:none;background:#e53935;border-radius:14px;padding:4px 10px;font-size:14px;font-weight:700}
+.cam-bottom{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:10px 0 max(20px,env(safe-area-inset-bottom));background:linear-gradient(transparent,rgba(0,0,0,.65))}
+.cam-row{display:flex;gap:8px;overflow-x:auto;padding:5px 12px;scrollbar-width:none;touch-action:pan-x}
+.cam-row::-webkit-scrollbar{display:none}
+.cam-chip{flex:0 0 auto;border:none;border-radius:18px;padding:8px 14px;background:rgba(255,255,255,.18);color:#fff;font-size:14px;cursor:pointer}
+.cam-chip.on{background:#fff;color:#111;font-weight:700}
+.cam-shutter-row{display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:8px}
+#camShutter{width:76px;height:76px;border-radius:50%;border:5px solid #fff;background:rgba(255,255,255,.25);cursor:pointer;touch-action:none;transition:transform .15s,background .15s}
+#camShutter.rec{background:#e53935;transform:scale(1.15)}
+#camHint{font-size:12px;opacity:.8}
+#camMsg{position:absolute;left:12px;right:12px;top:max(70px,calc(env(safe-area-inset-top) + 60px));z-index:4;background:rgba(0,0,0,.75);border-radius:12px;padding:10px 14px;font-size:14px;text-align:center;display:none}
+</style>
+<div id="camScreen">
+  <div class="cam-top">
+    <button class="cam-ib" id="camClose" type="button" title="Fermer">✕</button>
+    <span id="camTime">● 0:00</span>
+    <button class="cam-ib" id="camFlip" type="button" title="Changer de caméra">🔄</button>
+  </div>
+  <div id="camMsg"></div>
+  <div id="camWrap"><canvas id="camCanvas"></canvas></div>
+  <div class="cam-bottom">
+    <div class="cam-row" id="camFaces"></div>
+    <div class="cam-row" id="camFilters"></div>
+    <div class="cam-shutter-row"><button id="camShutter" type="button" aria-label="Photo ou vidéo"></button><span id="camHint">Appuyez : photo · Maintenez : vidéo</span></div>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const scr = $('camScreen'), cv = $('camCanvas'), ctx = cv.getContext('2d', { alpha: false });
+  const vid = document.createElement('video'); vid.playsInline = true; vid.muted = true; vid.setAttribute('playsinline', ''); vid.setAttribute('muted', '');
+  const MAXMS = 30000, LONG = 1280, FRAME_MS = 30, canFilter = 'filter' in ctx;
+  let stream = null, facing = 'user', raf = 0, lastT = 0, fIdx = 0, eff = '', opening = false, cw = 0, ch = 0;
+  let rec = null, cs = null, chunks = [], recording = false, discard = false, holdT = 0, tick = 0, t0 = 0, msgT = 0;
+  let tracker = null, trackerState = 'idle', targets = [], faces = [], seen = 0, lastDet = 0, detBusy = false;
+
+  // « Doux » sans flou : le flou par image est ce qui faisait ramer/planter les téléphones
+  const FILTERS = [['Normal', ''], ['Éclat', 'brightness(1.12) contrast(1.05) saturate(1.2)'], ['Doux', 'brightness(1.1) contrast(.9) saturate(1.1)'], ['N&B', 'grayscale(1) contrast(1.1)'], ['Vintage', 'sepia(.7) contrast(1.05) saturate(1.3)'], ['Froid', 'hue-rotate(180deg) saturate(1.1) brightness(1.05)'], ['Chaud', 'sepia(.35) saturate(1.5) brightness(1.05)'], ['Vif', 'contrast(1.25) saturate(1.7)'], ['Néon', 'hue-rotate(290deg) saturate(2) contrast(1.15)']];
+  const FACES = [['', '🚫 Aucun'], ['😎', '😎'], ['🐶', '🐶'], ['🤡', '🤡'], ['🎭', '🎭'], ['🙈', '🙈'], ['👑', '👑']];
+
+  function toast(t) { const m = $('camMsg'); m.textContent = t; m.style.display = 'block'; clearTimeout(msgT); msgT = setTimeout(() => { m.style.display = 'none'; }, 3000); }
+  function chips(box, list, get, set) {
+    box.innerHTML = '';
+    list.forEach((it, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'cam-chip' + (get(i) ? ' on' : ''); b.textContent = it[1] || it[0]; b.onclick = () => { set(i); chips(box, list, get, set); }; box.appendChild(b); });
+  }
+  if (canFilter) chips($('camFilters'), FILTERS, i => i === fIdx, i => { fIdx = i; });
+  else $('camFilters').style.display = 'none';   // navigateur sans filtres canvas : on ne propose pas un filtre qui ne s'applique pas
+  chips($('camFaces'), FACES, i => FACES[i][0] === eff, i => { eff = FACES[i][0]; if (eff) initTracker(); });
+
+  // Le canevas a la taille de l'écran : ce qu'on voit est exactement ce qui est photographié/enregistré
+  function fitCanvas() {
+    if (recording) return;
+    const sw = scr.clientWidth || window.innerWidth, sh = scr.clientHeight || window.innerHeight;
+    if (!sw || !sh) return;
+    const k = LONG / Math.max(sw, sh), W = Math.round(sw * k / 2) * 2, H = Math.round(sh * k / 2) * 2;
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+    cw = W; ch = H;
+  }
+
+  // ---- Suivi du visage en temps réel (chargé seulement quand on choisit un emoji) ----
+  const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+  async function initTracker() {
+    if (trackerState !== 'idle') return;
+    trackerState = 'loading'; toast('Chargement du suivi du visage…');
+    try {
+      const limit = new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 12000));
+      tracker = await Promise.race([(async () => {
+        const m = await import(MP + '/vision_bundle.mjs');
+        const files = await m.FilesetResolver.forVisionTasks(MP + '/wasm');
+        const opts = dl => ({ baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite', delegate: dl }, runningMode: 'VIDEO', minDetectionConfidence: .5 });
+        let d; try { d = await m.FaceDetector.createFromOptions(files, opts('GPU')); } catch (e) { d = await m.FaceDetector.createFromOptions(files, opts('CPU')); }
+        return { run: () => d.detectForVideo(vid, performance.now()).detections.map(z => ({ x: z.boundingBox.originX, y: z.boundingBox.originY, w: z.boundingBox.width, h: z.boundingBox.height })) };
+      })(), limit]);
+      trackerState = 'ready';
+    } catch (e) {
+      try {
+        if ('FaceDetector' in window) {
+          const nd = new FaceDetector({ fastMode: true, maxDetectedFaces: 3 });
+          tracker = { run: () => nd.detect(vid).then(r => r.map(f => ({ x: f.boundingBox.x, y: f.boundingBox.y, w: f.boundingBox.width, h: f.boundingBox.height }))) };
+          trackerState = 'ready'; return;
+        }
+      } catch (e2) {}
+      tracker = null; trackerState = 'none'; toast('Suivi du visage indisponible ici : l’emoji est placé au centre.');
+    }
+  }
+  function setFaces(list) {
+    if (!list || !list.length) { if (performance.now() - seen > 500) targets = []; return; }
+    seen = performance.now(); targets = list.sort((a, b) => a.x - b.x);
+  }
+  function detect(now) {
+    if (!tracker || detBusy || now - lastDet < 60 || vid.readyState < 2) return;
+    lastDet = now;
+    try {
+      const r = tracker.run();
+      if (r && typeof r.then === 'function') { detBusy = true; r.then(setFaces).catch(() => {}).then(() => { detBusy = false; }); } else setFaces(r);
+    } catch (e) {}
+  }
+  function smooth() {   // glissement doux vers la position détectée : mouvement fluide, sans saccades
+    if (!targets.length) { faces = []; return; }
+    if (faces.length !== targets.length) { faces = targets.map(t => ({ x: t.x, y: t.y, w: t.w, h: t.h })); return; }
+    faces.forEach((f, i) => { const t = targets[i]; f.x += (t.x - f.x) * .5; f.y += (t.y - f.y) * .5; f.w += (t.w - f.w) * .5; f.h += (t.h - f.h) * .5; });
+  }
+
+  function draw(now) {
+    raf = requestAnimationFrame(draw);
+    if (now - lastT < FRAME_MS) return;
+    lastT = now;
+    if (vid.readyState < 2 || !vid.videoWidth || !cw) return;
+    try {
+      const vw = vid.videoWidth, vh = vid.videoHeight, s = Math.max(cw / vw, ch / vh), dw = vw * s, dh = vh * s, dx = (cw - dw) / 2, dy = (ch - dh) / 2, mir = facing === 'user';
+      ctx.save();
+      if (canFilter) ctx.filter = FILTERS[fIdx][1] || 'none';
+      if (mir) { ctx.translate(cw, 0); ctx.scale(-1, 1); }
+      ctx.drawImage(vid, dx, dy, dw, dh);
+      ctx.restore();
+      if (eff) {
+        detect(now); smooth();
+        const list = tracker ? faces : (trackerState === 'loading' ? [] : [{ x: vw * .3, y: vh * .2, w: vw * .4, h: vw * .4 }]);
+        list.forEach(f => {
+          const size = Math.max(40, f.w * s * 1.6); let cx = dx + (f.x + f.w / 2) * s, cy = dy + (f.y + f.h / 2) * s;
+          if (mir) cx = cw - cx;
+          if (eff === '👑') cy = dy + f.y * s - size * .2;
+          ctx.font = Math.round(size) + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(eff, cx, cy);
+        });
+      }
+    } catch (e) { /* une image ratée ne doit jamais arrêter la caméra */ }
+  }
+
+  function stopStream() {
+    if (stream) { stream.getTracks().forEach(t => { t.onended = null; try { t.stop(); } catch (e) {} }); stream = null; }
+    try { vid.srcObject = null; } catch (e) {}
+  }
+  async function startStream() {
+    stopStream();
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('Caméra indisponible : le site doit être en HTTPS.'); return false; }
+    try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 30 } }, audio: { echoCancellation: true, noiseSuppression: true } }); }
+    catch (e) {
+      try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false }); toast('Micro indisponible : la vidéo sera sans son.'); }
+      catch (e2) { toast('Caméra inaccessible. Autorisez l’accès à la caméra (HTTPS requis).'); return false; }
+    }
+    if (scr.style.display !== 'flex') { stopStream(); return false; }   // fermée pendant l'attente de l'autorisation
+    const vt = stream.getVideoTracks()[0];
+    if (vt) vt.onended = () => { if (scr.style.display === 'flex' && !recording) { toast('Caméra interrompue, relance…'); setTimeout(() => { if (scr.style.display === 'flex') startStream(); }, 400); } };
+    vid.srcObject = stream; try { await vid.play(); } catch (e) {}
+    fitCanvas();
+    if (!raf) raf = requestAnimationFrame(draw);
+    return true;
+  }
+  function closeCam(keepClass) {
+    if (recording) { discard = true; try { rec.stop(); } catch (e) {} }
+    recording = false; clearTimeout(holdT); holdT = 0; clearInterval(tick);
+    cancelAnimationFrame(raf); raf = 0; stopStream(); targets = []; faces = [];
+    scr.style.display = 'none'; $('camShutter').classList.remove('rec'); $('camTime').style.display = 'none';
+    if (!keepClass) document.body.classList.remove('story-modal-open');
+  }
+  function finish(file) {
+    closeCam(true);
+    try { hideLaunch(); } catch (e) {}
+    document.body.classList.add('story-modal-open');
+    try { currentType = 'media'; selectedMediaFile = file; } catch (e) {}
+    if (typeof waOpenEditor === 'function') waOpenEditor(file);   // stickers, crayons, texte, musique, puis « Terminer »
+  }
+
+  function photo() { cv.toBlob(b => { if (b) finish(new File([b], 'story.jpg', { type: 'image/jpeg' })); else toast('Photo impossible, réessayez.'); }, 'image/jpeg', .92); }
+  function startRec() {
+    if (recording) return;
+    if (typeof MediaRecorder === 'undefined' || !cv.captureStream) { toast('Vidéo non prise en charge par ce navigateur : utilisez la photo.'); return; }
+    try {
+      fitCanvas();
+      cs = cv.captureStream(30);
+      const at = stream ? stream.getAudioTracks() : []; if (at.length) cs.addTrack(at[0]);
+      const mime = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'].find(m => { try { return MediaRecorder.isTypeSupported(m); } catch (e) { return false; } });
+      try { rec = new MediaRecorder(cs, mime ? { mimeType: mime, videoBitsPerSecond: 3000000 } : undefined); } catch (e) { rec = new MediaRecorder(cs); }
+      const r = rec; chunks = []; discard = false;
+      r.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+      r.onerror = () => { toast('Enregistrement interrompu.'); discard = true; stopRec(); };
+      r.onstop = () => {
+        try { cs && cs.getVideoTracks().forEach(t => t.stop()); } catch (e) {} cs = null;
+        if (discard) return;
+        if (!chunks.length) { toast('Vidéo vide, réessayez.'); return; }
+        const type = (r.mimeType || mime || 'video/webm').split(';')[0], ext = type.indexOf('mp4') > -1 ? 'mp4' : 'webm';
+        finish(new File([new Blob(chunks, { type })], 'story.' + ext, { type }));
+      };
+      r.start(500); recording = true; t0 = Date.now();
+      $('camShutter').classList.add('rec'); $('camTime').style.display = 'inline-block';
+      tick = setInterval(() => {
+        const s = Math.floor((Date.now() - t0) / 1000); $('camTime').textContent = '● ' + Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+        if (Date.now() - t0 >= MAXMS) stopRec();
+      }, 250);
+    } catch (e) { recording = false; toast('Enregistrement vidéo impossible.'); }
+  }
+  function stopRec() { if (!recording) return; recording = false; clearInterval(tick); $('camShutter').classList.remove('rec'); try { rec.stop(); } catch (e) {} }
+
+  const sh = $('camShutter');
+  sh.oncontextmenu = e => e.preventDefault();
+  sh.onpointerdown = e => { e.preventDefault(); try { sh.setPointerCapture(e.pointerId); } catch (x) {} clearTimeout(holdT); holdT = setTimeout(() => { holdT = 0; startRec(); }, 350); };
+  sh.onpointerup = () => { if (holdT) { clearTimeout(holdT); holdT = 0; photo(); } else if (recording) stopRec(); };
+  sh.onpointercancel = () => { if (holdT) { clearTimeout(holdT); holdT = 0; } else if (recording) stopRec(); };
+  $('camClose').onclick = () => closeCam(false);
+  $('camFlip').onclick = () => { if (recording || opening) return; facing = facing === 'user' ? 'environment' : 'user'; startStream(); };
+
+  window.addEventListener('resize', () => { if (scr.style.display === 'flex') fitCanvas(); });
+  window.addEventListener('orientationchange', () => { setTimeout(() => { if (scr.style.display === 'flex') fitCanvas(); }, 300); });
+  document.addEventListener('visibilitychange', () => {
+    if (scr.style.display !== 'flex') return;
+    if (document.hidden) { if (recording) stopRec(); }
+    else if (!stream || stream.getVideoTracks().every(t => t.readyState === 'ended')) startStream();
+  });
+
+  window.openCamera = async function () {
+    if (opening) return; opening = true;
+    try {
+      try { hideLaunch(); } catch (e) {}
+      document.body.classList.add('story-modal-open');
+      scr.style.display = 'flex';
+      fitCanvas();
+      await startStream();   // en cas d'échec, le message s'affiche et la croix ramène aux menus
+    } finally { opening = false; }
+  };
+})();
+</script>
+<!-- FIN : Caméra story -->

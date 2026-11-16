@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Appel — FaceNet</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    :root { --wa-green:#25D366; --wa-red:#F15C6D; --panel:#1f2c34; }
+    html, body { height:100%; overflow:hidden; background:#000; color:#fff;
+        font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,Helvetica,Arial,sans-serif; }
+    body { position:fixed; inset:0; }
+
+    #root {
+        position:absolute; inset:0; overflow:hidden;
+        display:flex; flex-direction:column;
+        background:#0b141a;
+    }
+    #root.video-mode { background:#000; }
+
+    /* ═════ FOND FLOU (photo du contact) ═════ */
+    .bg {
+        position:absolute; inset:-60px; z-index:0;
+        background-color:#0b141a;
+        background-image:linear-gradient(180deg,#12353a 0%,#0b141a 60%,#070d11 100%);
+        background-size:cover; background-position:center;
+        filter:blur(38px) brightness(.5) saturate(1.25);
+        transition:opacity .4s ease;
+    }
+    #root.video-mode .bg { display:none; }
+
+    /* ═════ BARRE DU HAUT ═════ */
+    .top {
+        position:absolute; top:0; left:0; right:0; z-index:30;
+        padding:max(env(safe-area-inset-top),14px) 10px 22px;
+        display:grid; grid-template-columns:48px 1fr 48px; align-items:center;
+        background:linear-gradient(180deg,rgba(0,0,0,.45),transparent);
+    }
+    .top-center { text-align:center; min-width:0; padding:0 6px; }
+    .peer-name {
+        font-size:20px; font-weight:600; letter-spacing:-.01em;
+        overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+    .status {
+        font-size:14px; color:rgba(255,255,255,.7);
+        min-height:20px; margin-top:2px;
+    }
+    .status.live { color:rgba(255,255,255,.9); font-variant-numeric:tabular-nums; }
+
+    .icon-round {
+        width:44px; height:44px; border-radius:50%;
+        background:transparent; border:none; color:#fff; font-size:18px; cursor:pointer;
+        display:flex; align-items:center; justify-content:center;
+        transition:background .2s, transform .15s;
+    }
+    .icon-round:hover { background:rgba(255,255,255,.12); }
+    .icon-round:active { transform:scale(.92); }
+
+    /* ═════ ZONE CENTRALE ═════ */
+    .stage { flex:1; position:relative; z-index:1; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+
+    /* --- MODE AUDIO --- */
+    .audio-view {
+        display:flex; flex-direction:column;
+        align-items:center; justify-content:center;
+        width:100%; height:100%;
+        padding:90px 24px 150px;
+        position:relative; z-index:2;
+        transition:opacity .35s ease;
+    }
+    .avatar-zone { position:relative; width:170px; height:170px;
+        display:flex; align-items:center; justify-content:center; }
+    .ring {
+        position:absolute; inset:0; border-radius:50%;
+        background:rgba(255,255,255,.07);
+        border:1px solid rgba(255,255,255,.22);
+        opacity:0; pointer-events:none;
+    }
+    .ringing .ring:nth-child(1) { animation:ringPulse 2.4s infinite; }
+    .ringing .ring:nth-child(2) { animation:ringPulse 2.4s .8s infinite; }
+    .ringing .ring:nth-child(3) { animation:ringPulse 2.4s 1.6s infinite; }
+    @keyframes ringPulse {
+        0%   { transform:scale(1); opacity:.9; }
+        100% { transform:scale(1.9); opacity:0; }
+    }
+    .avatar {
+        width:170px; height:170px; border-radius:50%;
+        background:linear-gradient(135deg,#128C7E,#25D366);
+        display:flex; align-items:center; justify-content:center;
+        font-size:68px; font-weight:600; color:#fff;
+        box-shadow:0 14px 44px rgba(0,0,0,.45);
+        overflow:hidden; position:relative; z-index:2;
+    }
+    .avatar img { width:100%; height:100%; object-fit:cover; }
+
+    /* --- MODE VIDÉO --- */
+    .video-view {
+        position:absolute; inset:0; background:#000;
+        display:none; z-index:1;
+    }
+    .video-view.on { display:block; }
+    #remoteVideo {
+        width:100%; height:100%; object-fit:cover;
+        display:block; background:#000;
+    }
+    #selfView {
+        position:absolute; right:14px; bottom:calc(112px + env(safe-area-inset-bottom));
+        width:98px; height:140px; border-radius:14px;
+        overflow:hidden; background:#111; display:none;
+        box-shadow:0 6px 20px rgba(0,0,0,.55);
+        border:1px solid rgba(255,255,255,.18);
+        z-index:5;
+        transition:width .28s ease, height .28s ease, right .28s ease, bottom .28s ease, border-radius .28s ease;
+    }
+    #root.self-live #selfView { display:block; }
+    /* avant la connexion : ma caméra en plein écran (comme WhatsApp) */
+    #root.video-mode.self-live:not(.connected) #selfView {
+        right:0; bottom:0; width:100%; height:100%; border-radius:0; border:none; box-shadow:none;
+    }
+    #root.video-mode.self-live .audio-view { opacity:0; pointer-events:none; }
+    /* réduire / agrandir ma caméra */
+    .selfmin {
+        position:absolute; top:6px; left:6px; width:28px; height:28px; border-radius:50%;
+        border:none; background:rgba(0,0,0,.55); color:#fff; font-size:12px;
+        display:none; align-items:center; justify-content:center; z-index:3; cursor:pointer;
+    }
+    #root.connected #selfView:not(.mini) .selfmin { display:flex; }
+    .selfexp {
+        display:none; position:absolute; inset:0; z-index:3;
+        align-items:center; justify-content:center; font-size:20px;
+        background:rgba(0,0,0,.4); color:#fff;
+    }
+    #root.connected #selfView.mini {
+        width:60px; height:60px; border-radius:18px; border:2px solid #fff;
+        cursor:pointer; animation:framePulse 1.6s ease-in-out infinite;
+    }
+    #root.connected #selfView.mini .selfexp { display:flex; }
+    @keyframes framePulse {
+        0%,100% { box-shadow:0 0 0 0 rgba(255,255,255,.6); }
+        50%     { box-shadow:0 0 0 8px rgba(255,255,255,0); }
+    }
+    #selfView video {
+        width:100%; height:100%; object-fit:cover;
+        transform:scaleX(-1); display:block;
+    }
+    #selfView video.rear { transform:none; }
+
+    /* ═════ BOUTONS (panneau du bas) ═════ */
+    .controls {
+        position:absolute; bottom:0; left:0; right:0; z-index:20;
+        padding:22px 18px max(env(safe-area-inset-bottom),26px);
+        display:flex; justify-content:center;
+        background:var(--panel);
+        border-radius:28px 28px 0 0;
+        box-shadow:0 -8px 30px rgba(0,0,0,.35);
+    }
+    #root.video-mode .controls {
+        background:rgba(11,20,26,.72);
+        backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px);
+    }
+    .grid {
+        display:flex; justify-content:center; align-items:center;
+        gap:16px; max-width:400px; width:100%;
+    }
+    .btn {
+        display:flex; flex-direction:column; align-items:center; gap:8px;
+        background:none; border:none; color:#fff; cursor:pointer;
+        font-family:inherit; padding:0;
+    }
+    .btn .circle {
+        width:68px; height:68px; border-radius:50%;
+        background:rgba(255,255,255,.12);
+        display:flex; align-items:center; justify-content:center;
+        font-size:24px; color:#fff;
+        transition:background .2s, transform .15s;
+    }
+    .grid .btn .circle { width:56px; height:56px; font-size:21px; }
+    .grid .btn .label { display:none; }
+    .btn:active .circle { transform:scale(.92); }
+    .btn .circle.on { background:#fff; color:#111b21; }
+    .btn .circle.red { background:var(--wa-red); }
+    .btn .circle.green { background:var(--wa-green); }
+    .btn .label { font-size:13px; font-weight:500; opacity:.9; }
+
+    /* ═════ APPEL ENTRANT ═════ */
+    .incoming { position:absolute; bottom:0; left:0; right:0; z-index:25;
+        padding:24px 52px max(env(safe-area-inset-bottom),48px);
+        display:none; justify-content:space-between; align-items:flex-end; }
+    .incoming.on { display:flex; }
+    #btnAccept .circle { animation:answerBounce 1.3s ease-in-out infinite; }
+    @keyframes answerBounce {
+        0%,100% { transform:translateY(0); }
+        50%     { transform:translateY(-8px); }
+    }
+
+    /* ═════ FIN D'APPEL ═════ */
+    .ended {
+        position:absolute; inset:0; z-index:50;
+        background:rgba(11,20,26,.92); backdrop-filter:blur(12px);
+        display:none; flex-direction:column; align-items:center; justify-content:center;
+        gap:22px; animation:fadeIn .25s ease;
+    }
+    .ended.on { display:flex; }
+    .ended h2 { font-size:22px; font-weight:600; }
+    .ended p  { font-size:14px; color:rgba(255,255,255,.6); }
+    @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+
+    /* ═════ BANNIÈRE INFO ═════ */
+    .toast {
+        position:absolute; top:88px; left:50%; transform:translateX(-50%);
+        padding:9px 16px; border-radius:999px;
+        font-size:12.5px; font-weight:600;
+        background:rgba(255,159,10,.95); color:#000;
+        z-index:40; display:none; box-shadow:0 6px 20px rgba(0,0,0,.3);
+    }
+    .toast.on { display:inline-flex; align-items:center; gap:6px; animation:drop .25s ease; }
+    .toast.err  { background:rgba(241,92,109,.95); color:#fff; }
+    .toast.ok   { background:rgba(37,211,102,.95); color:#06240f; }
+    @keyframes drop { from{opacity:0; transform:translateX(-50%) translateY(-8px);} to{opacity:1;} }
+
+    #root.video-mode.connected .audio-view { opacity:0; pointer-events:none; }
+
+    /* ═════ APPEL VIDÉO : boutons à droite + barre en pilule ═════ */
+    #root.video-mode .top-center { text-shadow:0 1px 8px rgba(0,0,0,.65); }
+    .side {
+        position:absolute; right:14px; top:calc(max(env(safe-area-inset-top),14px) + 74px);
+        z-index:22; display:none; flex-direction:column; gap:14px;
+    }
+    #root.video-mode.self-live .side { display:flex; }
+    .side button {
+        width:46px; height:46px; border-radius:50%; border:none; cursor:pointer;
+        background:rgba(20,24,28,.72); color:#fff; font-size:18px;
+        backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+        display:flex; align-items:center; justify-content:center;
+        transition:transform .15s, background .2s;
+    }
+    .side button:active { transform:scale(.92); }
+    .side button.on { background:#fff; color:#111b21; }
+    #root.video-mode .controls {
+        left:14px; right:14px; bottom:calc(12px + env(safe-area-inset-bottom));
+        padding:10px; border-radius:999px; box-shadow:none;
+        background:rgba(20,24,28,.88);
+    }
+    #root.video-mode .grid { max-width:none; justify-content:space-around; gap:6px; }
+    #root.video-mode .grid .btn .circle { width:54px; height:54px; background:rgba(255,255,255,.09); }
+    #root.video-mode .grid .btn .circle.on { background:#fff; color:#111b21; }
+    #root.video-mode .grid .btn .circle.red { background:#E5004B; }
+
+    /* ═════ PANNEAU RETOUCHE ═════ */
+    .beauty {
+        position:absolute; left:14px; right:14px; bottom:calc(88px + env(safe-area-inset-bottom));
+        z-index:24; display:none; flex-direction:column; gap:12px;
+        padding:14px 16px 16px; border-radius:22px;
+        background:rgba(20,24,28,.95); box-shadow:0 10px 40px rgba(0,0,0,.5);
+    }
+    .beauty.on { display:flex; animation:fadeIn .2s ease; }
+    .beauty-head { display:flex; align-items:center; gap:8px; font-size:15px; font-weight:600; }
+    .beauty-head .grow { flex:1; }
+    .beauty-head .icon-round { width:34px; height:34px; font-size:15px; }
+    .beauty-note { font-size:11.5px; color:rgba(255,255,255,.6); min-height:14px; }
+    .beauty label { display:flex; flex-direction:column; gap:6px; font-size:13px; color:rgba(255,255,255,.85); }
+    .beauty label span { display:flex; justify-content:space-between; }
+    .beauty input[type=range] { width:100%; accent-color:#25D366; height:22px; }
+    .beauty .reset {
+        align-self:flex-start; border:none; border-radius:999px; padding:8px 14px;
+        background:rgba(255,255,255,.12); color:#fff; font-size:12.5px; font-weight:600; cursor:pointer;
+    }
+
+    @media (orientation:landscape) and (max-height:500px) {
+        .grid .btn .circle { width:48px; height:48px; font-size:18px; }
+        .controls { padding:12px 18px max(env(safe-area-inset-bottom),14px); }
+        .avatar-zone, .avatar { width:100px; height:100px; }
+        .avatar { font-size:40px; }
+        .audio-view { padding:60px 24px 90px; }
+        #selfView { width:110px; height:78px; bottom:calc(84px + env(safe-area-inset-bottom)); }
+        .beauty { max-height:70vh; overflow:auto; }
+    }
+</style>
+</head>
+<body>
+
+<div id="root">
+
+    <div class="bg" id="bg"></div>
+    <div class="toast" id="toast"></div>
+
+    <!-- Barre du haut : réduire / nom / statut -->
+    <div class="top">
+        <button class="icon-round" id="btnMin" title="Réduire"><i class="fas fa-chevron-down"></i></button>
+        <div class="top-center">
+            <h1 class="peer-name" id="peerName">Utilisateur</h1>
+            <p class="status" id="status">Appel en cours…</p>
+        </div>
+        <span></span>
+    </div>
+
+    <!-- Scène -->
+    <div class="stage">
+
+        <!-- Vue vidéo -->
+        <div class="video-view" id="videoView">
+            <video id="remoteVideo" autoplay playsinline></video>
+            <div id="selfView">
+                <video id="localVideo" autoplay playsinline muted></video>
+                <button class="selfmin" id="selfMin" aria-label="Réduire ma caméra" title="Réduire"><i class="fas fa-compress"></i></button>
+                <div class="selfexp"><i class="fas fa-expand"></i></div>
+            </div>
+        </div>
+
+        <!-- Vue audio -->
+        <div class="audio-view" id="audioView">
+            <div class="avatar-zone">
+                <div class="ring"></div>
+                <div class="ring"></div>
+                <div class="ring"></div>
+                <div class="avatar" id="avatarBox">
+                    <img id="avatarImg" alt="" style="display:none">
+                    <span id="avatarInitials">U</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Boutons de droite (vidéo) : changer de caméra / retouche -->
+    <div class="side" id="side">
+        <button id="btnFlip" aria-label="Changer de caméra" title="Changer de caméra"><i class="fas fa-camera-rotate"></i></button>
+        <button id="btnBeauty" aria-label="Retouche" title="Retouche"><i class="fas fa-wand-magic-sparkles"></i></button>
+    </div>
+
+    <!-- Panneau retouche -->
+    <div class="beauty" id="beauty">
+        <div class="beauty-head">
+            <i class="fas fa-wand-magic-sparkles"></i><span class="grow">Retouche</span>
+            <button class="icon-round" id="beautyClose" aria-label="Fermer"><i class="fas fa-times"></i></button>
+        </div>
+        <label><span>Lissage de la peau <b data-v="smooth">0</b></span><input type="range" min="0" max="100" value="0" data-k="smooth"></label>
+        <label><span>Éclat / lumière <b data-v="bright">0</b></span><input type="range" min="0" max="100" value="0" data-k="bright"></label>
+        <label><span>Visage affiné <b data-v="slim">0</b></span><input type="range" min="0" max="100" value="0" data-k="slim"></label>
+        <label><span>Dents plus blanches <b data-v="teeth">0</b></span><input type="range" min="0" max="100" value="0" data-k="teeth"></label>
+        <div class="beauty-note" id="beautyNote"></div>
+        <button class="reset" id="beautyReset">Réinitialiser</button>
+    </div>
+
+    <!-- Contrôles principaux -->
+    <div class="controls" id="controls">
+        <div class="grid" id="controlsGrid"></div>
+    </div>
+
+    <!-- Boutons appel entrant -->
+    <div class="incoming" id="incoming">
+        <button class="btn" id="btnDecline">
+            <div class="circle red"><i class="fas fa-phone-slash"></i></div>
+            <span class="label">Refuser</span>
+        </button>
+        <button class="btn" id="btnAccept">
+            <div class="circle green"><i class="fas fa-phone"></i></div>
+            <span class="label">Répondre</span>
+        </button>
+    </div>
+
+    <!-- Fin d'appel -->
+    <div class="ended" id="endedView">
+        <h2 id="endedTitle">Appel terminé</h2>
+        <p id="endedSub">Durée : 00:00</p>
+        <button class="btn" id="btnBack" onclick="window.location.replace('/messagerie')">
+            <div class="circle" style="background:#fff;color:#000;"><i class="fas fa-arrow-left"></i></div>
+            <span class="label" style="color:#fff;">Retour</span>
+        </button>
+    </div>
+
+</div>
+
+<script>
+(function () {
+    "use strict";
+
+    /* ══════ PARAMÈTRES ══════ */
+    const P         = new URLSearchParams(location.search);
+    let   TYPE      = P.get('type') === 'video' ? 'video' : 'audio';
+    let   PEER      = P.get('peer') ? parseInt(P.get('peer'), 10) : null;
+    let   PEER_N    = P.get('name') || 'Utilisateur';
+    let   PEER_A    = P.get('avatar') || '';
+    const IS_CALLER = P.get('role') !== 'callee';
+    let   CALL_ID   = parseInt(P.get('appel') || P.get('appel_id') || P.get('id') || '', 10) || null;
+    const ME        = parseInt("{{ current_user.id if current_user else 0 }}", 10);
+
+    /* ══════ ÉTAT ══════ */
+    const S = {
+        phase: IS_CALLER ? 'ringing' : 'incoming',   // ringing | incoming | connecting | connected
+        muted:false, camOff:false, speaker:false, front:true,
+        startedAt:null, tick:null, finished:false,
+        local:null, mediaP:null, pc:null, killRing:null, poll:null, polling:false,
+        afterId:0, fails:0, offerSent:false, tracksAdded:false, pendingIce:[],
+        // Pour que la vidéo marche sur les réseaux mobiles, ajoutez un serveur TURN :
+        // window.FN_ICE_SERVERS = [{urls:'turn:...', username:'...', credential:'...'}] avant ce script.
+        stun: window.FN_ICE_SERVERS || [
+            { urls:'stun:stun.l.google.com:19302' },
+            { urls:'stun:stun1.l.google.com:19302' }
+        ]
+    };
+
+    const $ = id => document.getElementById(id);
+    const root=$('root'), bgEl=$('bg'), peerNameEl=$('peerName'), statusEl=$('status'),
+          avatarImg=$('avatarImg'), avatarInitials=$('avatarInitials'),
+          videoView=$('videoView'), remoteVideo=$('remoteVideo'), localVideo=$('localVideo'),
+          controls=$('controls'), controlsGrid=$('controlsGrid'),
+          incoming=$('incoming'), endedView=$('endedView'),
+          endedTitle=$('endedTitle'), endedSub=$('endedSub'), toast=$('toast');
+
+    /* ══════ UTILS ══════ */
+    function initials(n){ if(!n) return 'U'; const p=n.trim().split(/\s+/);
+        return p.length===1 ? p[0][0].toUpperCase() : (p[0][0]+p[p.length-1][0]).toUpperCase(); }
+    function fmt(s){ const m=Math.floor(s/60).toString().padStart(2,'0');
+        const ss=Math.floor(s%60).toString().padStart(2,'0'); return m+':'+ss; }
+    function note(txt, kind){
+        toast.textContent = txt;
+        toast.className = 'toast on' + (kind ? ' '+kind : '');
+        clearTimeout(toast._t);
+        toast._t = setTimeout(()=>{ toast.className='toast'; }, 4000);
+    }
+    async function api(path, method, body){
+        try {
+            const r = await fetch(path, {
+                method: method || 'GET', credentials:'same-origin', cache:'no-store',
+                headers: Object.assign({ 'X-Requested-With':'XMLHttpRequest' }, body ? { 'Content-Type':'application/json' } : {}),
+                body: body ? JSON.stringify(body) : undefined
+            });
+            return await r.json();
+        } catch(e){ return null; }
+    }
+    function sendSignal(kind, payload){
+        return api('/api/appel/'+CALL_ID+'/signal', 'POST', { kind:kind, payload:payload });
+    }
+
+    /* ══════ SONNERIE (Web Audio) ══════
+       - appelant : tonalité d'attente « tu-tu » (comme WhatsApp quand ça sonne chez l'autre)
+       - appelé   : sonnerie mélodique type marimba, en boucle jusqu'à la fin de l'appel */
+    function startRing(){
+        if (S.killRing) return;
+        try {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            const ctx = new AC();
+            const comp = ctx.createDynamicsCompressor();
+            const master = ctx.createGain(); master.gain.value = 0.55;
+            master.connect(comp); comp.connect(ctx.destination);
+            let stop = false, timer = null;
+
+            // une note : attaque rapide + décroissance exponentielle
+            const note1 = (f, t0, dur, vol, type) => {
+                const t = ctx.currentTime + t0;
+                const o = ctx.createOscillator(), g = ctx.createGain();
+                o.type = type || 'sine'; o.frequency.setValueAtTime(f, t);
+                g.gain.setValueAtTime(0.0001, t);
+                g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+                g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+                o.connect(g); g.connect(master);
+                o.start(t); o.stop(t + dur + 0.05);
+            };
+            // timbre « marimba / bulle » : fondamentale + harmonique courte
+            const bell = (f, t0, vol) => {
+                note1(f,     t0, 0.42, vol,       'sine');
+                note1(f * 4, t0, 0.10, vol * 0.18, 'sine');
+            };
+            // impulsion de tonalité d'attente (deux fréquences douces)
+            const pulse = (t0, dur) => {
+                const t = ctx.currentTime + t0;
+                [440, 480].forEach(f => {
+                    const o = ctx.createOscillator(), g = ctx.createGain();
+                    o.type = 'sine'; o.frequency.value = f;
+                    g.gain.setValueAtTime(0.0001, t);
+                    g.gain.exponentialRampToValueAtTime(0.35, t + 0.03);
+                    g.gain.setValueAtTime(0.35, t + dur - 0.05);
+                    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+                    o.connect(g); g.connect(master);
+                    o.start(t); o.stop(t + dur + 0.02);
+                });
+            };
+
+            const MELODY = [659.25, 783.99, 987.77, 1318.51, 987.77, 783.99, 987.77, 1318.51]; // mi sol si mi' si sol si mi'
+            function cycle(){
+                if (IS_CALLER) {            // tonalité d'attente : tu-tu ........
+                    pulse(0, 0.40); pulse(0.55, 0.40);
+                    return 3600;
+                }
+                // sonnerie entrante : motif joué 2 fois puis silence
+                for (let k = 0; k < 2; k++)
+                    MELODY.forEach((f, i) => bell(f, k * 1.5 + i * 0.15, i % 4 === 3 ? 0.5 : 0.38));
+                return 3400;
+            }
+            function loop(){
+                if (stop) return;
+                if (ctx.state === 'suspended') ctx.resume().catch(()=>{});
+                if (ctx.state === 'running') { timer = setTimeout(loop, cycle()); }
+                else { timer = setTimeout(loop, 400); }
+            }
+            const unlock = () => { ctx.resume().catch(()=>{}); };
+            ['pointerdown','keydown','touchstart'].forEach(ev => document.addEventListener(ev, unlock, { once:true }));
+            loop();
+
+            // vibration uniquement pour celui qui reçoit l'appel
+            let vib = null;
+            if (!IS_CALLER) {
+                vib = setInterval(() => { if (navigator.vibrate) navigator.vibrate([500,300,500,300,500]); }, 3200);
+                if (navigator.vibrate) navigator.vibrate([500,300,500,300,500]);
+            }
+            S.killRing = () => {
+                stop = true; clearTimeout(timer); if (vib) clearInterval(vib);
+                try { ctx.close(); } catch(e){}
+                if (navigator.vibrate) navigator.vibrate(0);
+            };
+        } catch(e){}
+    }
+    function stopRing(){ if (S.killRing) { S.killRing(); S.killRing=null; } }
+
+    // petits bips : connexion établie / fin d'appel
+    function chime(freqs, step, dur){
+        try {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            const c = new AC();
+            const g = c.createGain(); g.gain.value = 0.3; g.connect(c.destination);
+            freqs.forEach((f, i) => {
+                const t = c.currentTime + i * step;
+                const o = c.createOscillator(), e = c.createGain();
+                o.type = 'sine'; o.frequency.value = f;
+                e.gain.setValueAtTime(0.0001, t);
+                e.gain.exponentialRampToValueAtTime(1, t + 0.01);
+                e.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+                o.connect(e); e.connect(g); o.start(t); o.stop(t + dur + 0.02);
+            });
+            setTimeout(() => { try { c.close(); } catch(e){} }, (freqs.length * step + dur + 0.3) * 1000);
+        } catch(e){}
+    }
+
+    /* ══════ MÉDIA LOCAL ══════ */
+    async function getMedia(){
+        try {
+            const st = await navigator.mediaDevices.getUserMedia({
+                audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:true },
+                video: TYPE==='video' ? {
+                    facingMode: S.front ? 'user' : 'environment',
+                    width:{ ideal:1280 }, height:{ ideal:720 }
+                } : false
+            });
+            S.local = st;
+            st.getAudioTracks().forEach(t => t.enabled = !S.muted);
+            st.getVideoTracks().forEach(t => t.enabled = !S.camOff);
+            if (TYPE==='video') { localVideo.srcObject = st; await localVideo.play().catch(()=>{}); root.classList.add('self-live'); }
+            return st;
+        } catch(err) {
+            note('Caméra/micro refusé : '+err.name, 'err');
+            return null;
+        }
+    }
+    function getMediaOnce(){ if (!S.mediaP) S.mediaP = getMedia(); return S.mediaP; }
+    async function swapCam(){
+        if (S.local) S.local.getTracks().forEach(t=>t.stop());
+        const st = await getMedia();
+        S.mediaP = Promise.resolve(st);
+        if (st && S.pc) {
+            for (const tr of st.getTracks()) {
+                if (tr.kind === 'video') continue;      // la vidéo est gérée par syncSender (avec ou sans retouche)
+                const s = S.pc.getSenders().find(x => x.track && x.track.kind === tr.kind);
+                if (s) await s.replaceTrack(tr).catch(()=>{});
+            }
+        }
+        beautyRebind(); syncSender();
+    }
+
+    /* ══════ RETOUCHE (lissage, éclat, visage affiné, dents) ══════
+       La caméra passe par un canvas ; le flux retouché remplace la piste vidéo envoyée.
+       Visage affiné et dents utilisent la détection de visage MediaPipe (chargée à la demande). */
+    const BE = { v:{smooth:0,bright:0,slim:0,teeth:0}, on:false, raw:null, cv:null, cx:null, small:null, scx:null,
+                 outStream:null, outTrack:null, landmarker:null, loading:false, failed:false, pts:null, g:null, frame:0 };
+    const LIPS_IN = [78,95,88,178,87,14,317,402,318,324,308,415,310,311,312,13,82,81,80,191];
+    const beautyAny = () => { const v = BE.v; return v.smooth>0 || v.bright>0 || v.slim>0 || v.teeth>0; };
+    const beautyNote = t => { const n = $('beautyNote'); if (n) n.textContent = t || ''; };
+
+    async function loadLandmarker(){
+        if (BE.landmarker || BE.loading || BE.failed) return;
+        BE.loading = true; beautyNote('Chargement du détecteur de visage…');
+        try {
+            const V = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+            const mod = await import(V + '/vision_bundle.mjs');
+            const fs = await mod.FilesetResolver.forVisionTasks(V + '/wasm');
+            const MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
+            const mk = d => mod.FaceLandmarker.createFromOptions(fs, { baseOptions:{ modelAssetPath:MODEL, delegate:d }, runningMode:'VIDEO', numFaces:1 });
+            try { BE.landmarker = await mk('GPU'); } catch(e){ BE.landmarker = await mk('CPU'); }
+            beautyNote('');
+        } catch(e){
+            BE.failed = true;
+            beautyNote('Détecteur de visage indisponible : seuls le lissage et l\'éclat fonctionnent.');
+        }
+        BE.loading = false;
+    }
+    function detect(){
+        if (!BE.landmarker || !BE.raw || BE.raw.readyState < 2) return;
+        try {
+            const r = BE.landmarker.detectForVideo(BE.raw, performance.now());
+            BE.pts = (r && r.faceLandmarks && r.faceLandmarks[0]) || null;
+        } catch(e){}
+    }
+    function geom(W, H){
+        const p = BE.pts;
+        if (!p || !p[234] || !p[454] || !p[10] || !p[152]) { BE.g = null; return null; }
+        const n = { cx:(p[234].x+p[454].x)/2*W, fw:Math.abs(p[454].x-p[234].x)*W, top:p[10].y*H, chin:p[152].y*H };
+        const o = BE.g;
+        BE.g = o ? { cx:o.cx+(n.cx-o.cx)*.5, fw:o.fw+(n.fw-o.fw)*.5, top:o.top+(n.top-o.top)*.5, chin:o.chin+(n.chin-o.chin)*.5 } : n;
+        return BE.g;
+    }
+    function warpFace(c, raw, g, W, H, k){                 // visage affiné : bandes horizontales resserrées vers l'axe
+        const h = g.chin - g.top, y0 = g.top + h*0.35, y1 = g.chin + h*0.08;
+        const R = g.fw*0.85, kmax = 0.13*k, x0 = Math.max(0, g.cx-R), x1 = Math.min(W, g.cx+R), step = 3;
+        for (let y = Math.max(0,y0); y < Math.min(H,y1); y += step){
+            const t = (y-y0)/(y1-y0), w = Math.sin(Math.PI*t)*(0.6+0.4*t), s = 1 - kmax*w;
+            const dl = g.cx-(g.cx-x0)*s, dr = g.cx+(x1-g.cx)*s;
+            c.drawImage(raw, x0, y, x1-x0, step, dl, y, dr-dl, step);
+        }
+    }
+    function smoothSkin(c, g, W, H, k){                    // lissage : copie floue fondue sur l'ovale du visage
+        const sw = Math.max(8, Math.round(W/4)), sh = Math.max(8, Math.round(H/4));
+        if (BE.small.width !== sw || BE.small.height !== sh) { BE.small.width = sw; BE.small.height = sh; }
+        BE.scx.imageSmoothingEnabled = true; BE.scx.imageSmoothingQuality = 'high';
+        BE.scx.drawImage(BE.cv, 0, 0, sw, sh);
+        const cx = g ? g.cx : W*0.5, cy = g ? (g.top+g.chin)/2 : H*0.45;
+        const rx = g ? g.fw*0.62 : W*0.3, ry = g ? (g.chin-g.top)*0.62 : H*0.38;
+        c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
+        [1, .88, .76, .64].forEach(sc => {
+            c.save(); c.beginPath(); c.ellipse(cx, cy, rx*sc, ry*sc, 0, 0, Math.PI*2); c.clip();
+            c.globalAlpha = k*0.22; c.drawImage(BE.small, 0, 0, sw, sh, 0, 0, W, H); c.restore();
+        });
+    }
+    function whiten(c, W, H, k){                           // dents : on désature le jaune et on éclaircit dans l'intérieur des lèvres
+        const p = BE.pts; if (!p) return;
+        c.save(); c.beginPath();
+        LIPS_IN.forEach((i, n) => { const q = p[i]; if (!q) return; n ? c.lineTo(q.x*W, q.y*H) : c.moveTo(q.x*W, q.y*H); });
+        c.closePath(); c.clip();
+        c.globalCompositeOperation = 'saturation'; c.globalAlpha = 0.6*k; c.fillStyle = '#808080'; c.fillRect(0,0,W,H);
+        c.globalCompositeOperation = 'soft-light';  c.globalAlpha = 0.9*k; c.fillStyle = '#ffffff'; c.fillRect(0,0,W,H);
+        c.globalCompositeOperation = 'screen';      c.globalAlpha = 0.14*k; c.fillRect(0,0,W,H);
+        c.restore();
+    }
+    function renderFrame(){
+        const raw = BE.raw, cv = BE.cv, c = BE.cx, W = raw.videoWidth, H = raw.videoHeight;
+        if (!W || !H) return;
+        if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+        if ((BE.frame++ & 1) === 0) detect();
+        const v = BE.v, g = geom(W, H);
+        c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+        c.drawImage(raw, 0, 0, W, H);
+        if (v.slim  > 0 && g) warpFace(c, raw, g, W, H, v.slim/100);
+        if (v.smooth > 0)     smoothSkin(c, g, W, H, v.smooth/100);
+        if (v.bright > 0) {
+            c.globalCompositeOperation = 'screen'; c.globalAlpha = 1;
+            c.fillStyle = 'rgba(255,236,224,' + (v.bright/100*0.28).toFixed(3) + ')'; c.fillRect(0, 0, W, H);
+            c.globalCompositeOperation = 'source-over';
+        }
+        if (v.teeth  > 0)     whiten(c, W, H, v.teeth/100);
+    }
+    function syncSender(){                                 // la piste envoyée : caméra brute ou flux retouché
+        if (!S.pc) return;
+        const snd = S.pc.getSenders().find(x => x.track && x.track.kind === 'video');
+        const want = (BE.on && BE.outTrack) ? BE.outTrack : (S.local && S.local.getVideoTracks()[0]);
+        if (snd && want && snd.track !== want) snd.replaceTrack(want).catch(()=>{});
+    }
+    function beautyStart(){
+        if (BE.on || !S.local) return;
+        const vt = S.local.getVideoTracks()[0]; if (!vt) return;
+        BE.raw = document.createElement('video');
+        BE.raw.muted = true; BE.raw.playsInline = true; BE.raw.setAttribute('playsinline','');
+        BE.raw.style.cssText = 'position:fixed;width:2px;height:2px;opacity:0;pointer-events:none;left:0;top:0;';
+        document.body.appendChild(BE.raw);
+        BE.raw.srcObject = new MediaStream([vt]); BE.raw.play().catch(()=>{});
+        BE.cv = document.createElement('canvas'); BE.cx = BE.cv.getContext('2d');
+        BE.small = document.createElement('canvas'); BE.scx = BE.small.getContext('2d');
+        BE.outStream = BE.cv.captureStream(30); BE.outTrack = BE.outStream.getVideoTracks()[0];
+        BE.on = true;
+        const tick = () => { if (!BE.on) return; try { renderFrame(); } catch(e){} next(); };
+        const next = () => { if (!BE.on) return;
+            if (BE.raw.requestVideoFrameCallback) BE.raw.requestVideoFrameCallback(tick); else requestAnimationFrame(tick); };
+        next();
+        localVideo.srcObject = BE.outStream; localVideo.play().catch(()=>{});
+        syncSender();
+    }
+    function beautyStop(){
+        if (!BE.on) return;
+        BE.on = false;
+        try { BE.outTrack && BE.outTrack.stop(); } catch(e){}
+        if (BE.raw) { try { BE.raw.srcObject = null; BE.raw.remove(); } catch(e){} }
+        BE.raw = BE.cv = BE.cx = BE.small = BE.scx = BE.outStream = BE.outTrack = null; BE.pts = null; BE.g = null;
+        if (S.local) { localVideo.srcObject = S.local; localVideo.play().catch(()=>{}); }
+        syncSender();
+    }
+    function beautyRebind(){                               // après changement de caméra
+        if (!BE.on || !S.local) return;
+        const vt = S.local.getVideoTracks()[0]; if (!vt) return;
+        BE.raw.srcObject = new MediaStream([vt]); BE.raw.play().catch(()=>{});
+        localVideo.srcObject = BE.outStream; localVideo.play().catch(()=>{});
+        BE.pts = null; BE.g = null;
+    }
+    function beautyDispose(){
+        beautyStop();
+        if (BE.landmarker) { try { BE.landmarker.close(); } catch(e){} BE.landmarker = null; }
+    }
+    function updateWand(){ $('btnBeauty').classList.toggle('on', beautyAny()); }
+    function setBeauty(k, val){
+        BE.v[k] = val;
+        const out = document.querySelector('#beauty [data-v="'+k+'"]'); if (out) out.textContent = val;
+        if (beautyAny()) { beautyStart(); loadLandmarker(); } else beautyStop();
+        updateWand();
+    }
+
+    /* ══════ BOUTONS ══════ */
+    function renderBtns(){
+        const isVideo = TYPE==='video';
+        const list = [];
+        if (isVideo) {
+            list.push({ id:'cam', label:S.camOff?'Activer la caméra':'Couper la caméra',
+                icon:S.camOff?'fa-video-slash':'fa-video', act:'cam', on:S.camOff });
+        }
+        list.push({ id:'spk',   label:'Haut-parleur', icon:'fa-volume-up',
+            act:'spk', on:S.speaker });
+        list.push({ id:'mute',  label:S.muted?'Réactiver le micro':'Couper le micro',
+            icon:S.muted?'fa-microphone-slash':'fa-microphone',
+            act:'mute', on:S.muted });
+        list.push({ id:'end', label:'Terminer', icon:'fa-phone-slash', act:'end', red:true });
+
+        controlsGrid.innerHTML = list.map(b => `
+            <button class="btn" data-act="${b.act}" aria-label="${b.label}" title="${b.label}">
+                <div class="circle ${b.red?'red':''} ${b.on?'on':''}">
+                    <i class="fas ${b.icon}"></i>
+                </div>
+                <span class="label">${b.label}</span>
+            </button>`).join('');
+
+        controlsGrid.querySelectorAll('[data-act]').forEach(el =>
+            el.addEventListener('click', () => doAction(el.dataset.act)));
+    }
+    function doAction(a){
+        if (a==='mute') { S.muted=!S.muted;
+            if (S.local) S.local.getAudioTracks().forEach(t=>t.enabled=!S.muted); renderBtns(); }
+        else if (a==='spk') { S.speaker=!S.speaker; renderBtns(); }
+        else if (a==='cam') { S.camOff=!S.camOff;
+            if (S.local) S.local.getVideoTracks().forEach(t=>t.enabled=!S.camOff); renderBtns(); }
+        else if (a==='flip') { S.front=!S.front;
+            localVideo.classList.toggle('rear', !S.front); swapCam(); }
+        else if (a==='end') { hangup(); }
+    }
+
+    /* ══════ SIGNALISATION : /api/appel/<id>/etat (toutes les secondes) ══════ */
+    function startPolling(){
+        if (S.poll) return;
+        pollOnce();
+        S.poll = setInterval(pollOnce, 1000);
+    }
+    async function pollOnce(){
+        if (S.finished || S.polling || !CALL_ID) return;
+        S.polling = true;
+        try {
+            const d = await api('/api/appel/'+CALL_ID+'/etat?after_id='+S.afterId);
+            if (!d) { if (++S.fails >= 20) endCall('Connexion perdue'); return; }
+            if (!d.success) { endCall('Appel introuvable'); return; }
+            S.fails = 0;
+            await handleState(d);
+        } finally { S.polling = false; }
+    }
+    async function handleState(d){
+        const a = d.appel;
+        if (a.statut === 'sonne' || a.statut === 'en_cours') {
+            for (const g of (d.signals || [])) {
+                S.afterId = Math.max(S.afterId, g.id);
+                try { await handleSignal(g); } catch(e){ console.warn('signal', e); }
+            }
+            if (a.statut === 'en_cours' && IS_CALLER && !S.offerSent) {
+                S.offerSent = true; stopRing(); await callerOffer();
+            }
+            return;
+        }
+        // état final décidé par le serveur
+        if (a.statut === 'termine') { if (!S.finished) note(PEER_N+' a raccroché.', 'err'); endCall('Appel terminé', a.duree_s); }
+        else if (a.statut === 'refuse') { if (IS_CALLER) note(PEER_N+' a refusé l\'appel.', 'err'); endCall(IS_CALLER ? 'Appel refusé' : 'Appel terminé'); }
+        else if (a.statut === 'annule') endCall(IS_CALLER ? 'Appel annulé' : 'Appel manqué');
+        else if (a.statut === 'manque') endCall(IS_CALLER ? 'Pas de réponse' : 'Appel manqué');
+        else endCall('Appel terminé');
+    }
+    async function handleSignal(g){
+        if (g.kind === 'offer') await handleOffer(g.payload);
+        else if (g.kind === 'answer') await handleAnswer(g.payload);
+        else if (g.kind === 'ice') await addIce(g.payload);
+    }
+
+    /* ══════ WEBRTC ══════ */
+    function newPC(){
+        const pc = new RTCPeerConnection({ iceServers: S.stun });
+        pc.onicecandidate = e => { if (e.candidate) sendSignal('ice', e.candidate.toJSON()); };
+        pc.ontrack = e => {
+            remoteVideo.srcObject = e.streams[0];
+            remoteVideo.play().catch(() => note('Touchez l\'écran pour activer le son', 'warn'));
+        };
+        pc.onconnectionstatechange = () => {
+            if (pc.connectionState==='connected') goLive();
+            else if (pc.connectionState==='failed') note('Connexion instable', 'err');
+        };
+        S.pc = pc; return pc;
+    }
+    async function ajouterPistes(){
+        const st = await getMediaOnce();
+        if (!st) return false;
+        if (!S.tracksAdded) { st.getTracks().forEach(t => S.pc.addTrack(t, st)); S.tracksAdded = true; syncSender(); }
+        return true;
+    }
+    async function flushIce(){
+        const liste = S.pendingIce; S.pendingIce = [];
+        for (const c of liste) { try { await S.pc.addIceCandidate(new RTCIceCandidate(c)); } catch(e){} }
+    }
+    async function addIce(c){
+        if (!c) return;
+        if (!S.pc || !S.pc.remoteDescription) { S.pendingIce.push(c); return; }
+        try { await S.pc.addIceCandidate(new RTCIceCandidate(c)); } catch(e){}
+    }
+    async function callerOffer(){
+        S.phase = 'connecting'; statusEl.textContent = 'Connexion...';
+        if (!S.pc) newPC();
+        if (!(await ajouterPistes())) { hangup('Micro/caméra indisponible'); return; }
+        const off = await S.pc.createOffer();
+        await S.pc.setLocalDescription(off);
+        await sendSignal('offer', { type:off.type, sdp:off.sdp });
+    }
+    async function handleOffer(desc){
+        if (S.pc && S.pc.remoteDescription) return;      // offre déjà traitée
+        S.phase = 'connecting'; statusEl.textContent = 'Connexion...';
+        if (!S.pc) newPC();
+        if (!(await ajouterPistes())) { hangup('Micro/caméra indisponible'); return; }
+        await S.pc.setRemoteDescription(new RTCSessionDescription(desc));
+        await flushIce();
+        const ans = await S.pc.createAnswer();
+        await S.pc.setLocalDescription(ans);
+        await sendSignal('answer', { type:ans.type, sdp:ans.sdp });
+    }
+    async function handleAnswer(desc){
+        if (!S.pc || S.pc.signalingState !== 'have-local-offer') return;
+        await S.pc.setRemoteDescription(new RTCSessionDescription(desc));
+        await flushIce();
+    }
+    function goLive(){
+        if (S.phase==='connected') return;
+        S.phase='connected'; stopRing(); chime([784, 1175], 0.09, 0.12);
+        root.classList.remove('ringing'); root.classList.add('connected');
+        incoming.classList.remove('on'); controls.style.display='flex';
+        statusEl.classList.add('live');
+        S.startedAt = Date.now();
+        S.tick = setInterval(() => {
+            statusEl.textContent = fmt((Date.now()-S.startedAt)/1000);
+        }, 500);
+        statusEl.textContent = '00:00';
+        note('Connexion établie', 'ok');
+        if (navigator.vibrate) navigator.vibrate(80);
+    }
+
+    /* ══════ RACCROCHER ══════ */
+    function hangup(reason){
+        if (CALL_ID && !S.finished) api('/api/appel/'+CALL_ID+'/terminer', 'POST');
+        endCall(typeof reason === 'string' ? reason : (S.phase==='connected' ? 'Appel terminé' : 'Appel annulé'));
+    }
+    function endCall(reason, srvDur){
+        if (S.finished) return;
+        S.finished = true;
+        stopRing();
+        if (S.startedAt) chime([660, 440], 0.17, 0.16);
+        if (S.poll) { clearInterval(S.poll); S.poll = null; }
+        if (S.tick) clearInterval(S.tick);
+        if (S.pc) { try{S.pc.close();}catch(e){} S.pc=null; }
+        beautyDispose();
+        if (S.local) { S.local.getTracks().forEach(t=>t.stop()); S.local=null; }
+        const dur = S.startedAt ? Math.floor((Date.now()-S.startedAt)/1000) : (srvDur || 0);
+        endedTitle.textContent = reason || 'Appel terminé';
+        endedSub.textContent = dur > 0 ? 'Durée : '+fmt(dur) : '';
+        incoming.classList.remove('on');
+        endedView.classList.add('on');
+        const retour = PEER ? '/messagerie/'+PEER : '/messagerie';   // retour dans la discussion (historique de l'appel)
+        $('btnBack').onclick = () => { window.location.replace(retour); };
+    }
+
+    /* ══════ INIT ══════ */
+    function setPeerUI(){
+        peerNameEl.textContent = PEER_N;
+        if (PEER_A) bgEl.style.backgroundImage = 'url(' + JSON.stringify(PEER_A) + '), linear-gradient(180deg,#12353a 0%,#0b141a 60%,#070d11 100%)';
+        if (PEER_A) { avatarImg.src=PEER_A; avatarImg.style.display='block'; avatarInitials.style.display='none'; }
+        else { avatarImg.style.display='none'; avatarInitials.style.display=''; avatarInitials.textContent = initials(PEER_N); }
+    }
+    function init(mode){        // mode : 'caller' | 'sonne' | 'en_cours' | 'fini'
+        setPeerUI();
+        if (TYPE==='video') { root.classList.add('video-mode'); videoView.classList.add('on'); }
+        root.classList.add('ringing');
+        renderBtns();
+        if (mode === 'caller') {
+            statusEl.textContent = 'Appel en cours…';
+            startRing();
+        } else if (mode === 'sonne') {
+            statusEl.textContent = TYPE==='video' ? 'Appel vidéo FaceNet' : 'Appel vocal FaceNet';
+            incoming.classList.add('on');
+            controls.style.display = 'none';
+            startRing();
+        } else if (mode === 'en_cours') {
+            S.phase = 'connecting'; statusEl.textContent = 'Connexion...';
+            controls.style.display = 'flex';
+        } else {
+            controls.style.display = 'none';
+        }
+    }
+    async function resolveCallee(){
+        if (!CALL_ID) {
+            const d = await api('/api/appel/entrant');
+            const e = d && d.entrant;
+            if (e && (!PEER || (e.pair && e.pair.id === PEER))) CALL_ID = e.id;
+        }
+        if (!CALL_ID) return null;
+        const d = await api('/api/appel/'+CALL_ID+'/etat?after_id=0');
+        if (!d || !d.success || !d.appel) return null;
+        const a = d.appel;
+        TYPE = a.type === 'video' ? 'video' : 'audio';
+        if (a.pair) { PEER = a.pair.id; if (a.pair.nom) PEER_N = a.pair.nom; if (a.pair.avatar) PEER_A = a.pair.avatar; }
+        return a.statut;
+    }
+    async function boot(){
+        if (IS_CALLER) {
+            init('caller');
+            if (!CALL_ID) {
+                if (!PEER) { stopRing(); endCall('Contact introuvable'); return; }
+                const r = await api('/api/appel/lancer', 'POST', { peer_id:PEER, type:TYPE });
+                if (!r || !r.success) {
+                    stopRing(); note((r && r.error) || 'Impossible de lancer l\'appel.', 'err');
+                    setTimeout(() => endCall('Appel impossible'), 1800); return;
+                }
+                CALL_ID = r.appel.id;
+                try { const u = new URL(location.href); u.searchParams.set('appel', CALL_ID); history.replaceState(null, '', u.toString()); } catch(e){}
+                statusEl.textContent = r.pair_en_ligne ? 'Ça sonne…' : 'Appel en cours…';
+            }
+            startPolling();
+            getMediaOnce();          // prépare micro/caméra pendant la sonnerie
+            return;
+        }
+        const statut = await resolveCallee();
+        if (statut === 'sonne') { init('sonne'); startPolling(); }
+        else if (statut === 'en_cours') { init('en_cours'); startPolling(); getMediaOnce(); }
+        else { init('fini'); endCall(statut ? 'Appel terminé' : 'Appel introuvable'); }
+    }
+
+    /* ══════ BOUTONS FIXES ══════ */
+    $('btnAccept').onclick = async () => {
+        stopRing();
+        incoming.classList.remove('on'); controls.style.display='flex';
+        S.phase = 'connecting'; statusEl.textContent = 'Connexion...';
+        const st = await getMediaOnce();                 // micro/caméra prêts AVANT de décrocher
+        if (!st) { hangup('Micro/caméra indisponible'); return; }
+        const r = await api('/api/appel/'+CALL_ID+'/repondre', 'POST');
+        if (!r || !r.success) { note((r && r.error) || 'Impossible de décrocher.', 'err'); endCall('Appel terminé'); }
+    };
+    $('btnDecline').onclick = () => {
+        stopRing();
+        if (CALL_ID) api('/api/appel/'+CALL_ID+'/refuser', 'POST');
+        endCall('Appel refusé');
+    };
+    $('btnMin').onclick = () => { window.location.replace('/messagerie'); };
+
+    /* ══════ CAMÉRA : réduire / agrandir, changer de côté, retouche ══════ */
+    const selfView = $('selfView');
+    $('selfMin').addEventListener('click', e => { e.stopPropagation(); selfView.classList.add('mini'); });
+    selfView.addEventListener('click', () => { if (selfView.classList.contains('mini')) selfView.classList.remove('mini'); });   // un seul clic = agrandir
+    $('btnFlip').addEventListener('click', () => doAction('flip'));
+    const beautyEl = $('beauty');
+    $('btnBeauty').addEventListener('click', () => {
+        beautyEl.classList.toggle('on');
+        if (beautyEl.classList.contains('on')) loadLandmarker();
+    });
+    $('beautyClose').addEventListener('click', () => beautyEl.classList.remove('on'));
+    beautyEl.querySelectorAll('input[type=range]').forEach(inp =>
+        inp.addEventListener('input', () => setBeauty(inp.dataset.k, parseInt(inp.value, 10) || 0)));
+    $('beautyReset').addEventListener('click', () => {
+        beautyEl.querySelectorAll('input[type=range]').forEach(i => { i.value = 0; BE.v[i.dataset.k] = 0;
+            const o = beautyEl.querySelector('[data-v="'+i.dataset.k+'"]'); if (o) o.textContent = 0; });
+        beautyStop(); updateWand();
+    });
+
+    /* ══════ LANCEMENT ══════ */
+    const retourMsg = () => (PEER ? '/messagerie/'+PEER : '/messagerie');
+    const navEntry = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || null;
+    if (navEntry && navEntry.type === 'back_forward') {     // arrivé ici avec le bouton retour : ne JAMAIS relancer d'appel
+        location.replace(retourMsg());
+        return;
+    }
+    window.addEventListener('pageshow', e => { if (e.persisted) location.replace(retourMsg()); });
+    boot();
+
+    window.addEventListener('pagehide', () => {
+        if (CALL_ID && !S.finished) {
+            try { fetch('/api/appel/'+CALL_ID+'/terminer', { method:'POST', credentials:'same-origin', keepalive:true }); } catch(e){}
+        }
+        stopRing();
+        if (S.pc) { try{S.pc.close();}catch(e){} }
+        if (S.local) S.local.getTracks().forEach(t=>t.stop());
+    });
+})();
+</script>
+</body>
+</html>

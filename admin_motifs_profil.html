@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .av-wrap { max-width: 860px; margin: 30px auto 60px; padding: 0 15px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .av-back { display: inline-flex; align-items: center; gap: 6px; color: #1877f2; font-size: 14px; font-weight: 600; text-decoration: none; margin-bottom: 14px; }
+    .av-head h2 { margin: 0 0 4px; font-size: 24px; color: #1c1e21; }
+    .av-head p { margin: 0 0 22px; font-size: 14px; color: #65676b; }
+    .av-flash { background: #e7f3ff; border: 1px solid #b6d4fb; color: #0b4a9c; border-radius: 10px; padding: 10px 14px; margin: 0 0 16px; font-size: 14px; }
+
+    .av-card { background: #fff; border: 1px solid #e4e6eb; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.06); margin-bottom: 20px; overflow: hidden; }
+    .av-card-top { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-bottom: 1px solid #e4e6eb; }
+    .av-avatar { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid #1877f2; flex-shrink: 0; }
+    .av-qui { flex: 1; min-width: 0; }
+    .av-qui strong { display: block; font-size: 16px; color: #1c1e21; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .av-qui span { font-size: 13px; color: #65676b; }
+    .av-forfait { background: #e7f3ff; color: #0866ff; border: 1px solid #0866ff; border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+
+    .av-body { display: grid; grid-template-columns: 1fr 1.3fr; gap: 18px; padding: 18px; }
+    .av-infos { margin: 0; }
+    .av-infos div { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid #f0f2f5; font-size: 13px; }
+    .av-infos div:last-child { border-bottom: 0; }
+    .av-infos dt { color: #65676b; font-weight: 600; }
+    .av-infos dd { margin: 0; color: #1c1e21; font-weight: 600; text-align: right; }
+    .av-infos dd.nouveau { color: #15803d; }
+    .av-mini { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 1px solid #ccd0d5; vertical-align: middle; }
+    .av-piece { background: #f7f9fa; border: 1px solid #e4e6eb; border-radius: 10px; padding: 8px; text-align: center; }
+    .av-piece img { max-width: 100%; max-height: 340px; border-radius: 6px; display: block; margin: 0 auto; }
+    .av-piece a.av-ouvrir { display: inline-block; margin-top: 8px; font-size: 13px; font-weight: 600; color: #1877f2; text-decoration: none; }
+
+    .av-conseil { margin: 0 18px 16px; padding: 10px 14px; background: #fff8e5; border: 1px solid #ffe58f; border-radius: 10px; font-size: 13px; color: #7a5a00; line-height: 1.5; }
+    .av-actions { display: flex; gap: 10px; padding: 0 18px 18px; }
+    .av-actions form { flex: 1; margin: 0; }
+    .av-motif { width: 100%; box-sizing: border-box; padding: 9px 10px; border: 1px solid #ccd0d5; border-radius: 8px; margin-bottom: 8px; font: inherit; font-size: 13px; }
+    .av-btn { width: 100%; padding: 13px; border: 0; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; color: #fff; }
+    .av-btn.ok { background: #16a34a; }
+    .av-btn.ok:hover { background: #15803d; }
+    .av-btn.non { background: #fff; color: #dc2626; border: 2px solid #dc2626; }
+    .av-btn.non:hover { background: #fef2f2; }
+    .av-btn:focus-visible { outline: 3px solid #1877f2; outline-offset: 2px; }
+
+    .av-vide { background: #fff; border: 1px dashed #ccd0d5; border-radius: 14px; padding: 40px 20px; text-align: center; color: #65676b; font-size: 15px; }
+    .av-vide i { display: block; font-size: 34px; color: #22c55e; margin-bottom: 10px; }
+
+    @media (max-width: 640px) {
+        .av-body { grid-template-columns: 1fr; }
+        .av-card-top { flex-wrap: wrap; }
+        .av-actions { flex-direction: column; }
+    }
+</style>
+
+<div class="av-wrap">
+    <a href="{{ url_for('main.settings') }}" class="av-back"><i class="fas fa-arrow-left" aria-hidden="true"></i> Retour aux paramètres</a>
+
+    <div class="av-head">
+        <h2>Revérifications de profil</h2>
+        <p>
+            {% if modifs %}
+                {{ modifs|length }} demande{{ 's' if modifs|length > 1 }} d'abonnés Tsapi Verified en attente de votre décision.
+            {% else %}
+                Toutes les demandes ont été traitées.
+            {% endif %}
+        </p>
+    </div>
+
+    {% with msgs = get_flashed_messages() %}{% for m in msgs %}<div class="av-flash" role="status">{{ m }}</div>{% endfor %}{% endwith %}
+
+    {% if not modifs %}
+        <div class="av-vide">
+            <i class="fas fa-circle-check" aria-hidden="true"></i>
+            Aucune demande en attente. Elles apparaîtront ici dès qu'un abonné vérifié aura envoyé sa pièce d'identité pour changer son nom ou sa photo.
+        </div>
+    {% endif %}
+
+    {% for m in modifs %}
+    <article class="av-card">
+        <div class="av-card-top">
+            <img class="av-avatar" src="{{ url_for('static', filename='uploads/' + (m.avatar_actuel or 'default_avatar.png')) }}" alt="Photo actuelle de {{ m.nom_actuel }}">
+            <div class="av-qui">
+                <strong>{{ m.nom_actuel }}</strong>
+                <span>@{{ m.username }}{% if m.cree_le %} · demandé le {{ m.cree_le.strftime('%d/%m/%Y à %H:%M') }}{% endif %}</span>
+            </div>
+            <span class="av-forfait">{{ 'Changement de photo' if m.type == 'photo' else 'Changement de nom' }}</span>
+        </div>
+
+        <div class="av-body">
+            <dl class="av-infos">
+                {% if m.type == 'nom' %}
+                <div><dt>Nom actuel</dt><dd>{{ m.nom_actuel }}</dd></div>
+                <div><dt>Nouveau nom</dt><dd class="nouveau">{{ m.nouveau_nom }}</dd></div>
+                {% else %}
+                <div><dt>Photo actuelle</dt><dd><img class="av-mini" src="{{ url_for('static', filename='uploads/' + (m.avatar_actuel or 'default_avatar.png')) }}" alt="Photo actuelle"></dd></div>
+                <div><dt>Nouvelle photo</dt><dd><img class="av-mini" src="{{ url_for('static', filename='uploads/' + m.nouvelle_photo) }}" alt="Nouvelle photo"></dd></div>
+                <div><dt>Nom du profil</dt><dd>{{ m.nom_actuel }}</dd></div>
+                {% endif %}
+                <div><dt>Prénom</dt><dd>{{ m.prenom or '— non renseigné —' }}</dd></div>
+                <div><dt>Nom</dt><dd>{{ m.nom_famille or '— non renseigné —' }}</dd></div>
+                <div><dt>Date de naissance</dt><dd>{{ m.birth_date.strftime('%d/%m/%Y') if m.birth_date else '— non renseignée —' }}</dd></div>
+                <div><dt>Ville</dt><dd>{{ m.ville or '— non renseignée —' }}</dd></div>
+                <div><dt>Type de pièce</dt><dd>{{ m.piece_libelle or '—' }}</dd></div>
+            </dl>
+
+            <div class="av-piece">
+                {% if m.piece_pdf %}
+                    <i class="fas fa-file-pdf" aria-hidden="true" style="font-size:48px; color:#dc2626; margin:20px 0 6px;"></i>
+                    <div style="font-size:13px; color:#65676b;">La pièce est un fichier PDF.</div>
+                {% else %}
+                    <a href="{{ url_for('main.admin_reverif_piece', modif_id=m.id) }}" target="_blank" rel="noopener">
+                        <img src="{{ url_for('main.admin_reverif_piece', modif_id=m.id) }}" alt="Pièce d'identité de {{ m.nom_actuel }}" loading="lazy">
+                    </a>
+                {% endif %}
+                <a class="av-ouvrir" href="{{ url_for('main.admin_reverif_piece', modif_id=m.id) }}" target="_blank" rel="noopener">
+                    <i class="fas fa-up-right-from-square" aria-hidden="true"></i> Ouvrir en grand
+                </a>
+            </div>
+        </div>
+
+        <div class="av-conseil">
+            {% if m.type == 'nom' %}
+                Vérifiez que le <strong>nouveau nom</strong> correspond exactement au nom inscrit sur la pièce.
+            {% else %}
+                Vérifiez que le visage de la <strong>nouvelle photo</strong> est bien celui de la pièce d'identité.
+            {% endif %}
+            Tant que vous n'approuvez pas, l'ancien profil reste affiché.
+        </div>
+
+        <div class="av-actions">
+            <form method="post" action="{{ url_for('main.admin_reverif_approuver', modif_id=m.id) }}"
+                  onsubmit="return confirm('Appliquer cette modification au profil de {{ m.nom_actuel|replace("'", "") }} ?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="av-btn ok"><i class="fas fa-check" aria-hidden="true"></i> Approuver</button>
+            </form>
+            <form method="post" action="{{ url_for('main.admin_reverif_rejeter', modif_id=m.id) }}"
+                  onsubmit="return confirm('Refuser cette modification ? L\'abonné sera prévenu.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input class="av-motif" type="text" name="motif" maxlength="200" placeholder="Motif du refus (facultatif, envoyé à l'abonné)">
+                <button type="submit" class="av-btn non"><i class="fas fa-xmark" aria-hidden="true"></i> Refuser</button>
+            </form>
+        </div>
+    </article>
+    {% endfor %}
+</div>
+{% endblock %}

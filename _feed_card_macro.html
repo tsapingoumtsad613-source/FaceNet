@@ -1,0 +1,386 @@
+{% macro render_post_card(pub) %}
+    {# PAGES : si la publication vient d'une Page, on affiche la Page (nom, logo, lien) ; sinon rien ne change #}
+    {% set pg = page_de_pub(pub) if page_de_pub is defined else none %}
+    {% set uid = current_user.id if (current_user is defined and current_user and current_user.id is defined) else (session.get('user_id') if session is defined else none) %}
+    <div class="feed-card" id="publication-{{ pub.id }}" {% if pub.fn_sponsorise is defined and pub.fn_sponsorise %}data-sponsorise="1" {% endif %}data-pinned="{{ '1' if pub.epingle else '0' }}" data-privacy="{{ pub.confidentialite or 'public' }}" data-author-id="{{ pub.user_id }}" data-is-owner="{{ '1' if uid == pub.user_id else '0' }}">
+        <div class="post-header">
+            <div class="post-header-avatar-block">
+                <a href="{{ (pg.url if pg else url_for('main.profile', username=pub.author.username)) }}" data-profil="{{ (pg.url if pg else url_for('main.profile', username=pub.author.username)) }}" class="feed-avatar-link" title="Voir le profil" onclick="event.stopPropagation();"><img src="{{ url_for('static', filename='uploads/' + (pg.avatar if pg else (pub.author.avatar if pub.author.avatar else 'default_avatar.png'))) }}" alt="" loading="lazy" decoding="async"></a>
+            </div>
+            <div class="post-meta">
+                <div class="post-author">
+                    <a href="{{ (pg.url if pg else url_for('main.profile', username=pub.author.username)) }}" data-profil="{{ (pg.url if pg else url_for('main.profile', username=pub.author.username)) }}" class="post-author-link" onclick="event.stopPropagation();">{{ pg.nom if pg else pub.author.nom_complet }}</a>
+                    {% if not pg and (pub.author.badge_expire or pub.author.is_verified) %}
+                    <svg viewBox="0 0 24 24" style="width:1em; height:1em; vertical-align:-0.125em; margin-left: 3px;">
+                        <path fill="#1877F2" d="M 12.00,0.85 C 12.45,0.85 12.94,1.45 13.34,1.79 C 13.75,2.13 14.01,2.76 14.45,2.87 C 14.88,2.99 15.42,2.57 15.94,2.48 C 16.46,2.40 17.19,2.12 17.57,2.34 C 17.96,2.57 18.09,3.33 18.27,3.83 C 18.45,4.32 18.37,5.00 18.68,5.32 C 19.00,5.63 19.68,5.55 20.17,5.73 C 20.67,5.91 21.43,6.04 21.66,6.42 C 21.88,6.81 21.60,7.54 21.52,8.06 C 21.43,8.58 21.01,9.12 21.13,9.55 C 21.24,9.99 21.87,10.25 22.21,10.66 C 22.55,11.06 23.15,11.55 23.15,12.00 C 23.15,12.45 22.55,12.94 22.21,13.34 C 21.87,13.75 21.24,14.01 21.13,14.45 C 21.01,14.88 21.43,15.42 21.52,15.94 C 21.60,16.46 21.88,17.19 21.66,17.57 C 21.43,17.96 20.67,18.09 20.17,18.27 C 19.68,18.45 19.00,18.37 18.68,18.68 C 18.37,19.00 18.45,19.68 18.27,20.17 C 18.09,20.67 17.96,21.43 17.57,21.66 C 17.19,21.88 16.46,21.60 15.94,21.52 C 15.42,21.43 14.88,21.01 14.45,21.13 C 14.01,21.24 13.75,21.87 13.34,22.21 C 12.94,22.55 12.45,23.15 12.00,23.15 C 11.55,23.15 11.06,22.55 10.66,22.21 C 10.25,21.87 9.99,21.24 9.55,21.13 C 9.12,21.01 8.58,21.43 8.06,21.52 C 7.54,21.60 6.81,21.88 6.43,21.66 C 6.04,21.43 5.91,20.67 5.73,20.17 C 5.55,19.68 5.63,19.00 5.32,18.68 C 5.00,18.37 4.32,18.45 3.83,18.27 C 3.33,18.09 2.57,17.96 2.34,17.58 C 2.12,17.19 2.40,16.46 2.48,15.94 C 2.57,15.42 2.99,14.88 2.87,14.45 C 2.76,14.01 2.13,13.75 1.79,13.34 C 1.45,12.94 0.85,12.45 0.85,12.00 C 0.85,11.55 1.45,11.06 1.79,10.66 C 2.13,10.25 2.76,9.99 2.87,9.55 C 2.99,9.12 2.57,8.58 2.48,8.06 C 2.40,7.54 2.12,6.81 2.34,6.42 C 2.57,6.04 3.33,5.91 3.83,5.73 C 4.32,5.55 5.00,5.63 5.32,5.32 C 5.63,5.00 5.55,4.32 5.73,3.83 C 5.91,3.33 6.04,2.57 6.42,2.34 C 6.81,2.12 7.54,2.40 8.06,2.48 C 8.58,2.57 9.12,2.99 9.55,2.87 C 9.99,2.76 10.25,2.13 10.66,1.79 C 11.06,1.45 11.55,0.85 12.00,0.85 Z"/>
+                        <path fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" d="M7.3 12.2l3 3 6.2-6.6"/>
+                    </svg>
+                    {% endif %}
+                    {% if pub.type_publication == 'photo_profil' %}
+                    <span style="font-weight: normal;"> a changé sa photo de profil</span>
+                    {% elif pub.type_publication == 'photo_couverture' %}
+                    <span style="font-weight: normal;"> a changé sa photo de couverture</span>
+                    {% endif %}
+                    {% if pub.humeur %}
+                    <span style="font-weight: normal; color: #65676b; font-size: 14px;"> {{ pub.humeur }}</span>
+                    {% endif %}
+                    {% if pub.pays %}
+                    <span style="font-weight: normal; color: #65676b; font-size: 14px;"> — {{ pub.pays }}</span>
+                    {% endif %}
+                    {# FN-IDENTIFIES : « — avec Marie et 2 autres » (noms résolus côté navigateur, liste complète au clic) #}
+                    {% set idf_raw = pub.identifies %}
+                    {% if idf_raw is string %}
+                        {% set idf_ids = idf_raw.split(',')|map('trim')|select|list %}
+                    {% elif idf_raw is iterable and idf_raw is not mapping %}
+                        {% set idf_ids = idf_raw|map(attribute='id')|list %}
+                    {% else %}
+                        {% set idf_ids = [] %}
+                    {% endif %}
+                    {% if idf_ids %}
+                    <span class="post-tagged-inline" role="button" tabindex="0" data-pub-id="{{ pub.id }}" data-ids="{{ idf_ids|join(',') }}"
+                          onclick="event.stopPropagation(); window.openFeedTaggedSheet && openFeedTaggedSheet(this);"> — avec <strong class="post-tagged-names">{{ idf_ids|length }} personne{{ 's' if idf_ids|length > 1 else '' }}</strong></span>
+                    {% endif %}
+                </div>
+                {# MENTION IA : ligne dédiée sous le nom ; la date de publication reste en dessous #}
+                {% if pub.mention_ia %}
+                <div class="fn-ai-row" style="display:flex;align-items:center;margin:3px 0 2px;">
+                    <span class="fn-ai-label" title="Type de contenu IA : {{ pub.mention_ia_type or 'mixte' }}" style="display:inline-flex;align-items:center;gap:5px;margin:0;padding:2px 10px 2px 8px;border-radius:999px;background:rgba(101,103,107,.12);color:#65676b;font-size:11.5px;font-weight:600;line-height:1.35;letter-spacing:.1px;white-space:nowrap;">
+                        <i class="fa-solid fa-wand-magic-sparkles" style="font-size:10.5px;" aria-hidden="true"></i>
+                        <span>Contenu IA</span>
+                    </span>
+                </div>
+                {% endif %}
+                {% if pub.musique %}
+                {% set musique_titre, musique_sep, musique_artiste = pub.musique.partition(' — ') %}
+                <div class="post-music-line post-music-ticker fn-son-lien" data-music-ticker="1" data-son-url="/son/{{ pub.id }}" role="link" tabindex="0" title="{{ pub.musique }}" aria-label="Musique : {{ pub.musique }}">
+                    {# Le triangle de lecture n'est gardé que pour une publication texte + musique (sinon pas d'autre lecteur) #}
+                    {% if pub.musique_preview_url and not pub.media_url and not pub.musique_cover_url %}
+                    <button type="button" class="post-music-play-btn" data-pub-id="{{ pub.id }}" onclick="event.stopPropagation(); toggleFeedMusicPlayback({{ pub.id }}, this)" data-src="{{ pub.musique_preview_url }}" data-debut="{{ pub.musique_debut or 0 }}" aria-label="Écouter un extrait"><i class="fa-solid fa-play"></i></button>
+                    {% endif %}
+                    {% if pub.musique_cover_url %}<img src="{{ pub.musique_cover_url }}" class="post-music-cover" alt="" loading="lazy">{% endif %}
+                    <span class="post-music-ticker-window"><span class="post-music-ticker-track"><span class="post-music-ticker-copy">{{ musique_titre }}{% if musique_sep and musique_artiste %} · {{ musique_artiste }}{% endif %}</span><span class="post-music-ticker-copy post-music-ticker-copy-duplicate" aria-hidden="true">{{ musique_titre }}{% if musique_sep and musique_artiste %} · {{ musique_artiste }}{% endif %}</span></span></span>
+                </div>
+                {% endif %}
+                <div class="post-time">
+                    {% if pub.fn_sponsorise is defined and pub.fn_sponsorise %}<span class="fn-sponso" title="Publication sponsorisée" style="font-size:12px;color:#8a8d91;font-weight:400;">Sponsorisé</span>{% else %}
+                    <span class="fn-pub-age">{{ pub.date_creation|temps_ecoule }}</span>
+                    {% endif %}
+                    <span title="Confidentialité" class="post-privacy-icon" data-label="{{ {'public':'Public','amis':'Ami(e)s','famille':'Famille'}.get(pub.confidentialite or 'public', 'Moi uniquement') }}"><i class="fa-solid {{ {'public':'fa-earth-americas','amis':'fa-user-group','famille':'fa-house-user'}.get(pub.confidentialite or 'public', 'fa-lock') }}"></i></span>
+                </div>
+            </div>
+            {% set est_video = pub.media_url and (pub.media_url.endswith('.mp4') or pub.media_url.endswith('.webm')) %}
+            <button type="button" class="post-header-options-btn" aria-label="Options de la publication"
+                    onclick="openPostOptions({{ pub.id }}, {{ 'true' if pub.user_id == uid else 'false' }}, {{ 'true' if pub.media_url else 'false' }}, {{ 'true' if est_video else 'false' }})"
+                    title="Options">
+                <i class="fa-solid fa-ellipsis"></i>
+            </button>
+        </div>
+        
+        <div class="post-body">
+            {% if pub.type_publication in ('photo_profil', 'photo_couverture') %}
+                {# La phrase "a changé sa photo de..." est déjà affichée à côté du nom ; on n'affiche pas pub.contenu en double. #}
+            {% elif pub.evenement_fil %}
+                {# Publication d'événement : tout le texte (titre, date, lieu, détails) est dans la carte ci-dessous, pas en double. #}
+            {% elif pub.background_color and pub.background_color != 'transparent' %}
+                {% if pub.background_color.startswith('3d:') %}
+                {# FN-3D-BG : fond 3D « 3d:<style>-<palette> » (voir feed.html) #}
+                {% set _fn3d = pub.background_color[3:].split('-') %}
+                <div class="post-content-text vast-color-bg fn3d-bg fn3d-s-{{ _fn3d[0] }} fn3d-p-{{ _fn3d[1] if _fn3d|length > 1 else 'nuit' }}" data-raw-text="{{ pub.contenu }}">
+                    {{ pub.contenu }}
+                </div>
+                {% else %}
+                <div class="post-content-text vast-color-bg" style="background: {{ pub.background_color }};" data-raw-text="{{ pub.contenu }}">
+                    {{ pub.contenu }}
+                </div>
+                {% endif %}
+            {% else %}
+                <div class="post-text-wrapper">
+                    <p class="post-content-text normal-text" data-raw-text="{{ pub.contenu }}">{{ pub.contenu }}</p>
+                    <button type="button" class="post-text-seemore-btn" style="display:none;" onclick="togglePostTextExpand(this)">Voir plus</button>
+                </div>
+            {% endif %}
+            {# BARRE D'OUTILS DU TEXTE : traduction + lecture vocale #}
+            {% if pub.type_publication not in ('photo_profil', 'photo_couverture') and not pub.evenement_fil %}
+            <div class="fn-pub-tools"{% if not (pub.contenu and (pub.contenu|trim)) %} hidden{% endif %}>
+                <button type="button" class="fn-trad-btn fn-pub-tool-btn" aria-label="Traduire la publication" title="Appui simple : traduire · Appui maintenu : choisir la langue" onclick="event.stopPropagation(); window.fnTraduirePub && fnTraduirePub({{ pub.id }}, false);">
+                    <i class="fa-solid fa-language" aria-hidden="true"></i><span class="fn-t-voir">Voir la traduction</span><span class="fn-t-orig" style="display:none;">Voir l'original</span>
+                </button>
+                <button type="button" class="fn-ecouter-btn fn-pub-tool-btn" aria-pressed="false" aria-label="Écouter la publication" onclick="event.stopPropagation(); window.fnLirePublication && fnLirePublication({{ pub.id }}, this);">
+                    <i class="fa-solid fa-volume-high" aria-hidden="true"></i><span>Écouter</span>
+                </button>
+            </div>
+            {% endif %}
+        </div>
+
+        {# FN-TELEPHONE : numéro choisi dans « Appels » — au clic : Appeler ou WhatsApp #}
+        {% if pub.telephone %}
+        <div class="post-phone-wrap">
+            <button type="button" class="post-phone-btn" data-phone="{{ pub.telephone }}"
+                    onclick="event.stopPropagation(); window.openFeedPhoneSheet && openFeedPhoneSheet(this);">
+                <span class="post-phone-ico"><i class="fa-solid fa-phone"></i></span>
+                <span class="post-phone-txt"><strong>{{ pub.telephone }}</strong><small>Appuyez pour appeler ou écrire sur WhatsApp</small></span>
+                <i class="fa-solid fa-chevron-right post-phone-chev"></i>
+            </button>
+        </div>
+        {% endif %}
+
+        {# FN-MOSAIQUE : plusieurs photos / vidéos → mosaïque (1er média + « +N »), au clic lecture une par une (voir feed.html) #}
+        {% set fn_medias = medias_pub(pub) if (medias_pub is defined and pub.media_url) else [] %}
+        {% if pub.media_url and fn_medias|length > 1 %}
+            {% set fn_n = fn_medias|length %}
+            <div {% if pub.musique and pub.musique_preview_url %}class="feed-photo-music-wrap" data-pub-id="{{ pub.id }}" {% endif %}style="background: #000; text-align: center;">
+                <div class="fn-mosaic" data-pub-id="{{ pub.id }}" data-count="{{ fn_n }}" data-medias='{{ fn_medias|tojson }}' style="display:grid;grid-template-columns:repeat(6,1fr);gap:2px;background:#000;">
+                {% for m in fn_medias[:5] %}
+                    {% set fn_i = loop.index %}
+                    {% if fn_n == 2 %}{% set fn_span = 3 %}{% set fn_ar = '4/5' %}
+                    {% elif fn_n == 3 %}{% set fn_span = 6 if fn_i == 1 else 3 %}{% set fn_ar = '16/10' if fn_i == 1 else '1/1' %}
+                    {% elif fn_n >= 5 %}{% set fn_span = 3 if fn_i <= 2 else 2 %}{% set fn_ar = '1/1' %}
+                    {% else %}{% set fn_span = 3 %}{% set fn_ar = '1/1' %}{% endif %}
+                    <div class="fn-mos-cell" role="button" tabindex="0" data-idx="{{ loop.index0 }}" aria-label="Ouvrir le média {{ fn_i }} sur {{ fn_n }}"
+                         onclick="event.stopPropagation(); window.fnMosaiqueOuvrir && fnMosaiqueOuvrir({{ pub.id }}, {{ loop.index0 }});"
+                         style="position:relative;overflow:hidden;cursor:pointer;background:#111;grid-column:span {{ fn_span }};aspect-ratio:{{ fn_ar }};">
+                        {% if m.video %}
+                        <video src="{{ m.url }}#t=0.1" preload="metadata" muted playsinline tabindex="-1" style="display:block;width:100%;height:100%;object-fit:cover;pointer-events:none;"></video>
+                        <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:flex;align-items:center;justify-content:center;pointer-events:none;"><i class="fa-solid fa-play"></i></span>
+                        {% else %}
+                        <img src="{{ m.url }}" alt="Photo {{ fn_i }} sur {{ fn_n }}" loading="lazy" decoding="async" draggable="false" style="display:block;width:100%;height:100%;object-fit:cover;">
+                        {% endif %}
+                        {% if fn_n > 5 and loop.last %}
+                        <span style="position:absolute;inset:0;background:rgba(0,0,0,.5);color:#fff;font-size:32px;font-weight:600;display:flex;align-items:center;justify-content:center;pointer-events:none;">+{{ fn_n - 5 }}</span>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+                </div>
+                {% if pub.musique and pub.musique_preview_url %}
+                <button type="button" class="feed-music-play-btn" data-pub-id="{{ pub.id }}"
+                        onclick="toggleFeedMusicPlayback({{ pub.id }}, this)"
+                        data-src="{{ pub.musique_preview_url }}"
+                        data-debut="{{ pub.musique_debut or 0 }}">
+                    <i class="fa-solid fa-play"></i>
+                </button>
+                <div class="feed-photo-music-overlay">
+                    <div class="feed-music-title">{{ pub.musique }}</div>
+                    <div class="feed-music-bars"><span></span><span></span><span></span><span></span><span></span></div>
+                </div>
+                {% endif %}
+            </div>
+        {% elif pub.media_url %}
+            <div {% if pub.musique and pub.musique_preview_url and not est_video %}class="feed-photo-music-wrap" data-pub-id="{{ pub.id }}" {% endif %}style="background: #000; text-align: center;">
+            {% if pub.media_url.endswith('.mp4') or pub.media_url.endswith('.webm') %}
+                <div class="feed-video-wrapper">
+                    <video src="{{ url_for('static', filename='uploads/' + pub.media_url) }}#t=0.1" preload="metadata" style="cursor:pointer; display:block; width:100%; height:auto; max-height:80vh; object-fit:contain; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; image-rendering: high-quality;" playsinline onclick="handleFeedVideoClick(event, {{ pub.id }})" ondblclick="handleFeedVideoDoubleTapLike({{ pub.id }}, this)" data-pub-id="{{ pub.id }}"></video>
+                </div>
+            {% else %}
+                <img src="{{ url_for('static', filename='uploads/' + pub.media_url) }}" alt="Photo de la publication" loading="lazy" style="display:block; width:100%; height:auto; max-height:80vh; object-fit:contain; cursor:pointer; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; image-rendering: high-quality;" onclick="openPhotoViewer({{ pub.id }}, this.src)">
+                {% if pub.musique and pub.musique_preview_url %}
+                <button type="button" class="feed-music-play-btn" data-pub-id="{{ pub.id }}"
+                        onclick="toggleFeedMusicPlayback({{ pub.id }}, this)"
+                        data-src="{{ pub.musique_preview_url }}"
+                        data-debut="{{ pub.musique_debut or 0 }}">
+                    <i class="fa-solid fa-play"></i>
+                </button>
+                <div class="feed-photo-music-overlay">
+                    <div class="feed-music-title">{{ pub.musique }}</div>
+                    <div class="feed-music-bars"><span></span><span></span><span></span><span></span><span></span></div>
+                </div>
+                {% endif %}
+            {% endif %}
+            </div>
+        {% elif pub.musique_cover_url %}
+            <div class="feed-music-card" data-pub-id="{{ pub.id }}" style="background-image:url('{{ pub.musique_cover_url }}'); image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; image-rendering: high-quality;">
+                <button type="button" class="feed-music-play-btn" data-pub-id="{{ pub.id }}"
+                        onclick="toggleFeedMusicPlayback({{ pub.id }}, this)"
+                        data-src="{{ pub.musique_preview_url or '' }}"
+                        data-debut="{{ pub.musique_debut or 0 }}"
+                        {% if not pub.musique_preview_url %}disabled{% endif %}>
+                    <i class="fa-solid fa-play"></i>
+                </button>
+                <div class="feed-music-overlay">
+                    <div class="feed-music-title">{{ pub.musique }}</div>
+                    <div class="feed-music-bars"><span></span><span></span><span></span><span></span><span></span></div>
+                </div>
+            </div>
+        {% endif %}
+
+        {# FN-PUB-IA : Tsapi IA discrète sous la photo / vidéo. « hidden » = invisible partout, sauf dans le fil (règle CSS dans feed.html). #}
+        {% if pub.media_url and pub.type_publication not in ('photo_profil', 'photo_couverture') %}
+        {% set ia_genre = 'vidéo' if est_video else 'photo' %}
+        <div class="fn-pub-ia" data-pub-id="{{ pub.id }}" data-kind="{{ 'video' if est_video else 'photo' }}" hidden onclick="event.stopPropagation();" onkeydown="event.stopPropagation();">
+            <button type="button" class="fn-pub-ia-toggle" aria-expanded="false" onclick="window.fnPubIA && fnPubIA.toggle(this);">
+                <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+                <span>Poser une question à Tsapi IA</span>
+            </button>
+            <div class="fn-pub-ia-panel" hidden>
+                <div class="fn-pub-ia-chips"></div>
+                <div class="fn-pub-ia-thread" aria-live="polite"></div>
+                <div class="fn-pub-ia-row">
+                    <input type="text" class="fn-pub-ia-input" maxlength="300" autocomplete="off" placeholder="Pose ta question sur cette {{ ia_genre }}…" aria-label="Question pour Tsapi IA" onkeydown="window.fnPubIA && fnPubIA.key(event, this);">
+                    <button type="button" class="fn-pub-ia-send" aria-label="Envoyer la question" onclick="window.fnPubIA && fnPubIA.send(this);"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i></button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if pub.sondage %}
+            {% set total_votes = pub.sondage.options|map(attribute='votes')|map('length')|sum %}
+            {% set mon_vote_id = (pub.sondage.votes|selectattr('user_id','equalto',uid)|map(attribute='option_id')|list|first) %}
+            <div class="poll-box" data-poll-id="{{ pub.sondage.id }}">
+                {% for opt in pub.sondage.options %}
+                    {% set nb = opt.votes|length %}
+                    {% set pct = ((nb / total_votes * 100) if total_votes > 0 else 0)|round|int %}
+                    <button type="button" class="poll-option {{ 'voted' if mon_vote_id else '' }} {{ 'mine' if mon_vote_id == opt.id else '' }}"
+                            onclick="voterSondage({{ pub.sondage.id }}, {{ opt.id }}, this)">
+                        <div class="poll-option-fill" style="width:{{ pct if mon_vote_id else 0 }}%;"></div>
+                        <span class="poll-option-text">{{ opt.texte }}</span>
+                        <span class="poll-option-pct" style="display:{{ 'inline' if mon_vote_id else 'none' }};">{{ pct }}%</span>
+                    </button>
+                {% endfor %}
+                <div class="poll-total-votes">{{ total_votes }} vote{{ 's' if total_votes != 1 else '' }}</div>
+            </div>
+        {% endif %}
+
+        {% if pub.evenement_fil %}
+            {% set ev = pub.evenement_fil %}
+            {% set nb_participe = ev.participations|selectattr('statut','equalto','participe')|list|length %}
+            {% set nb_interesse = ev.participations|selectattr('statut','equalto','interesse')|list|length %}
+            {% set mon_statut = (ev.participations|selectattr('user_id','equalto',uid)|map(attribute='statut')|list|first) %}
+            {% set ev_mode = ev.mode_affichage if ev.mode_affichage in ('background', 'logo') else 'simple' %}
+            {% set ev_photo = ev.image and ev_mode == 'background' %}
+            {% set ev_logo = ev_mode == 'logo' %}
+            {% set ev_col = ev.couleur or '#1877f2' %}
+            {% set ev_tc = ev.texte_couleur or '#ffffff' %}
+            <div class="event-box fn-ev {{ 'has-event-background' if ev_photo else '' }} {{ 'has-event-logo' if ev_logo else '' }}" data-event-id="{{ ev.id }}" role="button" tabindex="0" aria-expanded="false" {% if ev_photo %}style="background-image:linear-gradient(rgba(0,0,0,{{ ev.voile or '0.55' }}),rgba(0,0,0,{{ ev.voile or '0.55' }})),url('{{ url_for('static', filename='uploads/' ~ ev.image) }}');--event-text-color:{{ ev_tc }};color:{{ ev_tc }};"{% elif ev_logo %}style="background-image:linear-gradient(rgba(0,0,0,{{ ev.voile or '0' }}),rgba(0,0,0,{{ ev.voile or '0' }})),linear-gradient(135deg,{{ ev_col }},{{ ev_col }}a6);--event-text-color:{{ ev_tc }};color:{{ ev_tc }};"{% endif %}>
+                {% if ev_logo %}<i class="fa-solid {{ ev.icone or 'fa-star' }} event-logo-bg" aria-hidden="true"></i>{% endif %}
+                <span class="event-toggle" aria-hidden="true"><i class="fa-solid fa-chevron-down"></i></span>
+                <div class="event-header"><i class="fa-solid {{ ev.icone or 'fa-calendar-days' }}"></i> Événement</div>
+                <div class="event-title">{{ ev.titre }}</div>
+                {% if ev.date_debut %}<div class="event-meta">🕒 {{ ev.date_debut.strftime('%d/%m/%Y à %H:%M') }}</div>{% endif %}
+                {% if ev.lieu %}<div class="event-meta ev-lieu">📍 {{ ev.lieu }}</div>{% endif %}
+                {% if ev.description %}<div class="event-desc">{{ ev.description }}</div>{% endif %}
+                {# Intéressé / Participer : seulement pour les événements organisés (soirée, rencontre…), pas pour les évènements marquants (couple, diplôme…) #}
+                {% if not ev.categorie %}
+                <div class="event-stats">{{ nb_participe }} participant{{ 's' if nb_participe != 1 else '' }} · {{ nb_interesse }} intéressé{{ 's' if nb_interesse != 1 else '' }}</div>
+                <div class="event-actions">
+                    <button type="button" class="event-btn {{ 'active' if mon_statut == 'interesse' else '' }}" onclick="repondreEvenement({{ ev.id }}, 'interesse', this)">⭐ Intéressé(e)</button>
+                    <button type="button" class="event-btn {{ 'active' if mon_statut == 'participe' else '' }}" onclick="repondreEvenement({{ ev.id }}, 'participe', this)">✅ Participer</button>
+                </div>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <div class="post-stats">
+            <span class="reaction-cluster-inline" id="reaction-cluster-{{ pub.id }}" data-lazy-reactions="1"></span>
+            <span id="like-count-{{ pub.id }}"><i class="fa-solid fa-thumbs-up"></i> {{ pub.likes|length|compact }}</span>
+            <span id="comment-count-{{ pub.id }}" style="cursor:pointer;" onclick="openCommentsDrawer({{ pub.id }})"><i class="fa-regular fa-comment"></i> {{ pub.commentaires|length }}</span>
+            <span id="share-count-{{ pub.id }}"><i class="fa-solid fa-share"></i> {{ pub.share_count or 0 }}</span>
+            <span id="repost-count-{{ pub.id }}" class="fn-rp-count" role="button" tabindex="0" style="display:none;" title="Voir qui a republié" onclick="event.stopPropagation(); window.fnRepostListe && fnRepostListe.ouvrir({{ pub.id }});" onkeydown="if(event.key==='Enter'){event.stopPropagation(); window.fnRepostListe && fnRepostListe.ouvrir({{ pub.id }});}"><i class="fa-solid fa-retweet"></i> <b>0</b></span>
+        </div>
+
+        <div class="friends-liked-line" id="friends-liked-{{ pub.id }}" data-lazy-friends-likes="1" data-likes="{{ pub.likes|length }}"></div>
+        {# AJOUT : « Marie et Paul ont republié » (rempli par _repost_actions.html) #}
+        <div class="friends-reposted-line" id="friends-reposted-{{ pub.id }}"></div>
+
+        {% if pub.fn_sponso_cta is defined and pub.fn_sponso_cta %}
+        <div class="fn-sponso-cta" style="display:flex;gap:8px;flex-wrap:wrap;padding:10px 12px 0;">
+            {% for b in pub.fn_sponso_cta %}
+            <a href="{{ b.url }}" {% if b.url.startswith('http') %}target="_blank" rel="noopener noreferrer"{% endif %} onclick="event.stopPropagation();" style="display:inline-flex;align-items:center;gap:6px;background:#e4e6eb;color:#050505;text-decoration:none;font-weight:600;font-size:14px;padding:8px 14px;border-radius:8px;"><i class="{{ 'fa-brands' if b.icone == 'fa-whatsapp' else 'fa-solid' }} {{ b.icone }}"></i> {{ b.label }}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <div class="post-actions-bar">
+            {% set user_liked = (pub.likes|selectattr('user_id', 'equalto', uid)|list|length) > 0 %}
+            <button type="button" class="post-action-button {% if user_liked %}liked{% endif %}" id="like-btn-{{ pub.id }}" data-pub-id="{{ pub.id }}" onclick="toggleLike({{ pub.id }}, this)">
+                <i class="fa-solid fa-thumbs-up" id="like-icon-{{ pub.id }}"></i> <span id="like-label-{{ pub.id }}">{% if user_liked %}Aimé{% else %}J'aime{% endif %}</span>
+            </button>
+            {% if uid == pub.user_id or peut_commenter_publication(pub, uid) %}
+            <button type="button" class="post-action-button"
+                    onclick="handleFeedCommentButtonClick({{ pub.id }})"
+                    ontouchstart="startFeedCommentLongPress(event, {{ pub.id }}, this)"
+                    ontouchend="cancelFeedCommentLongPress()"
+                    onmousedown="startFeedCommentLongPress(event, {{ pub.id }}, this)"
+                    onmouseup="cancelFeedCommentLongPress()"
+                    onmouseleave="cancelFeedCommentLongPress()">
+                <i class="fa-regular fa-comment"></i> Commenter
+            </button>
+            {% endif %}
+            <button type="button" class="post-action-button" onclick="openShareModal({{ pub.id }})">
+                <i class="fa-solid fa-share"></i> Partager
+            </button>
+            {# AJOUT : Republier en un appui, sans texte obligatoire ; les flèches tournent pendant l'envoi (voir _repost_actions.html) #}
+            <button type="button" class="post-action-button fn-rp-btn" id="rp-feed-btn-{{ pub.id }}" data-pub-id="{{ pub.id }}" aria-pressed="false" aria-label="Republier" onclick="event.stopPropagation(); window.fnRepost && fnRepost.clic({{ pub.id }}, this);">
+                <i class="fa-solid fa-retweet" aria-hidden="true"></i> <span class="fn-rp-label">Republier</span>
+            </button>
+            {% if pub.user_id == uid %}
+            <a href="/boost?post_id={{ pub.id }}" class="post-action-button boost-btn" title="Booster cette publication">
+                <i class="fa-solid fa-rocket"></i> Booster
+            </a>
+            {% endif %}
+        </div>
+
+        <div class="comments-section" id="comments-box-{{ pub.id }}">
+            {% for comm in pub.commentaires %}
+            <div class="comment-item comment-preview-hidden" id="comment-{{ comm.id }}"
+                 data-comment-id="{{ comm.id }}"
+                 data-owner="{{ '1' if comm.user_id == uid else '0' }}"
+                 data-post-owner="{{ '1' if pub.user_id == uid else '0' }}"
+                 ontouchstart="startCommentPress(event, {{ comm.id }})"
+                 ontouchend="cancelCommentPress()"
+                 oncontextmenu="openCommentActions({{ comm.id }}); return false;">
+                <a href="{{ url_for('main.profile', username=comm.author.username) }}" onclick="event.stopPropagation();">
+                    <img src="{{ url_for('static', filename='uploads/' + (comm.author.avatar if comm.author.avatar else 'default_avatar.png')) }}" class="comment-avatar" alt="" loading="lazy" decoding="async">
+                </a>
+                <div class="comment-body">
+                    {% if comm.parent_id and comm.parent %}
+                    <div class="comment-reply-link" onclick="event.stopPropagation(); scrollToParentComment({{ pub.id }}, {{ comm.parent_id }})">
+                        <i class="fa-solid fa-share fa-flip-horizontal"></i> En réponse à <strong>{{ comm.parent.author.nom_complet }}</strong>
+                    </div>
+                    {% endif %}
+                    <div class="comment-bubble">
+                        <a href="{{ url_for('main.profile', username=comm.author.username) }}" class="comment-author" onclick="event.stopPropagation();">{{ comm.author.nom_complet }}</a>
+                        {% if comm.user_id == pub.user_id %}
+                        <span class="comment-owner-badge"><i class="fa-solid fa-pen"></i> Propriétaire</span>
+                        {% endif %}
+                        {% if comm.contenu.startswith('AUDIO::') %}
+                        <audio controls src="{{ url_for('static', filename='uploads/' + comm.contenu[7:]) }}" style="max-width:200px;"></audio>
+                        {% else %}
+                        <span class="comment-text">{{ comm.contenu }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="comment-meta-row">
+                        <span class="comment-meta-link" onclick="event.stopPropagation(); startReplyTo({{ comm.id }})">Répondre</span>
+                        {% if comm.user_id != uid %}
+                        <span class="comment-meta-link" onclick="event.stopPropagation(); hideCommentById({{ comm.id }})">Masquer</span>
+                        {% endif %}
+                        <span class="comment-like-pill" id="comment-like-pill-{{ comm.id }}" style="display:{{ 'inline-flex' if comm.likes_count and comm.likes_count > 0 else 'none' }};">
+                            <i class="fa-solid fa-thumbs-up"></i> <span id="comment-like-count-{{ comm.id }}">{{ comm.likes_count or 0 }}</span>
+                        </span>
+                        <span class="comment-dislike-pill" id="comment-dislike-pill-{{ comm.id }}" style="display:{{ 'inline-flex' if comm.dislikes_count and comm.dislikes_count > 0 else 'none' }};">
+                            <i class="fa-solid fa-thumbs-down"></i> <span id="comment-dislike-count-{{ comm.id }}">{{ comm.dislikes_count or 0 }}</span>
+                        </span>
+                        <span class="comment-meta-spacer"></span>
+                        <button type="button" class="comment-vote-btn {{ 'active' if comm.user_liked else '' }}" id="comment-like-btn-{{ comm.id }}" onclick="toggleCommentLike({{ comm.id }}, event)">
+                            <i class="fa-{{ 'solid' if comm.user_liked else 'regular' }} fa-thumbs-up"></i>
+                        </button>
+                        <button type="button" class="comment-vote-btn {{ 'active' if comm.user_disliked else '' }}" id="comment-dislike-btn-{{ comm.id }}" onclick="toggleCommentDislike({{ comm.id }}, event)">
+                            <i class="fa-{{ 'solid' if comm.user_disliked else 'regular' }} fa-thumbs-down"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <button type="button" class="comments-view-all-bar" id="comments-viewall-{{ pub.id }}" onclick="openCommentsDrawer({{ pub.id }})" style="display:{{ 'block' if pub.commentaires|length > 0 else 'none' }};">
+            Voir les {{ pub.commentaires|length }} commentaires
+        </button>
+        <div class="comment-reply-target-chip" id="reply-target-chip-{{ pub.id }}">
+            <span>Réponse à <strong id="reply-target-name-{{ pub.id }}"></strong></span>
+            <span class="cancel-reply" onclick="cancelReplyTarget({{ pub.id }})">✕</span>
+        </div>
+        <input type="hidden" id="reply-target-id-{{ pub.id }}" value="">
+        <div class="comment-input-row">
+            <input type="text" class="comment-input" id="input-comm-{{ pub.id }}" placeholder="Écrire un commentaire..." aria-label="Écrire un commentaire" onkeypress="submitComment(event, {{ pub.id }})">
+            <button type="button" class="comment-voice-btn" id="voice-btn-{{ pub.id }}" onclick="toggleVoiceComment({{ pub.id }}, this)" title="Commentaire vocal"><i class="fa-solid fa-microphone"></i></button>
+            <button class="comment-send-btn" aria-label="Publier le commentaire" onclick="postComment({{ pub.id }})" title="Publier le commentaire">Publier</button>
+        </div>
+    </div>
+{% endmacro %}

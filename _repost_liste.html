@@ -1,0 +1,163 @@
+{# ══════════════════════════════════════════════════════════════════
+   _repost_liste.html — « Qui a republié ? » : feuille qui liste toutes les personnes qui ont republié
+   une publication, avec leur mot (ou « a republié sans laisser de mot »).
+   Inclus par _repost_actions.html (fil + profil) et par reel.html.
+   Ouverture : window.fnRepostListe.ouvrir(idPublication)
+   Contient aussi fnFmtCount (1000 → 1K, 10000 → 10K, 1 million → 1M, 1 milliard → 1Md).
+   ══════════════════════════════════════════════════════════════════ #}
+<style>
+.fn-rpl-backdrop { position: fixed; inset: 0; z-index: 99992; background: rgba(0,0,0,.45); opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+.fn-rpl-backdrop.open { opacity: 1; pointer-events: auto; }
+.fn-rpl-sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 99993; max-width: 560px; margin: 0 auto; height: 75vh; display: flex; flex-direction: column; background: #fff; color: #050505; border-radius: 18px 18px 0 0; box-shadow: 0 -8px 30px rgba(0,0,0,.25); transform: translateY(105%); transition: transform .25s ease; }
+.fn-rpl-sheet.open { transform: translateY(0); }
+.fn-rpl-handle { width: 40px; height: 4px; border-radius: 4px; background: #ccd0d5; margin: 10px auto 6px; flex-shrink: 0; }
+.fn-rpl-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 16px 10px; border-bottom: 1px solid #e4e6eb; flex-shrink: 0; }
+.fn-rpl-head strong { display: block; font-size: 16px; font-weight: 800; }
+.fn-rpl-head small { display: block; font-size: 12px; color: #65676b; margin-top: 2px; }
+.fn-rpl-x { border: 0; background: #e4e6eb; width: 32px; height: 32px; border-radius: 50%; font-size: 15px; cursor: pointer; color: inherit; }
+.fn-rpl-list { flex: 1; overflow-y: auto; padding: 4px 16px calc(14px + env(safe-area-inset-bottom, 0px)); -webkit-overflow-scrolling: touch; }
+.fn-rpl-row { display: flex; gap: 10px; padding: 12px 0; border-bottom: 1px solid #f0f2f5; }
+.fn-rpl-av img { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; background: #e4e6eb; display: block; }
+.fn-rpl-body { min-width: 0; flex: 1; }
+.fn-rpl-top { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.fn-rpl-nom { font-size: 14.5px; font-weight: 800; color: inherit; text-decoration: none; }
+.fn-rpl-date { font-size: 12px; color: #65676b; }
+.fn-rpl-note { margin-top: 4px; font-size: 14.5px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
+.fn-rpl-aucun { margin-top: 4px; font-size: 13px; color: #8a8d91; font-style: italic; }
+.fn-rpl-etat { text-align: center; padding: 28px 8px; font-size: 14px; color: #65676b; }
+.fn-rpl-plus { display: block; width: 100%; margin: 10px 0 4px; border: 0; border-radius: 10px; padding: 11px; font-size: 14px; font-weight: 700; background: #e4e6eb; color: inherit; cursor: pointer; }
+html[data-fn-theme="dark"] .fn-rpl-sheet, body.dark-mode .fn-rpl-sheet { background: #242526; color: #e4e6eb; }
+html[data-fn-theme="dark"] .fn-rpl-head, body.dark-mode .fn-rpl-head { border-color: #3e4042; }
+html[data-fn-theme="dark"] .fn-rpl-row, body.dark-mode .fn-rpl-row { border-color: #3a3b3c; }
+html[data-fn-theme="dark"] .fn-rpl-x, html[data-fn-theme="dark"] .fn-rpl-plus, body.dark-mode .fn-rpl-x, body.dark-mode .fn-rpl-plus { background: #3a3b3c; }
+html[data-fn-theme="dark"] .fn-rpl-handle, body.dark-mode .fn-rpl-handle { background: #4e4f50; }
+</style>
+
+<div class="fn-rpl-backdrop" id="fn-rpl-backdrop"></div>
+<div class="fn-rpl-sheet" id="fn-rpl-sheet" role="dialog" aria-modal="true" aria-labelledby="fn-rpl-titre">
+    <div class="fn-rpl-handle"></div>
+    <div class="fn-rpl-head">
+        <div><strong id="fn-rpl-titre">Republications</strong><small id="fn-rpl-sous"></small></div>
+        <button type="button" class="fn-rpl-x" id="fn-rpl-close" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="fn-rpl-list" id="fn-rpl-list"></div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+    if (window.fnRepostListe) return;
+
+    /* Abrège un compteur : 999 → 999 ; 1 000 → 1K ; 1 500 → 1,5K ; 10 000 → 10K ; 1 000 000 → 1M ; 1 000 000 000 → 1Md */
+    if (typeof window.fnFmtCount !== 'function') {
+        window.fnFmtCount = function (n) {
+            n = Math.floor(Number(n) || 0); if (n < 0) n = 0;
+            var u = [[1e9, 'Md'], [1e6, 'M'], [1e3, 'K']];
+            for (var i = 0; i < u.length; i++) {
+                if (n >= u[i][0]) { var t = Math.floor(n * 10 / u[i][0]), w = Math.floor(t / 10), d = t % 10; return w + (d ? ',' + d : '') + u[i][1]; }
+            }
+            return String(n);
+        };
+    }
+
+    function el(i) { return document.getElementById(i); }
+    var pubCourante = null, decalage = 0, charge = false;
+
+    function etat(msg) {
+        var l = el('fn-rpl-list');
+        var d = document.createElement('div');
+        d.className = 'fn-rpl-etat';
+        d.textContent = msg;
+        l.appendChild(d);
+        return d;
+    }
+
+    function ligne(it) {
+        var r = document.createElement('div');
+        r.className = 'fn-rpl-row';
+        var a = document.createElement('a');
+        a.className = 'fn-rpl-av';
+        if (it.url) a.href = it.url;
+        var img = document.createElement('img');
+        img.alt = ''; img.loading = 'lazy'; img.src = it.avatar;
+        a.appendChild(img);
+        var c = document.createElement('div');
+        c.className = 'fn-rpl-body';
+        var top = document.createElement('div');
+        top.className = 'fn-rpl-top';
+        var n = document.createElement('a');
+        n.className = 'fn-rpl-nom';
+        if (it.url) n.href = it.url;
+        n.textContent = it.moi ? 'Vous' : it.nom;
+        var dt = document.createElement('span');
+        dt.className = 'fn-rpl-date';
+        dt.textContent = '· ' + (it.date || '');
+        top.appendChild(n); top.appendChild(dt);
+        c.appendChild(top);
+        var m = document.createElement('div');
+        if (it.commentaire) {
+            m.className = 'fn-rpl-note';
+            m.textContent = it.commentaire;
+        } else {
+            m.className = 'fn-rpl-aucun';
+            m.textContent = (it.moi ? 'Vous avez republié sans laisser de mot.' : 'A republié sans laisser de mot.');
+        }
+        c.appendChild(m);
+        r.appendChild(a); r.appendChild(c);
+        return r;
+    }
+
+    function charger(raz) {
+        if (charge || pubCourante == null) return;
+        var id = pubCourante;
+        charge = true;
+        var l = el('fn-rpl-list');
+        if (raz) { decalage = 0; l.innerHTML = ''; el('fn-rpl-sous').textContent = ''; }
+        var attente = etat('Chargement…');
+        fetch('/api/reel/' + id + '/republications?offset=' + decalage, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d || {} }; }); })
+            .then(function (r) {
+                charge = false;
+                if (id !== pubCourante) return;
+                attente.remove();
+                if (!r.ok || !r.d.success) { etat(r.d.error || 'Impossible de charger la liste. Réessayez.'); return; }
+                var items = r.d.items || [];
+                var plus = l.querySelector('.fn-rpl-plus');
+                if (plus) plus.remove();
+                el('fn-rpl-sous').textContent = r.d.total + (r.d.total > 1 ? ' personnes ont republié' : ' personne a republié');
+                if (!items.length && decalage === 0) { etat("Personne n'a republié pour le moment."); return; }
+                items.forEach(function (it) { l.appendChild(ligne(it)); });
+                decalage += items.length;
+                if (r.d.suite) {
+                    var b = document.createElement('button');
+                    b.type = 'button'; b.className = 'fn-rpl-plus'; b.textContent = 'Voir plus';
+                    b.addEventListener('click', function () { charger(false); });
+                    l.appendChild(b);
+                }
+            })
+            .catch(function () {
+                charge = false;
+                attente.remove();
+                etat('Connexion impossible. Réessayez.');
+            });
+    }
+
+    function ouvrir(id) {
+        pubCourante = String(id);
+        el('fn-rpl-backdrop').classList.add('open');
+        el('fn-rpl-sheet').classList.add('open');
+        charge = false;
+        charger(true);
+    }
+    function fermer() {
+        pubCourante = null;
+        el('fn-rpl-backdrop').classList.remove('open');
+        el('fn-rpl-sheet').classList.remove('open');
+    }
+    el('fn-rpl-backdrop').addEventListener('click', fermer);
+    el('fn-rpl-close').addEventListener('click', fermer);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && el('fn-rpl-sheet').classList.contains('open')) fermer(); });
+
+    window.fnRepostListe = { ouvrir: ouvrir, fermer: fermer };
+})();
+</script>
