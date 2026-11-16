@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block title %}Créer une note{% endblock %}
+
+{% block content %}
+<style>
+.nc-page { max-width: 560px; margin: 0 auto; padding: 14px 14px 90px; color: var(--text, #050505); }
+.nc-top { display:flex; align-items:center; gap:10px; margin-bottom: 14px; }
+.nc-back { width:38px; height:38px; border-radius:50%; border:none; background: var(--bg, #f0f2f5); color: inherit; font-size:18px; cursor:pointer; }
+.nc-top h1 { flex:1; margin:0; font-size:20px; font-weight:800; }
+.nc-publish { border:none; background:#0866FF; color:#fff; font-weight:700; font-size:15px; padding:9px 18px; border-radius:20px; cursor:pointer; }
+.nc-publish:disabled { opacity:.45; cursor:not-allowed; }
+
+.nc-stage { background: var(--surface, #fff); border:1px solid var(--border, #e4e6eb); border-radius:16px; padding: 26px 16px 18px; text-align:center; }
+.nc-avatar-wrap { position:relative; width:96px; margin:0 auto; padding-top:56px; }
+.nc-avatar { width:96px; height:96px; border-radius:50%; object-fit:cover; display:block; background:#ddd; }
+.nc-bubble { position:absolute; left:50%; top:0; transform:translateX(-50%); min-width:70px; max-width:250px; background: var(--bg, #f0f2f5); color: var(--text, #050505);
+  border-radius:18px; padding:8px 12px; font-size:14px; line-height:1.3; box-shadow:0 1px 4px rgba(0,0,0,.18); word-break:break-word; text-align:center; }
+.nc-bubble::after { content:""; position:absolute; left:50%; bottom:-9px; width:12px; height:12px; background:inherit; border-radius:50%; transform:translateX(-18px); }
+.nc-bubble::before { content:""; position:absolute; left:50%; bottom:-17px; width:7px; height:7px; background:inherit; border-radius:50%; transform:translateX(-10px); }
+.nc-bubble .nc-ph { opacity:.55; }
+.nc-bubble img.nc-gif { display:block; max-width:150px; max-height:120px; border-radius:10px; margin:4px auto 0; }
+.nc-bubble .nc-mus { display:flex; align-items:center; gap:6px; font-size:12px; margin-top:5px; justify-content:center; opacity:.85; }
+.nc-bubble .nc-mus img { width:22px; height:22px; border-radius:4px; object-fit:cover; }
+.nc-who { margin-top:12px; font-weight:700; font-size:15px; }
+.nc-hint { font-size:12px; opacity:.6; margin-top:2px; }
+
+.nc-field { margin-top:14px; position:relative; }
+.nc-field textarea { width:100%; box-sizing:border-box; resize:none; border:1px solid var(--border, #ccd0d5); border-radius:12px; padding:12px 14px 26px; font-size:16px; font-family:inherit; background: var(--surface, #fff); color: inherit; outline:none; }
+.nc-field textarea:focus { border-color:#0866FF; }
+.nc-count { position:absolute; right:12px; bottom:8px; font-size:12px; opacity:.6; }
+.nc-count.nc-max { color:#e41e3f; opacity:1; font-weight:700; }
+
+.nc-actions { display:flex; gap:10px; margin-top:12px; }
+.nc-act { flex:1; border:1px solid var(--border, #ccd0d5); background: var(--surface, #fff); color: inherit; border-radius:12px; padding:11px 8px; font-size:14px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; }
+.nc-act.on { border-color:#0866FF; color:#0866FF; background:rgba(8,102,255,.08); }
+.nc-act .nc-x { margin-left:2px; opacity:.7; }
+
+.nc-panel { display:none; margin-top:12px; background: var(--surface, #fff); border:1px solid var(--border, #e4e6eb); border-radius:14px; padding:12px; }
+.nc-panel.show { display:block; }
+.nc-search { width:100%; box-sizing:border-box; border:1px solid var(--border, #ccd0d5); border-radius:20px; padding:9px 14px; font-size:15px; background: var(--bg, #f0f2f5); color:inherit; outline:none; }
+.nc-results { margin-top:10px; max-height:300px; overflow-y:auto; }
+.nc-msg { text-align:center; font-size:13px; opacity:.7; padding:14px 6px; }
+.nc-track { display:flex; align-items:center; gap:10px; padding:7px 4px; border-radius:10px; cursor:pointer; }
+.nc-track:hover { background: var(--bg, #f0f2f5); }
+.nc-track img { width:44px; height:44px; border-radius:8px; object-fit:cover; flex-shrink:0; }
+.nc-track .t { flex:1; min-width:0; }
+.nc-track .t b { display:block; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.nc-track .t span { font-size:12px; opacity:.65; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
+.nc-track button { border:none; background: var(--bg, #f0f2f5); color:inherit; width:34px; height:34px; border-radius:50%; cursor:pointer; flex-shrink:0; }
+.nc-gifgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+.nc-gifgrid img { width:100%; height:92px; object-fit:cover; border-radius:8px; cursor:pointer; background: var(--bg, #f0f2f5); }
+.nc-error { color:#e41e3f; font-size:13px; margin-top:10px; text-align:center; min-height:16px; }
+.nc-delete { display:block; margin:18px auto 0; border:none; background:none; color:#e41e3f; font-weight:600; cursor:pointer; font-size:14px; }
+</style>
+
+<div class="nc-page">
+    <div class="nc-top">
+        <button type="button" class="nc-back" onclick="history.length > 1 ? history.back() : (location.href='/messagerie')" aria-label="Retour">←</button>
+        <h1>Nouvelle note</h1>
+        <button type="button" class="nc-publish" id="ncPublish" disabled>Publier</button>
+    </div>
+
+    <div class="nc-stage">
+        <div class="nc-avatar-wrap">
+            <div class="nc-bubble" id="ncBubble"><span class="nc-ph">Partagez une réflexion…</span></div>
+            <img class="nc-avatar" alt="Vous"
+                 src="{{ url_for('static', filename='uploads/' + (current_user.avatar if current_user and current_user.avatar else 'default_avatar.png')) }}">
+        </div>
+        <div class="nc-who">{{ (current_user.nom_complet or current_user.username) if current_user and current_user.is_authenticated else 'Vous' }}</div>
+        <div class="nc-hint">Visible par vos amis pendant 24 h</div>
+    </div>
+
+    <div class="nc-field">
+        <textarea id="ncTexte" rows="3" maxlength="{{ note_max }}" placeholder="Écrivez votre note (emojis acceptés 😊)"></textarea>
+        <span class="nc-count" id="ncCount">0/{{ note_max }}</span>
+    </div>
+
+    <div class="nc-actions">
+        <button type="button" class="nc-act" id="ncBtnMusic">🎵 Musique <span class="nc-x" id="ncXMusic" style="display:none;">✕</span></button>
+        <button type="button" class="nc-act" id="ncBtnGif">GIF <span class="nc-x" id="ncXGif" style="display:none;">✕</span></button>
+    </div>
+
+    <div class="nc-panel" id="ncPanelMusic">
+        <input type="search" class="nc-search" id="ncMusicQ" placeholder="Rechercher une chanson ou un artiste">
+        <div class="nc-results" id="ncMusicRes"><div class="nc-msg">Tapez le nom d’une chanson.</div></div>
+    </div>
+    <div class="nc-panel" id="ncPanelGif">
+        <input type="search" class="nc-search" id="ncGifQ" placeholder="Rechercher un GIF">
+        <div class="nc-results" id="ncGifRes"><div class="nc-msg">Chargement…</div></div>
+    </div>
+
+    <div class="nc-error" id="ncError"></div>
+    {% if note_actuelle %}
+    <button type="button" class="nc-delete" id="ncDelete">Supprimer ma note actuelle</button>
+    {% endif %}
+</div>
+
+<script>
+(function () {
+    var MAX = {{ note_max }};
+    var $ = function (id) { return document.getElementById(id); };
+    var etat = { musique: null, gif: null };
+    var audio = null, audioUrl = null;
+    var tG = null, tM = null;
+
+    function h(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+
+    function majApercu() {
+        var t = $('ncTexte').value.trim();
+        var html = '';
+        if (t) html += '<div>' + h(t) + '</div>';
+        if (etat.gif) html += '<img class="nc-gif" alt="GIF" src="' + h(etat.gif) + '">';
+        if (etat.musique) {
+            html += '<div class="nc-mus">' + (etat.musique.cover ? '<img alt="" src="' + h(etat.musique.cover) + '">' : '🎵') +
+                    '<span>' + h(etat.musique.titre) + '</span></div>';
+        }
+        $('ncBubble').innerHTML = html || '<span class="nc-ph">Partagez une réflexion…</span>';
+        var n = $('ncTexte').value.length;
+        $('ncCount').textContent = n + '/' + MAX;
+        $('ncCount').classList.toggle('nc-max', n >= MAX);
+        $('ncPublish').disabled = !(t || etat.gif || etat.musique);
+        $('ncBtnMusic').classList.toggle('on', !!etat.musique);
+        $('ncBtnGif').classList.toggle('on', !!etat.gif);
+        $('ncXMusic').style.display = etat.musique ? '' : 'none';
+        $('ncXGif').style.display = etat.gif ? '' : 'none';
+    }
+
+    function arreterAudio() { if (audio) { audio.pause(); audio = null; audioUrl = null; } }
+
+    function afficherPanel(nom) {
+        ['Music', 'Gif'].forEach(function (n) { $('ncPanel' + n).classList.toggle('show', n === nom && !$('ncPanel' + n).classList.contains('show')); });
+        if (!$('ncPanelMusic').classList.contains('show')) arreterAudio();
+    }
+
+    function erreur(msg) { $('ncError').textContent = msg || ''; }
+
+    /* ---- Texte ---- */
+    $('ncTexte').addEventListener('input', function () {
+        if (this.value.length > MAX) this.value = Array.from(this.value).slice(0, MAX).join('');
+        erreur(''); majApercu();
+    });
+
+    /* ---- Musique (même service que les publications : /api/musique/recherche) ---- */
+    $('ncBtnMusic').addEventListener('click', function (e) {
+        if (e.target.id === 'ncXMusic') { etat.musique = null; arreterAudio(); majApercu(); return; }
+        afficherPanel('Music'); $('ncMusicQ').focus();
+        if (!musiquesTendance && $('ncPanelMusic').classList.contains('show') && !$('ncMusicQ').value.trim()) { musiquesTendance = true; chercherMusique(''); }   /* titres du moment */
+    });
+    var musiquesTendance = false;
+    $('ncMusicQ').addEventListener('input', function () {
+        clearTimeout(tM);
+        var q = this.value.trim();
+        if (!q) { $('ncMusicRes').innerHTML = '<div class="nc-msg">Tapez le nom d’une chanson.</div>'; return; }
+        tM = setTimeout(function () { chercherMusique(q); }, 400);
+    });
+    function chercherMusique(q) {
+        $('ncMusicRes').innerHTML = '<div class="nc-msg">Recherche…</div>';
+        fetch('/api/musique/recherche?q=' + encodeURIComponent(q), { credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                var liste = (d && d.results) || [];
+                if (d && d.error) { $('ncMusicRes').innerHTML = '<div class="nc-msg">' + h(d.error) + '</div>'; return; }
+                if (!liste.length) { $('ncMusicRes').innerHTML = '<div class="nc-msg">Aucun résultat.</div>'; return; }
+                $('ncMusicRes').innerHTML = '';
+                liste.forEach(function (m) {
+                    var row = document.createElement('div'); row.className = 'nc-track';
+                    row.innerHTML = '<img alt="" src="' + h(m.cover || '') + '"><div class="t"><b>' + h(m.title) + '</b><span>' + h(m.artist) + '</span></div><button type="button" aria-label="Écouter">▶</button>';
+                    row.querySelector('button').addEventListener('click', function (ev) {
+                        ev.stopPropagation();
+                        if (audio && audioUrl === m.preview_url) { arreterAudio(); this.textContent = '▶'; return; }
+                        arreterAudio();
+                        audio = new Audio(m.preview_url); audioUrl = m.preview_url; audio.play().catch(function () {});
+                        $('ncMusicRes').querySelectorAll('button').forEach(function (b) { b.textContent = '▶'; });
+                        this.textContent = '⏸';
+                    });
+                    row.addEventListener('click', function () {
+                        etat.musique = { titre: m.title, artiste: m.artist, cover: m.cover, preview: m.preview_url };
+                        arreterAudio(); $('ncPanelMusic').classList.remove('show'); majApercu();
+                    });
+                    $('ncMusicRes').appendChild(row);
+                });
+            })
+            .catch(function () { $('ncMusicRes').innerHTML = '<div class="nc-msg">Service musical indisponible, réessayez.</div>'; });
+    }
+
+    /* ---- GIFs réels (Giphy via notre serveur) ---- */
+    var gifsCharges = false;
+    $('ncBtnGif').addEventListener('click', function (e) {
+        if (e.target.id === 'ncXGif') { etat.gif = null; majApercu(); return; }
+        afficherPanel('Gif');
+        if (!gifsCharges && $('ncPanelGif').classList.contains('show')) chercherGifs('');
+    });
+    $('ncGifQ').addEventListener('input', function () {
+        clearTimeout(tG); var q = this.value.trim();
+        tG = setTimeout(function () { chercherGifs(q); }, 400);
+    });
+    function chercherGifs(q) {
+        $('ncGifRes').innerHTML = '<div class="nc-msg">Chargement…</div>';
+        fetch('/api/notes/gifs?q=' + encodeURIComponent(q), { credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (!d.success) { $('ncGifRes').innerHTML = '<div class="nc-msg">' + h(d.error || 'GIFs indisponibles.') + '</div>'; return; }
+                gifsCharges = true;
+                if (!d.gifs.length) { $('ncGifRes').innerHTML = '<div class="nc-msg">Aucun GIF trouvé.</div>'; return; }
+                var grid = document.createElement('div'); grid.className = 'nc-gifgrid';
+                d.gifs.forEach(function (g) {
+                    var im = document.createElement('img'); im.src = g.preview; im.alt = 'GIF'; im.loading = 'lazy';
+                    im.addEventListener('click', function () { etat.gif = g.url; $('ncPanelGif').classList.remove('show'); majApercu(); });
+                    grid.appendChild(im);
+                });
+                $('ncGifRes').innerHTML = ''; $('ncGifRes').appendChild(grid);
+            })
+            .catch(function () { $('ncGifRes').innerHTML = '<div class="nc-msg">Service GIF indisponible, réessayez.</div>'; });
+    }
+
+    /* ---- Publier ---- */
+    $('ncPublish').addEventListener('click', function () {
+        var btn = this; btn.disabled = true; erreur('');
+        var fd = new FormData();
+        fd.append('texte', $('ncTexte').value.trim());
+        if (etat.musique) {
+            fd.append('musique_titre', etat.musique.titre || '');
+            fd.append('musique_artiste', etat.musique.artiste || '');
+            fd.append('musique_cover', etat.musique.cover || '');
+            fd.append('musique_preview_url', etat.musique.preview || '');
+        }
+        if (etat.gif) fd.append('gif_url', etat.gif);
+        fetch('/api/notes/publier', { method: 'POST', body: fd, credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d.success) { window.location.href = '/messagerie'; }
+                else { erreur(d.error || 'Publication impossible.'); btn.disabled = false; }
+            })
+            .catch(function () { erreur('Connexion impossible, réessayez.'); btn.disabled = false; });
+    });
+
+    var del = $('ncDelete');
+    if (del) del.addEventListener('click', function () {
+        if (!confirm('Supprimer votre note actuelle ?')) return;
+        fetch('/api/notes/supprimer', { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.json(); })
+            .then(function (d) { if (d.success) window.location.href = '/messagerie'; else erreur(d.error || 'Suppression impossible.'); })
+            .catch(function () { erreur('Connexion impossible, réessayez.'); });
+    });
+
+    majApercu();
+})();
+</script>
+{% endblock %}

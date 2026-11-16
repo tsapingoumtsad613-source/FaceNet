@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b2a1f">
+<title>Noël | FaceNet</title>
+<style>
+:root{
+  --nuit:#07161a; --sapin:#0b3b2a; --sapin2:#14573d; --rouge:#c8102e; --rouge2:#ff4560;
+  --or:#f5c451; --or2:#ffe39a; --neige:#ffffff; --texte:#f6f1e7; --doux:rgba(246,241,231,.68);
+  --verre:rgba(255,255,255,.08); --verre2:rgba(255,255,255,.14); --bord:rgba(255,255,255,.16);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;}
+body{
+  font-family:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+  color:var(--texte);
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(200,16,46,.28), transparent 60%),
+    radial-gradient(900px 600px at 0% 20%, rgba(20,87,61,.65), transparent 60%),
+    linear-gradient(180deg,#06121a 0%, #0a2a24 55%, #0b3b2a 100%);
+  background-attachment:fixed;
+  padding-bottom:calc(120px + env(safe-area-inset-bottom,0px));
+  overflow-x:hidden;
+}
+#neige{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+.etoiles{position:fixed;inset:0;pointer-events:none;z-index:0}
+.etoiles i{position:absolute;width:3px;height:3px;border-radius:50%;background:#fff;opacity:.0;animation:scint 4s infinite ease-in-out}
+@keyframes scint{0%,100%{opacity:.05;transform:scale(.6)}50%{opacity:.95;transform:scale(1.4)}}
+
+/* guirlande */
+.guirlande{position:fixed;top:0;left:0;right:0;height:46px;z-index:5;pointer-events:none;
+  padding-top:env(safe-area-inset-top,0px)}
+.guirlande svg{width:100%;height:46px;display:block}
+.ampoules{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 2px);display:flex;justify-content:space-around;padding:0 2%}
+.ampoules b{display:block;width:12px;height:17px;border-radius:50% 50% 55% 55%;margin-top:14px;position:relative;
+  animation:allume 2.4s infinite ease-in-out}
+.ampoules b::before{content:"";position:absolute;left:3px;top:-6px;width:6px;height:7px;background:#3b3b3b;border-radius:2px}
+.ampoules b:nth-child(4n+1){background:var(--rouge2);box-shadow:0 0 14px 3px rgba(255,69,96,.8);animation-delay:0s}
+.ampoules b:nth-child(4n+2){background:var(--or);box-shadow:0 0 14px 3px rgba(245,196,81,.85);animation-delay:.6s}
+.ampoules b:nth-child(4n+3){background:#46e08f;box-shadow:0 0 14px 3px rgba(70,224,143,.75);animation-delay:1.2s}
+.ampoules b:nth-child(4n+4){background:#6fb7ff;box-shadow:0 0 14px 3px rgba(111,183,255,.8);animation-delay:1.8s}
+@keyframes allume{0%,100%{opacity:.45;filter:saturate(.7)}50%{opacity:1;filter:saturate(1.3)}}
+
+.page{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:calc(64px + env(safe-area-inset-top,0px)) 16px 0}
+
+/* barre du haut */
+.haut{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.retour{display:inline-flex;align-items:center;gap:8px;padding:10px 16px 10px 12px;border-radius:999px;text-decoration:none;
+  color:var(--texte);background:var(--verre2);border:1px solid var(--bord);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  font-weight:600;font-size:15px;transition:transform .15s, background .2s}
+.retour:hover{background:rgba(255,255,255,.22)}
+.retour:active{transform:scale(.96)}
+.retour svg{width:18px;height:18px}
+.compte{margin-left:auto;text-align:right;font-size:13px;color:var(--doux);line-height:1.25}
+.compte strong{display:block;color:var(--or2);font-size:15px}
+
+/* hero */
+.hero{text-align:center;padding:10px 6px 22px}
+.hero h1{margin:0;font-family:Georgia,'Times New Roman',serif;font-weight:700;letter-spacing:.5px;
+  font-size:clamp(34px,7vw,60px);line-height:1.05;
+  background:linear-gradient(90deg,var(--or2),var(--or),#fff,var(--or),var(--or2));-webkit-background-clip:text;background-clip:text;color:transparent;
+  background-size:220% 100%;animation:brille 7s linear infinite;text-shadow:0 0 30px rgba(245,196,81,.25)}
+@keyframes brille{to{background-position:220% 0}}
+.hero p{margin:10px auto 0;max-width:560px;color:var(--doux);font-size:16px;line-height:1.5}
+.sapin{width:min(210px,52vw);margin:4px auto 0;display:block;filter:drop-shadow(0 12px 28px rgba(0,0,0,.45))}
+.sapin .lum{animation:allume 2s infinite ease-in-out}
+.sapin .lum:nth-of-type(2n){animation-delay:.7s}.sapin .lum:nth-of-type(3n){animation-delay:1.3s}
+.etoile-sapin{transform-origin:100px 20px;animation:tourne 6s ease-in-out infinite}
+@keyframes tourne{0%,100%{transform:rotate(-6deg) scale(1)}50%{transform:rotate(6deg) scale(1.12)}}
+
+/* lecteur */
+.lecteur{display:grid;grid-template-columns:240px 1fr;gap:22px;align-items:center;padding:22px;border-radius:26px;
+  background:linear-gradient(135deg,rgba(255,255,255,.14),rgba(255,255,255,.05));
+  border:1px solid var(--bord);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  box-shadow:0 20px 50px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.2)}
+.boule-zone{display:flex;justify-content:center}
+.boule{position:relative;width:210px;height:210px;border-radius:50%;
+  background:radial-gradient(circle at 32% 28%, #ff8aa0 0, var(--rouge2) 18%, var(--rouge) 52%, #5d0716 100%);
+  box-shadow:0 18px 40px rgba(200,16,46,.45), inset -14px -18px 36px rgba(0,0,0,.35), inset 10px 10px 30px rgba(255,255,255,.25);
+  display:flex;align-items:center;justify-content:center;transition:transform .4s}
+.boule::before{content:"";position:absolute;top:-22px;left:50%;width:46px;height:30px;transform:translateX(-50%);
+  background:linear-gradient(180deg,#ffe9a8,#d9a227);border-radius:8px 8px 4px 4px;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.boule::after{content:"";position:absolute;top:-40px;left:50%;width:22px;height:22px;transform:translateX(-50%);
+  border:3px solid #d9a227;border-bottom:none;border-radius:20px 20px 0 0}
+.boule .motif{width:70%;height:70%;border-radius:50%;border:2px dashed rgba(255,227,154,.7);display:flex;align-items:center;justify-content:center;
+  font-size:76px;line-height:1;animation:tourneLent 14s linear infinite;animation-play-state:paused}
+.lecture .boule .motif{animation-play-state:running}
+.lecture .boule{transform:scale(1.04)}
+@keyframes tourneLent{to{transform:rotate(360deg)}}
+.infos{min-width:0}
+.etiquette{display:inline-block;font-size:12px;letter-spacing:1.6px;text-transform:uppercase;color:var(--or2);
+  background:rgba(245,196,81,.14);border:1px solid rgba(245,196,81,.35);padding:4px 10px;border-radius:999px}
+.titre{margin:10px 0 2px;font-family:Georgia,'Times New Roman',serif;font-size:clamp(22px,4.6vw,34px);line-height:1.15;
+  overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.artiste{color:var(--doux);font-size:15px;margin-bottom:16px}
+.barre{display:flex;align-items:center;gap:10px;font-variant-numeric:tabular-nums;font-size:13px;color:var(--doux)}
+.curseur{flex:1;-webkit-appearance:none;appearance:none;height:8px;border-radius:99px;outline:none;cursor:pointer;
+  background:linear-gradient(90deg,var(--or) var(--p,0%),rgba(255,255,255,.2) var(--p,0%))}
+.curseur::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--rouge);box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.curseur::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid var(--rouge)}
+.controles{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:16px;flex-wrap:wrap}
+.btn{width:46px;height:46px;border-radius:50%;border:1px solid var(--bord);background:var(--verre);color:var(--texte);
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .12s,background .2s,box-shadow .2s}
+.btn:hover{background:var(--verre2)}.btn:active{transform:scale(.92)}
+.btn svg{width:22px;height:22px;fill:currentColor}
+.btn.actif{color:var(--or);border-color:rgba(245,196,81,.6);box-shadow:0 0 14px rgba(245,196,81,.35)}
+.btn.grand{width:68px;height:68px;background:linear-gradient(135deg,var(--rouge2),var(--rouge));border:none;
+  box-shadow:0 10px 26px rgba(200,16,46,.55)}
+.btn.grand svg{width:30px;height:30px}
+.btn.grand:hover{background:linear-gradient(135deg,#ff6d83,#d81535)}
+.volume{display:flex;align-items:center;gap:8px;margin-left:6px}
+.volume svg{width:20px;height:20px;fill:var(--doux)}
+.volume input{width:96px}
+
+/* liste */
+.liste-tete{display:flex;align-items:center;gap:10px;margin:26px 0 12px;flex-wrap:wrap}
+.liste-tete h2{margin:0;font-family:Georgia,serif;font-size:24px}
+.nb{color:var(--doux);font-size:14px}
+.outils{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.recherche{flex:1;min-width:200px;position:relative}
+.recherche input{width:100%;padding:13px 14px 13px 42px;border-radius:14px;border:1px solid var(--bord);background:var(--verre);
+  color:var(--texte);font-size:15px;outline:none}
+.recherche input::placeholder{color:var(--doux)}
+.recherche input:focus{border-color:var(--or);box-shadow:0 0 0 3px rgba(245,196,81,.2)}
+.recherche svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:18px;height:18px;fill:var(--doux)}
+.onglets{display:flex;background:var(--verre);border:1px solid var(--bord);border-radius:14px;padding:4px;gap:4px}
+.onglets button{border:none;background:transparent;color:var(--doux);padding:9px 14px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer}
+.onglets button.on{background:linear-gradient(135deg,var(--rouge2),var(--rouge));color:#fff}
+.ajout{display:inline-flex;align-items:center;gap:8px;padding:0 16px;border-radius:14px;border:1px dashed rgba(245,196,81,.6);
+  color:var(--or2);background:rgba(245,196,81,.08);font-weight:600;font-size:14px;cursor:pointer;min-height:46px}
+.ajout:hover{background:rgba(245,196,81,.16)}
+.ajout input{display:none}
+.liste{display:flex;flex-direction:column;gap:8px}
+.morceau{display:grid;grid-template-columns:44px 1fr auto auto;align-items:center;gap:12px;padding:10px 12px;border-radius:16px;
+  background:var(--verre);border:1px solid transparent;cursor:pointer;transition:background .15s,transform .1s,border-color .2s}
+.morceau:hover{background:var(--verre2)}
+.morceau:active{transform:scale(.995)}
+.morceau.courant{background:linear-gradient(135deg,rgba(200,16,46,.35),rgba(20,87,61,.45));border-color:rgba(245,196,81,.55)}
+.num{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;
+  background:rgba(255,255,255,.1);color:var(--or2);font-variant-numeric:tabular-nums}
+.courant .num{background:var(--or);color:#3a2300}
+.eq{display:none;gap:3px;align-items:flex-end;height:18px}
+.eq i{width:4px;background:#3a2300;border-radius:2px;animation:eq 0.9s infinite ease-in-out}
+.eq i:nth-child(2){animation-delay:.25s}.eq i:nth-child(3){animation-delay:.5s}
+@keyframes eq{0%,100%{height:5px}50%{height:18px}}
+.courant.lecture .num span{display:none}.courant.lecture .eq{display:flex}
+.m-titre{min-width:0}
+.m-titre b{display:block;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-titre small{display:block;color:var(--doux);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.m-duree{color:var(--doux);font-size:13px;font-variant-numeric:tabular-nums;min-width:38px;text-align:right}
+.coeur{width:38px;height:38px;border:none;background:transparent;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.coeur svg{width:21px;height:21px;fill:none;stroke:var(--doux);stroke-width:2;transition:transform .15s}
+.coeur.on svg{fill:var(--rouge2);stroke:var(--rouge2)}
+.coeur:active svg{transform:scale(1.3)}
+.vide{text-align:center;color:var(--doux);padding:34px 14px;border:1px dashed var(--bord);border-radius:18px;line-height:1.6}
+.vide code{background:rgba(255,255,255,.1);padding:2px 7px;border-radius:6px;color:var(--or2)}
+
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,40px);opacity:0;z-index:20;
+  background:rgba(10,20,20,.92);border:1px solid var(--bord);color:#fff;padding:12px 18px;border-radius:14px;font-size:14px;transition:.3s;max-width:90vw;text-align:center}
+.toast.vu{opacity:1;transform:translate(-50%,0)}
+.pied{text-align:center;color:var(--doux);font-size:13px;margin:34px 0 0}
+
+/* mini-lecteur collant (mobile) */
+.mini{display:none}
+@media (max-width:720px){
+  .lecteur{grid-template-columns:1fr;text-align:center;padding:18px}
+  .boule{width:160px;height:160px}.boule .motif{font-size:56px}
+  .controles{gap:8px}.volume{display:none}
+  .morceau{grid-template-columns:40px 1fr auto;gap:10px}
+  .m-duree{display:none}
+  .num{width:40px;height:40px}
+  .compte{display:none}
+  .mini{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:15;display:none;align-items:center;gap:10px;
+    padding:8px 10px;border-radius:18px;background:rgba(8,22,22,.9);border:1px solid var(--bord);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+  .mini.on{display:flex}
+  .mini .t{flex:1;min-width:0;font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mini .btn{width:40px;height:40px}.mini .btn.grand{width:44px;height:44px}.mini .btn.grand svg{width:20px;height:20px}
+}
+@media (prefers-reduced-motion:reduce){
+  .hero h1,.ampoules b,.etoile-sapin,.sapin .lum,.etoiles i,.boule .motif,.eq i{animation:none!important}
+}
+/* ===== ajouts : auditeur, jeu de lumière, finitions ===== */
+.hero{position:relative}
+.hero::before{content:"";position:absolute;left:50%;top:0;width:min(440px,92%);height:250px;transform:translateX(-50%);
+  background:radial-gradient(closest-side,rgba(245,196,81,.22),transparent);filter:blur(6px);pointer-events:none;z-index:-1}
+.lecteur{position:relative}
+.lecteur::before{content:"";position:absolute;left:28px;right:28px;top:0;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,transparent,var(--or),transparent);opacity:.75;pointer-events:none}
+.lecture .boule-zone{animation:halo 2.6s ease-in-out infinite}
+@keyframes halo{0%,100%{filter:drop-shadow(0 0 6px rgba(255,200,120,.22))}50%{filter:drop-shadow(0 0 28px rgba(255,200,120,.6))}}
+.lecture .btn.grand{animation:pouls 1.9s ease-in-out infinite}
+@keyframes pouls{0%,100%{box-shadow:0 10px 26px rgba(200,16,46,.55)}50%{box-shadow:0 10px 34px rgba(255,69,96,.85),0 0 0 7px rgba(255,69,96,.14)}}
+
+.aud-ligne{margin:-4px 0 16px}
+.auditeur{display:none;align-items:center;gap:10px;padding:5px 16px 5px 5px;border-radius:999px;max-width:100%;
+  background:linear-gradient(135deg,rgba(245,196,81,.22),rgba(255,255,255,.06));border:1px solid rgba(245,196,81,.42)}
+.auditeur.on{display:inline-flex}
+.auditeur .av{flex:none;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:16px;color:#3a2300;background:linear-gradient(135deg,var(--or2),var(--or));box-shadow:0 2px 10px rgba(245,196,81,.45)}
+.auditeur .aud-t{min-width:0;text-align:left;line-height:1.2}
+.auditeur small{display:block;font-size:12px;color:var(--doux)}
+.auditeur b{display:block;font-size:15px;color:var(--or2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw}
+.aud-eq{display:none;gap:3px;align-items:flex-end;height:16px}
+.aud-eq i{width:3px;background:var(--or);border-radius:2px;animation:eq .9s infinite ease-in-out}
+.aud-eq i:nth-child(2){animation-delay:.25s}.aud-eq i:nth-child(3){animation-delay:.5s}
+.lecture .aud-eq{display:flex}
+
+.lumieres{display:flex;justify-content:space-between;gap:6px;margin-top:20px;padding:0 4px}
+.lumieres i{flex:1;max-width:30px;height:8px;border-radius:99px;background:rgba(255,255,255,.14);
+  transition:background .15s,box-shadow .15s,transform .15s}
+.lumieres i:nth-child(4n+1){--c:#ff4560}.lumieres i:nth-child(4n+2){--c:#f5c451}
+.lumieres i:nth-child(4n+3){--c:#46e08f}.lumieres i:nth-child(4n+4){--c:#6fb7ff}
+.lumieres i.fl{background:var(--c);box-shadow:0 0 14px 3px var(--c);transform:scaleY(1.9)}
+.ampoules b.fl{animation:none;opacity:1;filter:brightness(1.7) saturate(1.5);transform:scale(1.28)}
+
+.liste-tete::after{content:"";flex:1;min-width:40px;height:1px;background:linear-gradient(90deg,var(--bord),transparent)}
+.num{background:linear-gradient(135deg,rgba(255,255,255,.17),rgba(255,255,255,.06))}
+.morceau:hover{box-shadow:0 8px 22px rgba(0,0,0,.22)}
+.morceau.courant{box-shadow:0 10px 26px rgba(0,0,0,.3)}
+.ajout{background:linear-gradient(135deg,rgba(245,196,81,.16),rgba(245,196,81,.05))}
+@media (max-width:720px){ .auditeur b{max-width:56vw} .lumieres{margin-top:16px} }
+@media (prefers-reduced-motion:reduce){
+  .lecture .boule-zone,.lecture .btn.grand,.aud-eq i{animation:none!important}
+}
+/* ===== partage (vidéo / musique) + lecture vidéo ===== */
+#audio{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.lecteur.video{grid-template-columns:1fr}
+.lecteur.video .boule{display:none}
+.lecteur.video .boule-zone{display:block}
+.lecteur.video #audio{position:static;width:100%;height:auto;max-height:56vh;opacity:1;pointer-events:auto;display:block;
+  border-radius:18px;background:#000;box-shadow:0 14px 34px rgba(0,0,0,.45);cursor:pointer}
+.partage{margin:22px 0 4px;padding:18px;border-radius:22px;background:linear-gradient(135deg,rgba(245,196,81,.16),rgba(255,255,255,.05));
+  border:1px solid rgba(245,196,81,.38);box-shadow:0 14px 34px rgba(0,0,0,.25)}
+.partage-t b{display:block;font-family:Georgia,serif;font-size:20px;color:var(--or2)}
+.partage-t span{display:block;color:var(--doux);font-size:14px;line-height:1.45;margin:4px 0 14px}
+.partage-f{display:flex;gap:10px;flex-wrap:wrap}
+.partage-f input[type=text]{flex:1;min-width:180px;padding:13px 14px;border-radius:14px;border:1px solid var(--bord);background:var(--verre);
+  color:var(--texte);font-size:15px;outline:none}
+.partage-f input[type=text]::placeholder{color:var(--doux)}
+.partage-f input[type=text]:focus{border-color:var(--or);box-shadow:0 0 0 3px rgba(245,196,81,.2)}
+.partage .ajout{justify-content:center}
+.progres{display:none;height:8px;border-radius:99px;background:rgba(255,255,255,.15);margin-top:14px;overflow:hidden}
+.progres.on{display:block}
+.progres i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--or),var(--rouge2));transition:width .2s}
+.envois{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.envois:empty{display:none}
+.envoi{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:14px;background:rgba(0,0,0,.22)}
+.envoi .et{min-width:0}.envoi b{display:block;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.envoi small{display:block;font-size:12.5px;color:var(--doux)}
+.envoi.rej small{color:#ff9aa8}
+.modo{display:inline-block;margin-top:12px;padding:9px 16px;border-radius:999px;text-decoration:none;font-weight:600;font-size:14px;
+  color:#3a2300;background:linear-gradient(135deg,var(--or2),var(--or))}
+.modo[hidden]{display:none}
+</style>
+</head>
+<body>
+
+<div class="etoiles" id="etoiles"></div>
+<canvas id="neige"></canvas>
+
+<div class="guirlande" aria-hidden="true">
+  <svg viewBox="0 0 1000 46" preserveAspectRatio="none"><path d="M0,4 Q125,44 250,4 T500,4 T750,4 T1000,4" fill="none" stroke="#1d6b49" stroke-width="3"/></svg>
+  <div class="ampoules" id="ampoules"></div>
+</div>
+
+<div class="page" id="page">
+  <div class="haut">
+    <a class="retour" id="btnRetour" href="{{ url_for('main.settings') }}" aria-label="Retour aux paramètres">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      Retour
+    </a>
+    <div class="compte" id="compte"></div>
+  </div>
+
+  <header class="hero">
+    <svg class="sapin" viewBox="0 0 200 230" aria-hidden="true">
+      <g class="etoile-sapin"><polygon points="100,2 108,22 130,24 113,38 119,60 100,48 81,60 87,38 70,24 92,22" fill="#ffd45e" stroke="#fff1b8" stroke-width="2"/></g>
+      <polygon points="100,34 148,98 126,98 168,152 138,152 184,208 16,208 62,152 32,152 74,98 52,98" fill="#146b45"/>
+      <polygon points="100,34 148,98 126,98 168,152 138,152 184,208 100,208" fill="#0f5a39"/>
+      <rect x="88" y="206" width="24" height="22" rx="3" fill="#6b3f1d"/>
+      <path d="M58,100 Q100,126 142,100 M44,154 Q100,184 156,154 M30,204 Q100,232 170,204" fill="none" stroke="#ffd45e" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round"/>
+      <circle class="lum" cx="80" cy="112" r="6" fill="#ff4560"/><circle class="lum" cx="122" cy="126" r="6" fill="#6fb7ff"/>
+      <circle class="lum" cx="96" cy="84" r="5" fill="#ffd45e"/><circle class="lum" cx="70" cy="160" r="7" fill="#ffd45e"/>
+      <circle class="lum" cx="132" cy="170" r="7" fill="#ff4560"/><circle class="lum" cx="100" cy="150" r="6" fill="#6fb7ff"/>
+      <circle class="lum" cx="52" cy="198" r="7" fill="#6fb7ff"/><circle class="lum" cx="108" cy="192" r="7" fill="#ff4560"/>
+      <circle class="lum" cx="150" cy="196" r="6" fill="#ffd45e"/>
+    </svg>
+    <h1>Joyeux Noël !</h1>
+    <p>Allume la magie des fêtes : choisis un chant, lance la musique et laisse la neige tomber.</p>
+  </header>
+
+  <section class="lecteur" id="lecteur" aria-label="Lecteur de musique">
+    <div class="boule-zone"><div class="boule"><div class="motif" id="motif">🎄</div></div>
+      <video id="audio" preload="metadata" playsinline></video></div>
+    <div class="infos">
+      <span class="etiquette" id="etiquette">Sélectionne un chant</span>
+      <h2 class="titre" id="titre">Prêt à écouter ?</h2>
+      <div class="artiste" id="artiste">Appuie sur lecture ou choisis un morceau ci-dessous</div>
+      <div class="aud-ligne"><div class="auditeur" id="auditeur">
+        <span class="av" id="audAv"></span>
+        <span class="aud-t"><small id="audEtat">Prêt à écouter</small><b id="audNom"></b></span>
+        <span class="aud-eq" aria-hidden="true"><i></i><i></i><i></i></span>
+      </div></div>
+      <div class="barre">
+        <span id="tCourant">0:00</span>
+        <input type="range" class="curseur" id="progression" min="0" max="1000" value="0" aria-label="Progression">
+        <span id="tTotal">0:00</span>
+      </div>
+      <div class="controles">
+        <button class="btn" id="btnAlea" title="Lecture aléatoire (S)" aria-label="Aléatoire"><svg viewBox="0 0 24 24"><path d="M17 3h4v4l-1.5-1.5-3.6 3.6-1.4-1.4 3.6-3.6L17 3zM3 7h3.5c1.4 0 2.7.7 3.5 1.8l5 6.7c.4.6 1.1.9 1.8.9h2.7l-1.6-1.6 1.4-1.4L21 15.4V21h-4v-.1l1.5-1.5H16.3c-1.4 0-2.7-.7-3.5-1.8l-5-6.7C7.4 10.3 6.7 10 6 10H3V7zm0 10h3c.7 0 1.4-.3 1.8-.9l.9-1.2 1.6 1.2-.9 1.3C8.6 18.3 7.6 19 6.5 19H3v-2z"/></svg></button>
+        <button class="btn" id="btnPrec" title="Précédent (←)" aria-label="Précédent"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zM20 6v12L9.5 12z"/></svg></button>
+        <button class="btn grand" id="btnLire" title="Lecture / Pause (Espace)" aria-label="Lecture"><svg id="icLire" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+        <button class="btn" id="btnSuiv" title="Suivant (→)" aria-label="Suivant"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM4 6l10.5 6L4 18z"/></svg></button>
+        <button class="btn" id="btnRep" title="Répéter (R)" aria-label="Répéter"><svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg></button>
+        <div class="volume"><svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 4V5L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1c2.9.9 5 3.5 5 6.7s-2.1 5.8-5 6.7v2.1c4-.9 7-4.5 7-8.8s-3-7.9-7-8.8z"/></svg>
+          <input type="range" class="curseur" id="volume" min="0" max="100" value="80" aria-label="Volume"></div>
+      </div>
+      <div class="lumieres" id="lumieres" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <section class="partage" id="partage" aria-label="Ajouter une chanson">
+    <div class="partage-t"><b>🎁 Partage ta chanson de Noël</b>
+      <span>Vidéo ou musique audio. Un administrateur la vérifie avant qu’elle apparaisse dans la liste.</span></div>
+    <div class="partage-f">
+      <input type="text" id="titreAjout" maxlength="80" placeholder="Titre de la chanson" autocomplete="off">
+      <label class="ajout">🎬 Ajouter une vidéo ou une musique<input type="file" id="fichiers" accept="video/*,audio/*"></label>
+    </div>
+    <div class="progres" id="progres"><i></i></div>
+    <div class="envois" id="mesEnvois"></div>
+    <a class="modo" id="lienModo" href="/noel/admin" hidden>🛡️ Modération</a>
+  </section>
+
+  <div class="liste-tete"><h2>🎁 Tous les chants</h2><span class="nb" id="nb"></span></div>
+  <div class="outils">
+    <label class="recherche"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.8l-.3-.3A6.5 6.5 0 1 0 14 15.5l.3.3v.8l5 5 1.5-1.5-5-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/></svg>
+      <input type="search" id="recherche" placeholder="Rechercher un chant…" autocomplete="off"></label>
+    <div class="onglets"><button class="on" data-f="tous">Tous</button><button data-f="fav">♥ Favoris</button></div>
+  </div>
+  <div class="liste" id="liste"></div>
+  <p class="pied">🎅 Joyeuses fêtes de la part de toute l'équipe FaceNet</p>
+</div>
+
+<div class="mini" id="mini">
+  <button class="btn" id="mPrec" aria-label="Précédent"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zM20 6v12L9.5 12z"/></svg></button>
+  <div class="t" id="mTitre">—</div>
+  <button class="btn grand" id="mLire" aria-label="Lecture"><svg id="mIc" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+  <button class="btn" id="mSuiv" aria-label="Suivant"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM4 6l10.5 6L4 18z"/></svg></button>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+{%- set _u = current_user if current_user is defined else none -%}
+{%- set jeton = (csrf_token() if csrf_token is defined else '')|string -%}
+{%- set nom_auditeur = ((((_u.username or _u.nom or _u.name or _u.prenom or _u.pseudo) if _u else '') or session.get('username') or session.get('nom') or '')|string) -%}
+<script>
+(function(){
+  'use strict';
+  var URL_MORCEAUX = "{{ url_for('main.noel_morceaux') }}";
+  var URL_PARAMETRES = "{{ url_for('main.settings') }}";
+  var NOM_AUDITEUR = {{ nom_auditeur|tojson }};
+  var URL_AJOUTS = "/noel/ajouts";
+  var JETON = {{ jeton|tojson }};
+  var $ = function(id){ return document.getElementById(id); };
+  var audio = $('audio');
+  var pistes = [];        // [{id, titre, artiste, url, local}]
+  var courant = -1, filtre = 'tous', alea = false, rep = 0;   // rep : 0 aucune, 1 tout, 2 une
+  var durees = {}, favoris = {}, historique = [];
+
+  /* ---------- stockage (protégé) ---------- */
+  function lire(k, d){ try{ var v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } }
+  function ecrire(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  favoris = lire('fn_noel_fav', {});
+  var vol = lire('fn_noel_vol', 80);
+
+  /* ---------- chants FaceNet générés (synthétiseur intégré) ---------- */
+  var SR = 22050;
+  var CHANTS = [
+    {id:'fn-jingle', titre:'Jingle Bells', style:'piano', label:'🎹 Piano jouet', bpm:132, mesure:4, ana:0,
+     notes:'E4:1 E4:1 E4:2 E4:1 E4:1 E4:2 E4:1 G4:1 C4:1.5 D4:.5 E4:4 F4:1 F4:1 F4:1.5 F4:.5 F4:1 E4:1 E4:1 E4:.5 E4:.5 E4:1 D4:1 D4:1 E4:1 D4:2 G4:2 ' +
+           'E4:1 E4:1 E4:2 E4:1 E4:1 E4:2 E4:1 G4:1 C4:1.5 D4:.5 E4:4 F4:1 F4:1 F4:1.5 F4:.5 F4:1 E4:1 E4:1 E4:.5 E4:.5 G4:1 G4:1 F4:1 D4:1 C4:4'},
+    {id:'fn-douce-nuit-boite', titre:'Douce nuit', style:'boite', label:'🎶 Boîte à musique', bpm:70, mesure:3, ana:0, notes:'SILENT'},
+    {id:'fn-vive-le-vent', titre:'Vive le vent', style:'guirlande', label:'💡 Guirlande lumineuse', bpm:150, mesure:4, ana:0, oct:12, notes:'JINGLE'},
+    {id:'fn-merry', titre:'We Wish You a Merry Christmas', style:'guitare', label:'🎸 Guitare jouet', bpm:118, mesure:3, ana:1, rep:2,
+     notes:'G4:1 C5:1 C5:.5 D5:.5 C5:.5 B4:.5 A4:1 A4:1 A4:1 D5:1 D5:.5 E5:.5 D5:.5 C5:.5 B4:1 G4:1 G4:1 E5:1 E5:.5 F5:.5 E5:.5 D5:.5 C5:1 A4:1 G4:.5 G4:.5 A4:1 D5:1 B4:1 C5:3'},
+    {id:'fn-douce-nuit-guitare', titre:'Douce nuit (guitare)', style:'guitare', label:'🎸 Guitare jouet', bpm:64, mesure:3, ana:0, notes:'SILENT'}
+  ];
+  var NUIT = 'G4:1.5 A4:.5 G4:1 E4:3 G4:1.5 A4:.5 G4:1 E4:3 D5:2 D5:1 B4:3 C5:2 C5:1 G4:3 A4:2 A4:1 C5:1.5 B4:.5 A4:1 G4:1.5 A4:.5 G4:1 E4:3 ' +
+             'A4:2 A4:1 C5:1.5 B4:.5 A4:1 G4:1.5 A4:.5 G4:1 E4:3 D5:2 D5:1 F5:1.5 D5:.5 B4:1 C5:3 E5:3 C5:1 G4:1 E4:1 G4:1.5 F4:.5 D4:1 C4:3';
+  for (var ci = 0; ci < CHANTS.length; ci++){
+    if (CHANTS[ci].notes === 'SILENT') CHANTS[ci].notes = NUIT;
+    else if (CHANTS[ci].notes === 'JINGLE') CHANTS[ci].notes = CHANTS[0].notes;
+  }
+  var NOTES = {C:0, D:2, E:4, F:5, G:7, A:9, B:11};
+  function midi(n){ var m = /^([A-G])([#b]?)(-?\d)$/.exec(n); return 12 * (parseInt(m[3], 10) + 1) + NOTES[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0); }
+  function hz(m){ return 440 * Math.pow(2, (m - 69) / 12); }
+  function analyser(c){
+    var ev = [], pos = 0, sp = 60 / c.bpm, tok = c.notes.split(/\s+/), r = c.rep || 1, ana = c.ana || 0;
+    for (var k = 0; k < r; k++) for (var i = 0; i < tok.length; i++){
+      if (!tok[i]) continue;
+      var a = tok[i].split(':'), d = parseFloat(a[1]);
+      if (a[0] !== 'R'){
+        var m = midi(a[0]) + (c.oct || 0), fort = pos >= ana && ((pos - ana) % c.mesure) < 0.001;
+        ev.push({t: pos * sp, d: d * sp, m: m, v: fort ? 1 : .85});
+        if (fort) ev.push({t: pos * sp, d: d * sp, m: m - 12, v: .4, basse: true});
+      }
+      pos += d;
+    }
+    return {ev: ev, duree: pos * sp + 1.6};
+  }
+  var TIMBRES = {
+    piano:     {R: [1, 2, 3, 4],        H: [1, .5, .25, .1],  K: 3.4},
+    boite:     {R: [1, 2.01, 4.02],     H: [1, .35, .12],     K: 2.2},
+    guirlande: {R: [1, 2.5, 4.07],      H: [1, .5, .25],      K: 5}
+  };
+  function noteSynth(buf, e, style){
+    var f = hz(e.m), i0 = Math.floor(e.t * SR), n = buf.length, s, h;
+    if (style === 'guitare'){
+      var L = Math.max(2, Math.round(SR / f)), ring = new Float32Array(L), len = Math.min(n - i0, Math.floor((Math.max(e.d, .5) + 1) * SR));
+      var graine = (e.m * 9301 + 49297) % 233280;
+      for (var k = 0; k < L; k++){ graine = (graine * 9301 + 49297) % 233280; ring[k] = graine / 233280 * 2 - 1; }
+      var q = 0, amp = .5 * e.v;
+      for (s = 0; s < len; s++){
+        var nx = (q + 1) % L, y = ring[q];
+        ring[q] = (ring[q] + ring[nx]) * .5 * .9965; buf[i0 + s] += y * amp; q = nx;
+      }
+      return;
+    }
+    var T = TIMBRES[style] || TIMBRES.piano, len2 = Math.min(n - i0, Math.floor((e.d + 1.3) * SR)), a0 = .32 * e.v;
+    for (h = 0; h < T.R.length; h++){
+      if (f * T.R[h] > SR / 2.2) continue;
+      var w = 6.2831853 * f * T.R[h] / SR, kk = T.K * (1 + h * .7), ah = a0 * T.H[h];
+      for (s = 0; s < len2; s++){
+        var t = s / SR, env = Math.exp(-kk * t) * (t < .004 ? t / .004 : 1) * (t > e.d ? Math.exp(-(t - e.d) * 8) : 1);
+        buf[i0 + s] += ah * env * Math.sin(w * s);
+      }
+    }
+  }
+  function synth(c){
+    var a = analyser(c), n = Math.ceil(a.duree * SR), buf = new Float32Array(n), i, pic = 0;
+    for (i = 0; i < a.ev.length; i++) noteSynth(buf, a.ev[i], c.style);
+    for (i = 0; i < n; i++){ var x = Math.abs(buf[i]); if (x > pic) pic = x; }
+    var g = pic > 0 ? .85 / pic : 1, b = new ArrayBuffer(44 + n * 2), v = new DataView(b);
+    function txt(o, t){ for (var j = 0; j < t.length; j++) v.setUint8(o + j, t.charCodeAt(j)); }
+    txt(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); txt(8, 'WAVE'); txt(12, 'fmt '); v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, SR, true); v.setUint32(28, SR * 2, true);
+    v.setUint16(32, 2, true); v.setUint16(34, 16, true); txt(36, 'data'); v.setUint32(40, n * 2, true);
+    for (i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, buf[i] * g)) * 32767, true);
+    return {url: URL.createObjectURL(new Blob([b], {type: 'audio/wav'})), ev: a.ev};
+  }
+  function preparer(p){
+    if (p.gen && !p.url){ var r = synth(p.gen); p.url = r.url; p.ev = r.ev; }
+    return p;
+  }
+  pistes = CHANTS.map(function(c){
+    durees['fn:' + c.id] = Math.ceil(analyser(c).duree * SR) / SR;
+    return {id: c.id, titre: c.titre, artiste: 'FaceNet · ' + c.label, url: null, local: false, gen: c};
+  });
+  for (var di = 0; di < pistes.length; di++) durees[pistes[di].id] = durees['fn:' + pistes[di].id];
+
+  /* ---------- jeu de lumière synchronisé ---------- */
+  var evts = [], idxL = 0, lumRaf = 0;
+  var sansAnim = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  (function(){
+    var l = '', i; for (i = 0; i < 14; i++) l += '<i></i>';
+    $('lumieres').innerHTML = l;
+  })();
+  function eclair(m){
+    if (sansAnim) return;
+    var a = $('ampoules').children, b = $('lumieres').children, nA = a.length, nB = b.length;
+    var set = [a[m % nA], a[(m * 3 + 5) % nA], b[m % nB], b[(m * 5 + 2) % nB]];
+    for (var i = 0; i < set.length; i++){
+      if (!set[i]) continue;
+      set[i].classList.add('fl');
+      (function(x){ setTimeout(function(){ x.classList.remove('fl'); }, 220); })(set[i]);
+    }
+  }
+  function boucleLumiere(){
+    if (audio.paused || !evts.length){ lumRaf = 0; return; }
+    var t = audio.currentTime;
+    if (idxL > 0 && evts[idxL - 1].t > t + .1){ idxL = 0; while (idxL < evts.length && evts[idxL].t <= t) idxL++; }
+    while (idxL < evts.length && evts[idxL].t <= t){
+      if (t - evts[idxL].t < .25 && !evts[idxL].basse) eclair(evts[idxL].m);
+      idxL++;
+    }
+    lumRaf = requestAnimationFrame(boucleLumiere);
+  }
+
+  /* ---------- nom de la personne qui écoute ---------- */
+  if (NOM_AUDITEUR){
+    $('audNom').textContent = NOM_AUDITEUR;
+    $('audAv').textContent = NOM_AUDITEUR.charAt(0).toUpperCase();
+    $('auditeur').classList.add('on');
+  }
+  function majAuditeur(lit){
+    $('audEtat').textContent = lit ? 'En écoute' : (courant >= 0 ? 'En pause' : 'Prêt à écouter');
+  }
+
+  /* ---------- décor : étoiles, ampoules ---------- */
+  (function(){
+    var e = $('etoiles'), s = '';
+    for (var i = 0; i < 46; i++) s += '<i style="left:' + (Math.random()*100).toFixed(1) + '%;top:' + (Math.random()*100).toFixed(1) + '%;animation-delay:' + (Math.random()*4).toFixed(2) + 's"></i>';
+    e.innerHTML = s;
+    var a = '', n = Math.max(10, Math.min(26, Math.round(window.innerWidth / 48)));
+    for (var j = 0; j < n; j++) a += '<b></b>';
+    $('ampoules').innerHTML = a;
+  })();
+
+  /* ---------- compte à rebours ---------- */
+  (function(){
+    var now = new Date(), an = now.getFullYear(), noel = new Date(an, 11, 25);
+    var jour = new Date(an, now.getMonth(), now.getDate());
+    var d = Math.round((noel - jour) / 86400000), c = $('compte');
+    if (d > 1) c.innerHTML = '<strong>J – ' + d + '</strong>avant Noël';
+    else if (d === 1) c.innerHTML = '<strong>Demain !</strong>c\'est Noël';
+    else if (d === 0) c.innerHTML = '<strong>C\'est Noël !</strong>Joyeuses fêtes';
+    else c.innerHTML = '<strong>Joyeuses fêtes</strong>et bonne année';
+  })();
+
+  /* ---------- neige ---------- */
+  (function(){
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var cv = $('neige'), ctx = cv.getContext('2d'), W, H, flocons = [], dpr = Math.min(2, window.devicePixelRatio || 1);
+    function taille(){ W = cv.width = innerWidth * dpr; H = cv.height = innerHeight * dpr; }
+    taille(); addEventListener('resize', taille);
+    var N = innerWidth < 720 ? 70 : 140;
+    for (var i = 0; i < N; i++) flocons.push({x: Math.random()*W, y: Math.random()*H, r: (Math.random()*2.6 + .8)*dpr, v: (Math.random()*.9 + .35)*dpr, d: Math.random()*6.28, s: Math.random()*.012 + .004});
+    function boucle(){
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = 'rgba(255,255,255,.88)';
+      for (var i = 0; i < flocons.length; i++){
+        var f = flocons[i];
+        f.y += f.v; f.d += f.s; f.x += Math.sin(f.d) * .6 * dpr;
+        if (f.y > H + 6){ f.y = -6; f.x = Math.random() * W; }
+        ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 6.2832); ctx.fill();
+      }
+      requestAnimationFrame(boucle);
+    }
+    boucle();
+  })();
+
+  /* ---------- utilitaires ---------- */
+  function fmt(s){ if (!isFinite(s) || s < 0) s = 0; var m = Math.floor(s/60), r = Math.floor(s%60); return m + ':' + (r < 10 ? '0' : '') + r; }
+  function esc(t){ return String(t).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function toast(msg){ var t = $('toast'); t.textContent = msg; t.classList.add('vu'); clearTimeout(toast._t); toast._t = setTimeout(function(){ t.classList.remove('vu'); }, 2800); }
+  var ICO_LIRE = '<path d="M8 5v14l11-7z"/>', ICO_PAUSE = '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>';
+  var MOTIFS = ['🎄','🔔','⭐','🎅','🦌','🎁','⛄','🕯️','❄️','🍪'];
+
+  /* ---------- liste ---------- */
+  function visibles(){
+    var q = $('recherche').value.trim().toLowerCase();
+    var out = [];
+    for (var i = 0; i < pistes.length; i++){
+      var p = pistes[i];
+      if (filtre === 'fav' && !favoris[p.id]) continue;
+      if (q && (p.titre + ' ' + p.artiste).toLowerCase().indexOf(q) === -1) continue;
+      out.push(i);
+    }
+    return out;
+  }
+  function dessiner(){
+    var el = $('liste'), idx = visibles();
+    $('nb').textContent = pistes.length + ' morceau' + (pistes.length > 1 ? 'x' : '') + (idx.length !== pistes.length ? ' · ' + idx.length + ' affiché' + (idx.length > 1 ? 's' : '') : '');
+    if (!pistes.length){
+      el.innerHTML = '<div class="vide">🎄 Aucun morceau pour le moment.<br>Dépose tes fichiers audio (mp3, ogg, m4a…) dans le dossier <code>static/noel/</code> du serveur, ou ajoute un son vidéo avec le bouton ci-dessus.</div>';
+      return;
+    }
+    if (!idx.length){ el.innerHTML = '<div class="vide">Aucun résultat' + (filtre === 'fav' ? ' dans tes favoris' : '') + '.</div>'; return; }
+    var h = '';
+    for (var k = 0; k < idx.length; k++){
+      var i = idx[k], p = pistes[i], c = i === courant;
+      h += '<div class="morceau' + (c ? ' courant' + (!audio.paused ? ' lecture' : '') : '') + '" data-i="' + i + '" role="button" tabindex="0">' +
+        '<div class="num"><span>' + (i + 1) + '</span><div class="eq"><i></i><i></i><i></i></div></div>' +
+        '<div class="m-titre"><b>' + (p.type === 'video' ? '🎬 ' : '') + esc(p.titre) + '</b><small>' + esc(p.artiste) + '</small></div>' +
+        '<div class="m-duree" data-d="' + i + '">' + (durees[p.id] ? fmt(durees[p.id]) : '') + '</div>' +
+        '<button class="coeur' + (favoris[p.id] ? ' on' : '') + '" data-f="' + i + '" aria-label="Favori"><svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 2.9 5 6.2 5c2 0 3.2 1 3.8 2 .6-1 1.8-2 3.8-2 3.3 0 5.3 3.4 3.8 6.8C19.5 16.4 12 21 12 21z" transform="translate(.0 0)"/></svg></button>' +
+        '</div>';
+    }
+    el.innerHTML = h;
+  }
+  function majEtat(){
+    var lit = !audio.paused;
+    $('lecteur').classList.toggle('lecture', lit);
+    majAuditeur(lit);
+    var svg = lit ? ICO_PAUSE : ICO_LIRE;
+    $('icLire').innerHTML = svg; $('mIc').innerHTML = svg;
+    var rows = document.querySelectorAll('.morceau');
+    for (var i = 0; i < rows.length; i++){
+      var on = +rows[i].getAttribute('data-i') === courant;
+      rows[i].classList.toggle('courant', on); rows[i].classList.toggle('lecture', on && lit);
+    }
+  }
+
+  /* ---------- lecture ---------- */
+  function jouer(i, auto){
+    if (i < 0 || i >= pistes.length) return;
+    var p = preparer(pistes[i]);
+    if (courant !== i || !audio.src){
+      courant = i; audio.src = p.url; audio.load(); evts = p.ev || []; idxL = 0; $('lecteur').classList.toggle('video', p.type === 'video');
+      $('titre').textContent = p.titre; $('artiste').textContent = p.artiste;
+      $('etiquette').textContent = 'Chant n° ' + (i + 1) + ' / ' + pistes.length;
+      $('motif').textContent = MOTIFS[i % MOTIFS.length];
+      $('mTitre').textContent = p.titre; $('mini').classList.add('on');
+      $('tTotal').textContent = durees[p.id] ? fmt(durees[p.id]) : '0:00';
+      ecrire('fn_noel_der', p.id);
+      if (!auto) historique.push(i);
+      if ('mediaSession' in navigator){
+        try{ navigator.mediaSession.metadata = new MediaMetadata({title: p.titre, artist: p.artiste, album: 'Noël sur FaceNet'}); }catch(e){}
+      }
+    }
+    var pr = audio.play();
+    if (pr && pr.catch) pr.catch(function(err){ if (err && err.name !== 'AbortError') toast('Appuie sur lecture pour démarrer le son.'); majEtat(); });
+    majEtat();
+  }
+  function suivant(auto){
+    if (!pistes.length) return;
+    var liste = visibles(); if (!liste.length) liste = pistes.map(function(_, i){ return i; });
+    var pos = liste.indexOf(courant), n;
+    if (alea && liste.length > 1){ do { n = liste[Math.floor(Math.random() * liste.length)]; } while (n === courant); }
+    else if (pos === -1) n = liste[0];
+    else if (pos + 1 < liste.length) n = liste[pos + 1];
+    else if (rep === 1 || !auto) n = liste[0];
+    else { audio.pause(); audio.currentTime = 0; majEtat(); return; }
+    jouer(n, true);
+  }
+  function precedent(){
+    if (audio.currentTime > 3){ audio.currentTime = 0; return; }
+    var liste = visibles(); if (!liste.length) liste = pistes.map(function(_, i){ return i; });
+    var pos = liste.indexOf(courant);
+    jouer(liste[pos > 0 ? pos - 1 : liste.length - 1], true);
+  }
+  function basculer(){
+    if (courant === -1){ var l = visibles(); if (l.length) jouer(alea ? l[Math.floor(Math.random() * l.length)] : l[0]); return; }
+    if (audio.paused){ var pr = audio.play(); if (pr && pr.catch) pr.catch(function(){}); } else audio.pause();
+  }
+
+  audio.addEventListener('play', function(){ majEtat(); if (!lumRaf && evts.length) lumRaf = requestAnimationFrame(boucleLumiere); }); audio.addEventListener('pause', majEtat);
+  audio.addEventListener('ended', function(){
+    if (rep === 2){ audio.currentTime = 0; audio.play(); } else suivant(true);
+  });
+  audio.addEventListener('loadedmetadata', function(){
+    if (courant < 0) return;
+    var p = pistes[courant]; durees[p.id] = audio.duration; $('tTotal').textContent = fmt(audio.duration);
+    var c = document.querySelector('[data-d="' + courant + '"]'); if (c) c.textContent = fmt(audio.duration);
+  });
+  audio.addEventListener('timeupdate', function(){
+    var d = audio.duration, t = audio.currentTime;
+    $('tCourant').textContent = fmt(t);
+    if (isFinite(d) && d > 0 && !$('progression')._drag){
+      var v = Math.round(t / d * 1000); $('progression').value = v; $('progression').style.setProperty('--p', (v / 10) + '%');
+    }
+  });
+  audio.addEventListener('error', function(){
+    if (courant < 0 || !audio.src) return;
+    toast('Ce morceau n\'a pas pu être lu — passage au suivant.');
+    setTimeout(function(){ if (pistes.length > 1) suivant(true); }, 900);
+  });
+
+  var prog = $('progression');
+  prog.addEventListener('input', function(){ prog._drag = true; prog.style.setProperty('--p', (prog.value / 10) + '%'); $('tCourant').textContent = fmt(audio.duration * prog.value / 1000); });
+  prog.addEventListener('change', function(){ if (isFinite(audio.duration)) audio.currentTime = audio.duration * prog.value / 1000; prog._drag = false; });
+
+  var vo = $('volume');
+  function appliquerVolume(){ audio.volume = vo.value / 100; vo.style.setProperty('--p', vo.value + '%'); ecrire('fn_noel_vol', +vo.value); }
+  vo.value = vol; vo.addEventListener('input', appliquerVolume); appliquerVolume();
+
+  /* ---------- commandes ---------- */
+  $('btnLire').onclick = basculer; $('mLire').onclick = basculer;
+  $('btnSuiv').onclick = function(){ suivant(false); }; $('mSuiv').onclick = function(){ suivant(false); };
+  $('btnPrec').onclick = precedent; $('mPrec').onclick = precedent;
+  audio.addEventListener('click', basculer);
+  $('btnAlea').onclick = function(){ alea = !alea; this.classList.toggle('actif', alea); toast(alea ? 'Lecture aléatoire activée' : 'Lecture aléatoire désactivée'); };
+  $('btnRep').onclick = function(){
+    rep = (rep + 1) % 3; this.classList.toggle('actif', rep > 0);
+    toast(['Répétition désactivée', 'Répéter toute la liste', 'Répéter ce morceau'][rep]);
+  };
+  $('liste').addEventListener('click', function(e){
+    var f = e.target.closest('.coeur');
+    if (f){
+      e.stopPropagation();
+      var p = pistes[+f.getAttribute('data-f')];
+      if (favoris[p.id]) delete favoris[p.id]; else favoris[p.id] = 1;
+      ecrire('fn_noel_fav', favoris);
+      if (filtre === 'fav') dessiner(); else f.classList.toggle('on', !!favoris[p.id]);
+      return;
+    }
+    var r = e.target.closest('.morceau');
+    if (!r) return;
+    var i = +r.getAttribute('data-i');
+    if (i === courant){ basculer(); } else jouer(i);
+  });
+  $('liste').addEventListener('keydown', function(e){
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('morceau')){ e.preventDefault(); e.target.click(); }
+  });
+  $('recherche').addEventListener('input', dessiner);
+  document.querySelector('.onglets').addEventListener('click', function(e){
+    var b = e.target.closest('button'); if (!b) return;
+    filtre = b.getAttribute('data-f');
+    var bs = this.querySelectorAll('button'); for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('on', bs[i] === b);
+    dessiner();
+  });
+  /* ---------- ajouts des utilisateurs (validés par un administrateur) ---------- */
+  function fusionnerAjouts(liste){
+    var idCourant = (courant >= 0 && pistes[courant]) ? pistes[courant].id : null;
+    pistes = pistes.filter(function(p){ return !p.ajout; });
+    for (var i = 0; i < liste.length; i++){
+      var a = liste[i];
+      pistes.push({id: 'ajout:' + a.id, titre: a.titre, artiste: 'Chanté par ' + a.auteur, url: a.url, type: a.type, local: false, ajout: true});
+    }
+    courant = -1;
+    if (idCourant) for (var j = 0; j < pistes.length; j++) if (pistes[j].id === idCourant) courant = j;
+  }
+  function dessinerEnvois(liste){
+    var h = '';
+    for (var i = 0; i < liste.length; i++){
+      var a = liste[i], rej = a.statut === 'rejete';
+      h += '<div class="envoi' + (rej ? ' rej' : '') + '"><span>' + (a.type === 'video' ? '🎬' : '🎵') + '</span>' +
+           '<span class="et"><b>' + esc(a.titre) + '</b><small>' + (rej ? '❌ Refusé par l’administrateur' : '⏳ En attente de validation') + '</small></span></div>';
+    }
+    $('mesEnvois').innerHTML = h;
+  }
+  function chargerAjouts(){
+    return fetch(URL_AJOUTS, {credentials: 'same-origin', headers: {'Accept': 'application/json'}})
+      .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function(d){
+        fusionnerAjouts(d.approuves || []);
+        dessinerEnvois(d.miens || []);
+        var lm = $('lienModo');
+        if (d.admin){ lm.hidden = false; lm.textContent = '🛡️ Modération' + (d.en_attente ? ' (' + d.en_attente + ' en attente)' : ''); }
+        dessiner();
+      })
+      .catch(function(){ /* serveur d’ajouts non installé : les chants FaceNet restent disponibles */ });
+  }
+  $('fichiers').addEventListener('change', function(){
+    var f = this.files[0]; this.value = '';
+    if (!f) return;
+    var okV = /^video\//.test(f.type) || /\.(mp4|m4v|mov|webm|ogv|3gp|mkv)$/i.test(f.name);
+    var okA = /^audio\//.test(f.type) || /\.(mp3|ogg|oga|opus|wav|m4a|aac|flac|weba)$/i.test(f.name);
+    if (!okV && !okA){ toast('Choisis une vidéo (mp4, webm, mov…) ou une musique (mp3, m4a, ogg, wav…).'); return; }
+    var fd = new FormData();
+    fd.append('fichier', f);
+    fd.append('titre', ($('titreAjout').value || '').trim() || f.name.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' '));
+    if (JETON) fd.append('csrf_token', JETON);
+    var x = new XMLHttpRequest(), pg = $('progres');
+    x.open('POST', URL_AJOUTS);
+    x.setRequestHeader('Accept', 'application/json');
+    if (JETON) x.setRequestHeader('X-CSRFToken', JETON);
+    pg.classList.add('on'); pg.firstChild.style.width = '0%';
+    x.upload.onprogress = function(e){ if (e.lengthComputable) pg.firstChild.style.width = Math.round(e.loaded / e.total * 100) + '%'; };
+    x.onerror = function(){ pg.classList.remove('on'); toast('Envoi impossible. Vérifie ta connexion.'); };
+    x.onload = function(){
+      pg.classList.remove('on');
+      var d = {}; try{ d = JSON.parse(x.responseText); }catch(e){}
+      if (x.status >= 200 && x.status < 300){ $('titreAjout').value = ''; toast(d.message || 'Envoyé !'); chargerAjouts(); }
+      else toast(d.erreur || ('Envoi refusé (erreur ' + x.status + ').'));
+    };
+    x.send(fd);
+  });
+  document.addEventListener('keydown', function(e){
+    var t = e.target && e.target.tagName;
+    if (t === 'INPUT' && e.target.type !== 'range') return;
+    if (e.code === 'Space'){ e.preventDefault(); basculer(); }
+    else if (e.key === 'ArrowRight'){ if (e.shiftKey) audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 10); else suivant(false); }
+    else if (e.key === 'ArrowLeft'){ if (e.shiftKey) audio.currentTime = Math.max(0, audio.currentTime - 10); else precedent(); }
+    else if (e.key === 's' || e.key === 'S') $('btnAlea').click();
+    else if (e.key === 'r' || e.key === 'R') $('btnRep').click();
+  });
+  if ('mediaSession' in navigator){
+    try{
+      navigator.mediaSession.setActionHandler('play', basculer);
+      navigator.mediaSession.setActionHandler('pause', basculer);
+      navigator.mediaSession.setActionHandler('nexttrack', function(){ suivant(false); });
+      navigator.mediaSession.setActionHandler('previoustrack', precedent);
+    }catch(e){}
+  }
+
+  /* ---------- chargement des morceaux ---------- */
+  function restaurer(){
+    if (courant !== -1) return;
+    var der = lire('fn_noel_der', null);
+    if (!der) return;
+    for (var i = 0; i < pistes.length; i++) if (pistes[i].id === der){
+      var p = preparer(pistes[i]);
+      courant = i; audio.src = p.url; evts = p.ev || []; idxL = 0; $('lecteur').classList.toggle('video', p.type === 'video');
+      $('titre').textContent = p.titre; $('artiste').textContent = p.artiste;
+      $('etiquette').textContent = 'Chant n° ' + (i + 1) + ' / ' + pistes.length; $('motif').textContent = MOTIFS[i % MOTIFS.length];
+      $('mTitre').textContent = p.titre; $('mini').classList.add('on'); majEtat(); break;
+    }
+  }
+  dessiner();   // les chants FaceNet intégrés sont disponibles tout de suite
+  fetch(URL_MORCEAUX, {credentials: 'same-origin', headers: {'Accept': 'application/json'}})
+    .then(function(r){
+      if (r.status === 403 || r.status === 404){ location.replace(URL_PARAMETRES); throw new Error('hors saison'); }
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(d){
+      var serveur = (d.morceaux || []).map(function(m, i){ return {id: m.id || ('p' + i), titre: m.titre, artiste: m.artiste || 'Chant de Noël', url: m.url, local: false}; });
+      pistes = pistes.concat(serveur);
+      dessiner(); restaurer();
+    })
+    .catch(function(err){
+      if (err && err.message === 'hors saison') return;
+      toast('Les chants du serveur sont indisponibles — les chants FaceNet restent disponibles.');
+      dessiner(); restaurer();
+    })
+    .then(chargerAjouts)
+    .then(function(){ dessiner(); restaurer(); });
+})();
+</script>
+</body>
+</html>

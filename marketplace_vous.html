@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    .mkv { max-width: 640px; margin: 0 auto; background: #fff; min-height: calc(100vh - var(--header-h, 60px)); padding: 0 16px 90px; box-sizing: border-box; font-family: Segoe UI, Helvetica, Arial, sans-serif; color: #050505; }
+    .mkv-top { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; padding: 14px 0 10px; }
+    .mkv-top a { color: #050505; font-size: 22px; text-decoration: none; width: 44px; height: 44px; display: flex; align-items: center; }
+    .mkv-top h1 { margin: 0; text-align: center; font-size: 20px; font-weight: 700; }
+    .mkv-me { display: flex; align-items: center; gap: 14px; padding: 12px 0 18px; }
+    .mkv-me img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: #e4e6eb; }
+    .mkv-nom { font-size: 20px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+    .mkv-badge { flex-shrink: 0; }
+    .mkv-me a { color: #1877f2; text-decoration: none; font-size: 17px; }
+    .mkv-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+    .mkv-card { border: 1px solid #ced0d4; border-radius: 14px; padding: 14px; text-decoration: none; color: #050505; display: flex; flex-direction: column; gap: 14px; min-height: 92px; box-sizing: border-box; justify-content: space-between; }
+    .mkv-card i { font-size: 22px; }
+    .mkv-card b { font-size: 17px; font-weight: 700; }
+    .mkv h2 { font-size: 21px; font-weight: 700; margin: 22px 0 8px; }
+    .mkv-row { display: flex; align-items: center; gap: 16px; padding: 13px 0; text-decoration: none; color: #050505; font-size: 18px; }
+    .mkv-row i { width: 26px; text-align: center; font-size: 22px; }
+    .mkv-row small { display: block; color: #65676b; font-size: 15px; margin-top: 2px; }
+    .mkv-row:active, .mkv-card:active { background: #f0f2f5; }
+</style>
+
+<div class="mkv">
+    <div class="mkv-top">
+        <a href="/marketplace" aria-label="Retour"><i class="fas fa-chevron-left"></i></a>
+        <h1>Vous</h1>
+        <span></span>
+    </div>
+
+    <div class="mkv-me">
+        <img src="{{ moi.avatar }}" alt="">
+        <div>
+            <div class="mkv-nom">
+                <span>{{ moi.nom }}</span>
+                {# Badge bleu affiché uniquement si l'utilisateur est vérifié #}
+                {% if moi.verifie %}
+                <svg class="mkv-badge" viewBox="0 0 24 24" width="20" height="20" role="img" aria-label="Profil vérifié">
+                    <path fill="#1877f2" d="M12 1.5l2.6 1.9 3.2-.1 1 3.1 2.6 1.9-1 3.1 1 3.1-2.6 1.9-1 3.1-3.2-.1L12 22.5l-2.6-1.9-3.2.1-1-3.1-2.6-1.9 1-3.1-1-3.1 2.6-1.9 1-3.1 3.2.1z"/>
+                    <path fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M7.8 12.3l2.9 2.9 5.6-5.8"/>
+                </svg>
+                {% endif %}
+            </div>
+            <a href="/marketplace/vendeur/{{ moi.id }}">Voir le profil Marketplace</a>
+        </div>
+    </div>
+
+    <div class="mkv-cards">
+        <a class="mkv-card" href="/marketplace/enregistres"><i class="far fa-bookmark"></i><b>Éléments enregistrés</b></a>
+        <a class="mkv-card" href="{{ liens.messages }}"><i class="far fa-envelope"></i><b>Messagerie</b></a>
+        <a class="mkv-card" href="/marketplace/avis"><i class="far fa-star"></i><b>Avis</b></a>
+        <a class="mkv-card" href="/marketplace/recents"><i class="far fa-clock"></i><b>Vus récemment</b></a>
+    </div>
+
+    <h2>Ventes</h2>
+    <a class="mkv-row" href="/marketplace/vos-annonces"><i class="fas fa-tag"></i><span>Vos annonces</span></a>
+    <a class="mkv-row" href="/marketplace/actions-rapides"><i class="fas fa-bolt"></i><span>Actions rapides</span></a>
+    <a class="mkv-row" href="/marketplace/followers"><i class="fas fa-user-group"></i><span>Followers Marketplace</span></a>
+    <a class="mkv-row" href="/marketplace/activites"><i class="fas fa-wave-square"></i><span>Toutes les activités de vente</span></a>
+
+    <h2>Préférences</h2>
+    <a class="mkv-row" href="/marketplace/suivis"><i class="far fa-square-check"></i><span>Suivi(e)s</span></a>
+
+    <h2>Compte</h2>
+    <a class="mkv-row" href="/marketplace/statut"><i class="fas fa-shield-halved"></i><span>Statut Marketplace<small>Vous avez un accès complet.</small></span></a>
+    <a class="mkv-row" href="/marketplace/localisation"><i class="fas fa-location-dot"></i><span>Localisation</span></a>
+    <a class="mkv-row" href="{{ liens.notifications }}"><i class="far fa-bell"></i><span>Notifications</span></a>
+
+    <h2>Plus</h2>
+    <a class="mkv-row" href="{{ liens.parametres }}"><i class="fas fa-gear"></i><span>Paramètres</span></a>
+</div>
+{% endblock %}

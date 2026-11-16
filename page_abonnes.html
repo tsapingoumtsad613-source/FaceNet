@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from '_page_macros.html' import badge with context %}
+
+{% block title %}Abonnés — {{ page.nom }} — FaceNet{% endblock %}
+
+{% block content %}
+{% include '_page_style.html' %}
+<div class="pg-wrap">
+    <div class="pg-card" style="display:flex;align-items:center;gap:12px;">
+        <a class="pg-back" href="{{ url_for('main.fnpage_profil', page_id=page.id) }}" aria-label="Retour">←</a>
+        <div style="min-width:0;">
+            <h3 style="margin:0;">Abonnés</h3>
+            <span style="color:var(--pg-grey);font-size:13px;">{{ page.nom }}{% if page.verifiee %}{{ badge(14) }}{% endif %} · <b>{{ page.nb_abonnes }}</b> abonné(e)(s)</span>
+        </div>
+    </div>
+
+    <div class="pg-card">
+        {% if abonnes %}
+        <div class="pg-liste">
+            {% for u in abonnes %}
+            <a class="pg-item" href="{{ url_for('main.profile', username=u.username) }}">
+                <img src="{{ url_for('static', filename='uploads/' + (u.avatar or 'default_avatar.png')) }}" alt="">
+                <div class="t"><b>{{ u.nom_complet or u.username }}</b><span>@{{ u.username }}</span></div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="pg-vide">Aucun abonné pour le moment.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

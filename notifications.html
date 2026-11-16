@@ -1,0 +1,696 @@
+<style>
+    /* ============================================================
+       Notifications — présentation identique à la maquette (liste plate façon appli mobile)
+       Toutes les tailles sont en « u » : 1u = 1 % de la largeur d'écran (plafonné à 7,2 px sur grand écran),
+       donc les proportions sont les mêmes sur tous les téléphones. Pour tout agrandir / réduire d'un coup,
+       change seulement la valeur de --u ci-dessous (ex : min(1.1vw, 7.9px)).
+       ============================================================ */
+    body { background-color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
+
+    .main-container { --u: min(1vw, 7.2px); --bleu: #1877f2; --gris-texte: #65676b; --fond-ligne: #ffffff;
+        width: calc(var(--u) * 100); max-width: 100%; margin: 0 auto; padding: 0; box-sizing: border-box; color: #050505; }
+
+    /* --- Titre « Nouveau » --- */
+    .notif-header { display: block; padding: calc(var(--u) * 3.4) calc(var(--u) * 3) calc(var(--u) * 1.6); margin: 0; }
+    .notif-header h2 { margin: 0; font-size: calc(var(--u) * 4.5); line-height: 1.2; font-weight: 800; color: #050505; }
+    .notif-summary { display: none; }   /* compteur conservé dans la page (mis à jour par le script) mais non affiché, comme sur la maquette */
+
+    /* --- Barre d'outils : petites pastilles discrètes (Retour, Actualiser, Annuler, Tout marquer comme lu) --- */
+    .notif-toolbar { display: flex; flex-wrap: nowrap; gap: calc(var(--u) * 1.6); margin: 0; padding: 0 calc(var(--u) * 3) calc(var(--u) * 2); overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .notif-toolbar::-webkit-scrollbar { display: none; }
+    .notif-tool { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: calc(var(--u) * 1.2); background: #e4e6eb; color: #050505; border: none; border-radius: 999px; height: calc(var(--u) * 7.4); padding: 0 calc(var(--u) * 3); font-family: inherit; font-size: calc(var(--u) * 3.3); font-weight: 600; white-space: nowrap; cursor: pointer; box-shadow: none; transition: background .15s ease, transform .1s ease; -webkit-tap-highlight-color: transparent; }
+    .notif-tool svg { width: 1.2em; height: 1.2em; fill: currentColor; flex-shrink: 0; }
+    .notif-tool:hover:not(:disabled) { background: #d8dadf; }
+    .notif-tool:active:not(:disabled) { transform: scale(.96); }
+    .notif-tool:disabled { opacity: .45; cursor: not-allowed; }
+    .notif-tool.is-spinning svg { animation: notifSpin .6s linear infinite; }
+    @keyframes notifSpin { to { transform: rotate(360deg); } }
+
+    /* --- Liste plate, sans carte ni ombre --- */
+    .card { background: transparent; border-radius: 0; padding: 0; box-shadow: none; }
+
+    .notif-item { --fond-ligne: #ffffff; position: relative; display: block; box-sizing: border-box; background: var(--fond-ligne);
+        padding: calc(var(--u) * 2) calc(var(--u) * 3) calc(var(--u) * 2) calc(var(--u) * 5); border: none; border-radius: 0; cursor: default; transition: background .15s ease; }
+    .notif-item.clickable { cursor: pointer; }
+    .notif-item.clickable:active { background: #f2f3f5; }
+    .notif-item.unread { --fond-ligne: #e7f3ff; background: var(--fond-ligne); }
+    .notif-item.unread.clickable:active { background: #d9eaff; }
+    /* point bleu « non lu » */
+    .unread::before { content: ""; position: absolute; left: calc(var(--u) * 1.4); top: 50%; transform: translateY(-50%); width: calc(var(--u) * 1.7); height: calc(var(--u) * 1.7); border-radius: 50%; background: var(--bleu); }
+
+    .notif-main { display: flex; align-items: flex-start; gap: calc(var(--u) * 2.8); min-width: 0; }
+
+    /* --- Photo ronde + petite pastille de type (en bas à droite) --- */
+    .notif-avatar-wrap { position: relative; flex-shrink: 0; width: calc(var(--u) * 15.5); height: calc(var(--u) * 15.5); }
+    .notif-avatar { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: #e4e6eb; display: block; }
+    .notif-avatar-generic { width: 100%; height: 100%; border-radius: 50%; background: #e4e6eb; color: #65676b; display: flex; align-items: center; justify-content: center; font-size: calc(var(--u) * 6); box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+    .notif-type-badge { position: absolute; right: calc(var(--u) * -0.7); bottom: calc(var(--u) * -0.4); z-index: 2; width: calc(var(--u) * 6.4); height: calc(var(--u) * 6.4); box-sizing: border-box; border-radius: 50%; background: var(--bleu); color: #fff; display: flex; align-items: center; justify-content: center; border: calc(var(--u) * 0.55) solid var(--fond-ligne); }
+    .notif-type-badge .notif-svg { width: 58%; height: 58%; fill: currentColor; display: block; }
+    .facenet-logo { width: calc(var(--u) * 15.5); height: calc(var(--u) * 15.5); border-radius: 50%; flex-shrink: 0; display: block; box-shadow: 0 calc(var(--u) * .5) calc(var(--u) * 1.6) rgba(24,119,242,.35); }
+    .facenet-logo svg { width: 100%; height: 100%; display: block; }
+
+    /* --- Texte : nom en gras, heure grise à la suite --- */
+    .notif-content { flex: 1; min-width: 0; }
+    .notif-content p { margin: 0; padding-right: calc(var(--u) * 7.5); font-size: calc(var(--u) * 4.05); line-height: 1.2; color: #050505; word-break: break-word; }
+    .notif-content p b { font-weight: 700; }
+    .notif-content small { color: var(--gris-texte); font-size: inherit; font-weight: 400; white-space: nowrap; }
+    .notif-content > small { display: block; padding-right: calc(var(--u) * 7.5); font-size: calc(var(--u) * 4.05); }
+    .facenet-support-header { display: inline; }
+    .facenet-support-header span, .facenet-support-header b { font-size: inherit !important; font-weight: 700; color: #050505 !important; }
+    .verified-badge { color: var(--bleu); font-size: .9em; }
+    .notif-status { display: block; margin-top: calc(var(--u) * 1); color: var(--gris-texte); font-weight: 600; font-size: calc(var(--u) * 3.6); }
+    .notif-status i { color: #31a24c; margin-right: calc(var(--u) * .8); }
+
+    /* --- Boutons d'action : deux côte à côte, pleine largeur --- */
+    .notif-actions { display: flex; gap: calc(var(--u) * 2); margin: calc(var(--u) * 2.4) 0 0 0; }
+    .notif-actions form { flex: 1; margin: 0; }
+    .notif-actions form.notif-act[data-busy] button { opacity: .55; pointer-events: none; }
+    .btn-notif-confirm, .btn-notif-delete { display: block; width: 100%; height: calc(var(--u) * 8.8); padding: 0 calc(var(--u) * 2); border: none; border-radius: calc(var(--u) * 1.3); font-family: inherit; font-size: calc(var(--u) * 3.7); font-weight: 500; cursor: pointer; transition: background .2s; -webkit-tap-highlight-color: transparent; }
+    .btn-notif-confirm { background: var(--bleu); color: #fff; }
+    .btn-notif-confirm:hover { background: #166fe5; }
+    .btn-notif-delete { background: #e4e6eb; color: #050505; }
+    .btn-notif-delete:hover { background: #d8dadf; }
+
+    /* --- Menu « ••• » (trois points horizontaux, en haut à droite) --- */
+    .menu-btn { position: absolute; top: calc(var(--u) * 1.4); right: calc(var(--u) * 1.2); width: calc(var(--u) * 7.6); height: calc(var(--u) * 7.6); display: flex; align-items: center; justify-content: center; color: #65676b; border-radius: 50%; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .menu-btn svg { width: calc(var(--u) * 5.2); height: calc(var(--u) * 5.2); fill: currentColor; display: block; }
+    .menu-btn:active { background: rgba(0,0,0,.08); }
+    .dropdown-content { display: none; position: absolute; right: calc(var(--u) * 3); top: calc(var(--u) * 8.6); background: #fff; border-radius: calc(var(--u) * 2); box-shadow: 0 calc(var(--u) * .6) calc(var(--u) * 3.2) rgba(0,0,0,.28); z-index: 5; width: calc(var(--u) * 66); max-width: calc(100% - var(--u) * 6); overflow: hidden; }
+    .dropdown-content a { display: block; padding: calc(var(--u) * 2.8) calc(var(--u) * 3.2); text-decoration: none; color: #050505; font-size: calc(var(--u) * 3.7); line-height: 1.3; }
+    .dropdown-content a:active, .dropdown-content a:hover { background: #f2f3f5; }
+
+    /* --- Fin de liste et liste vide (discrets) --- */
+    .notif-empty { text-align: center; color: var(--gris-texte); padding: calc(var(--u) * 14) calc(var(--u) * 4); }
+    .notif-empty i { font-size: calc(var(--u) * 14); color: #c7cad1; margin-bottom: calc(var(--u) * 2); display: block; }
+    .notif-empty p { margin: 0; font-size: calc(var(--u) * 4); }
+    .notif-end { text-align: center; color: var(--gris-texte); padding: calc(var(--u) * 6) calc(var(--u) * 4) calc(var(--u) * 8); }
+    .notif-end i { font-size: calc(var(--u) * 6); color: #31a24c; display: block; margin-bottom: calc(var(--u) * 1.6); }
+    .notif-end strong { display: block; font-size: calc(var(--u) * 3.9); color: #050505; margin-bottom: calc(var(--u) * 1); }
+    .notif-end span { font-size: calc(var(--u) * 3.3); }
+
+    /* --- Animations (suppression et arrivée de nouvelles notifications) --- */
+    .notif-item.notif-removing { opacity: 0; transform: translateX(40px); max-height: 0; padding-top: 0 !important; padding-bottom: 0 !important; overflow: hidden; transition: opacity .25s ease, transform .25s ease, max-height .3s ease .1s, padding .3s ease .1s; }
+    .notif-delete-link.is-busy { opacity: .5; pointer-events: none; }
+    .notif-arrive { animation: notifDescend .55s cubic-bezier(.2,.8,.2,1); overflow: hidden; }
+    @keyframes notifDescend {
+        from { opacity: 0; transform: translateY(-18px); max-height: 0; }
+        to   { opacity: 1; transform: translateY(0);     max-height: 600px; }
+    }
+    .notif-nouvelles-pill { position: fixed; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 12px); z-index: 500;
+        background: var(--bleu, #1877f2); color: #fff; border: 0; border-radius: 999px; padding: 9px 16px; font: 700 14px/1 inherit; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+    .notif-nouvelles-pill[hidden] { display: none; }
+    .notif-toast-fb { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #1c1e21; color: #fff; padding: 14px 22px; border-radius: 12px; font-size: 16px; z-index: 50; max-width: 90vw; text-align: center; }
+    @media (prefers-reduced-motion: reduce) { .notif-arrive { animation: none; } }
+</style>
+
+
+{# ===== Logos SVG intégrés (aucune dépendance à Font Awesome) ===== #}
+{% macro notif_icon(icon_class) -%}
+{%- set paths = {
+ 'fa-thumbs-up': 'M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z',
+ 'fa-comment': 'M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z',
+ 'fa-reply': 'M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z',
+ 'fa-at': 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10h5v-2h-5c-4.34 0-8-3.66-8-8s3.66-8 8-8 8 3.66 8 8v1.43c0 .79-.71 1.57-1.5 1.57s-1.5-.78-1.5-1.57V12c0-2.76-2.24-5-5-5s-5 2.24-5 5 2.24 5 5 5c1.38 0 2.64-.56 3.54-1.47.65.89 1.77 1.47 2.96 1.47 1.97 0 3.5-1.6 3.5-3.57V12c0-5.52-4.48-10-10-10zm0 13c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z',
+ 'fa-share': 'M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z',
+ 'fa-retweet': 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z',
+ 'fa-envelope': 'M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z',
+ 'fa-user-plus': 'M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
+ 'fa-play-circle': 'M10 16.5l6-4.5-6-4.5v9zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z',
+ 'fa-lock': 'M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z',
+ 'fa-flag': 'M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z',
+ 'fa-check-circle': 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z',
+ 'fa-exclamation-circle': 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z',
+ 'fa-exclamation-triangle': 'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z',
+ 'fa-trash': 'M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z',
+ 'fa-headset': 'M12 1c-4.97 0-9 4.03-9 9v7c0 1.66 1.34 3 3 3h3v-8H5v-2c0-3.87 3.13-7 7-7s7 3.13 7 7v2h-4v8h3c1.66 0 3-1.34 3-3v-7c0-4.97-4.03-9-9-9z',
+ 'fa-credit-card': 'M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z',
+ 'fa-bolt': 'M7 2v11h3v9l7-12h-4l4-8z',
+ 'fa-star': 'M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z',
+ 'fa-tag': 'M17.63 5.84C17.27 5.33 16.67 5 16 5L5 5.01C3.9 5.01 3 5.9 3 7v10c0 1.1.9 1.99 2 1.99L16 19c.67 0 1.27-.33 1.63-.84L22 12l-4.37-6.16z',
+ 'fa-birthday-cake': 'M12 6c1.11 0 2-.9 2-2 0-.38-.1-.73-.29-1.03L12 0l-1.71 2.97c-.19.3-.29.65-.29 1.03 0 1.1.9 2 2 2zm4.6 9.99l-1.07-1.07-1.08 1.07c-1.3 1.3-3.58 1.31-4.89 0l-1.07-1.07-1.09 1.07C6.75 16.64 5.88 17 4.96 17c-.73 0-1.4-.23-1.96-.61V21c0 .55.45 1 1 1h16c.55 0 1-.45 1-1v-4.61c-.56.38-1.23.61-1.96.61-.92 0-1.79-.36-2.44-1.01zM18 9h-5V7h-2v2H6c-1.66 0-3 1.34-3 3v1.54c0 1.08.88 1.96 1.96 1.96.52 0 1.02-.2 1.38-.57l2.14-2.13 2.13 2.13c.74.74 2.03.74 2.77 0l2.14-2.13 2.13 2.13c.37.37.86.57 1.38.57 1.08 0 1.96-.88 1.96-1.96V12C21 10.34 19.66 9 18 9z',
+ 'fa-bell': 'M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z'
+} -%}
+<svg class="notif-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ paths.get(icon_class, paths['fa-bell']) }}"/></svg>
+{%- endmacro %}
+
+<div class="main-container">
+    {# Logo « Support FaceNet » : défini une seule fois, réutilisé par chaque notification du support #}
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+        <defs>
+            <linearGradient id="fnLogoFond" x1="12" y1="4" x2="88" y2="96" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#4DB6FF"/><stop offset=".55" stop-color="#1D6FEA"/><stop offset="1" stop-color="#1A3FB5"/>
+            </linearGradient>
+            <radialGradient id="fnLogoReflet" cx="32" cy="18" r="46" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+            </radialGradient>
+            <symbol id="fn-logo-support" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="50" fill="url(#fnLogoFond)"/>
+                <circle cx="50" cy="50" r="50" fill="url(#fnLogoReflet)"/>
+                <circle cx="50" cy="50" r="46.5" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="1.6"/>
+                <path d="M37 76V36q0-10 10-10h20M37 52h23" fill="none" stroke="#0B2A7A" stroke-opacity=".28" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 2.2)"/>
+                <path d="M37 76V36q0-10 10-10h20M37 52h23" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="74" cy="26" r="7.2" fill="#fff"/>
+                <circle cx="67" cy="52" r="7.2" fill="#fff"/>
+                <circle cx="74" cy="26" r="2.6" fill="#1D6FEA"/>
+                <circle cx="67" cy="52" r="2.6" fill="#1D6FEA"/>
+            </symbol>
+        </defs>
+    </svg>
+    <div class="notif-header">
+        <h2>Nouveau</h2>
+    </div>
+    {% if notifications %}
+        {% set nb_total = notifications|length %}
+        {% set nb_non_lues = notifications|rejectattr('is_read')|list|length %}
+        <p class="notif-summary">{{ nb_total }} notification{{ 's' if nb_total > 1 else '' }} · {% if nb_non_lues %}<strong>{{ nb_non_lues }} non lue{{ 's' if nb_non_lues > 1 else '' }}</strong>{% else %}tout est lu{% endif %}</p>
+    {% endif %}
+    <div class="notif-toolbar">
+        <button type="button" class="notif-tool" onclick="retourPagePrecedente()" aria-label="Retour" title="Retour">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            Retour
+        </button>
+        <button type="button" class="notif-tool" id="notif-btn-refresh" onclick="actualiserNotifications(this)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+            Actualiser
+        </button>
+        <button type="button" class="notif-tool" id="notif-btn-undo" onclick="annulerDerniereSuppression(this)" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+            Annuler la suppression
+        </button>
+        <button type="button" class="notif-tool" id="notif-btn-readall" onclick="toutMarquerCommeLu(this)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"/></svg>
+            Tout marquer comme lu
+        </button>
+    </div>
+    <div class="card" id="notif-card-container">
+        {% if notifications %}
+            {% for notif in notifications|sort(attribute='id', reverse=true) %}
+                {% set get_user_fn = get_user if get_user is defined else None %}
+                {# AJOUT : les notifications Ghost n'affichent jamais d'avatar ni de @pseudo (anonymat) #}
+                {% set sender = get_user_fn(notif.sender_id) if (get_user_fn and notif.sender_id and not (notif.type or '').startswith('ghost')) else None %}
+                {% set profile_url = url_for('main.profile', username=sender.username) if sender else '' %}
+                {% set type_icons = {'ghost_recu': 'fa-bell', 'ghost_reponse': 'fa-comment', 'like': 'fa-thumbs-up', 'reaction': 'fa-thumbs-up', 'comment': 'fa-comment', 'commentaire': 'fa-comment', 'reply': 'fa-reply', 'mention': 'fa-at', 'share': 'fa-share', 'partage': 'fa-share', 'repost': 'fa-retweet', 'republication': 'fa-retweet', 'message': 'fa-envelope', 'friend_request': 'fa-user-plus', 'friend_accept': 'fa-user-plus', 'amitie': 'fa-user-plus', 'ami': 'fa-user-plus', 'follow': 'fa-user-plus', 'invitation': 'fa-user-plus', 'family_invite': 'fa-user-plus', 'family_accept': 'fa-check-circle', 'story': 'fa-play-circle', 'securite_mot_de_passe': 'fa-lock', 'signalement_recu': 'fa-flag', 'signalement_traite': 'fa-check-circle', 'contenu_signale': 'fa-flag', 'profil_probleme': 'fa-exclamation-circle', 'avertissement': 'fa-exclamation-triangle', 'contenu_supprime': 'fa-trash', 'support': 'fa-headset', 'paiement_confirme': 'fa-credit-card', 'paiement_echoue': 'fa-credit-card', 'boost': 'fa-bolt', 'blue_badge_sub': 'fa-check-circle', 'blue_badge_active': 'fa-check-circle', 'blue_badge_rejete': 'fa-exclamation-circle', 'verification_badge': 'fa-check-circle', 'welcome': 'fa-star', 'bienvenue': 'fa-star', 'tag': 'fa-tag', 'tagged': 'fa-tag', 'identification': 'fa-tag', 'identifie': 'fa-tag', 'photo_tag': 'fa-tag', 'anniversaire': 'fa-birthday-cake', 'birthday': 'fa-birthday-cake', 'suggestion': 'fa-user-plus', 'friend_suggestion': 'fa-user-plus', 'suggestion_ami': 'fa-user-plus', 'parental_invite': 'fa-lock', 'parental_reponse': 'fa-check-circle', 'parental_demande': 'fa-bell', 'parental_blocage': 'fa-lock', 'parental_deblocage': 'fa-check-circle', 'parental_fin': 'fa-lock'} %}
+                {% set type_labels = {'ghost_recu': '👻 Ghost', 'ghost_reponse': '👻 Réponse Ghost', 'like': "J'aime", 'reaction': 'Réaction', 'comment': 'Commentaire', 'commentaire': 'Commentaire', 'friend_request': "Demande d'ami", 'friend_accept': 'Ami accepté', 'message': 'Message', 'mention': 'Mention', 'share': 'Partage', 'partage': 'Partage', 'repost': 'Republication', 'republication': 'Republication', 'story': 'Story', 'reply': 'Réponse', 'follow': 'Nouvel abonné', 'invitation': 'Invitation', 'family_invite': 'Cercle familial', 'family_accept': 'Cercle familial', 'securite_mot_de_passe': 'Sécurité', 'signalement_recu': 'Signalement', 'signalement_traite': 'Signalement', 'contenu_signale': 'Contenu signalé', 'profil_probleme': 'Profil', 'avertissement': 'Avertissement', 'contenu_supprime': 'Contenu supprimé', 'support': 'Support', 'paiement_confirme': 'Paiement', 'paiement_echoue': 'Paiement', 'boost': 'Boost', 'tag': 'Identification', 'tagged': 'Identification', 'identification': 'Identification', 'identifie': 'Identification', 'photo_tag': 'Identification', 'anniversaire': 'Anniversaire', 'birthday': 'Anniversaire', 'suggestion': 'Suggestion', 'friend_suggestion': 'Suggestion', 'suggestion_ami': 'Suggestion', 'parental_invite': 'Contrôle parental', 'parental_reponse': 'Contrôle parental', 'parental_demande': 'Contrôle parental', 'parental_blocage': 'Contrôle parental', 'parental_deblocage': 'Contrôle parental', 'parental_fin': 'Contrôle parental'} %}
+                {% set type_colors = {'ghost_recu': '#6C5CE7', 'ghost_reponse': '#6C5CE7', 'like': '#1877F2', 'reaction': '#1877F2', 'comment': '#31A24C', 'commentaire': '#31A24C', 'reply': '#31A24C', 'mention': '#E67E22', 'share': '#8E44AD', 'partage': '#8E44AD', 'repost': '#00A884', 'republication': '#00A884', 'message': '#0084FF', 'friend_request': '#1877F2', 'friend_accept': '#1877F2', 'amitie': '#1877F2', 'ami': '#1877F2', 'follow': '#1877F2', 'invitation': '#1877F2', 'family_invite': '#8E44AD', 'family_accept': '#31A24C', 'story': '#E1306C', 'securite_mot_de_passe': '#2D3748', 'signalement_recu': '#E67E22', 'contenu_signale': '#E67E22', 'profil_probleme': '#E67E22', 'avertissement': '#F02849', 'contenu_supprime': '#F02849', 'paiement_echoue': '#F02849', 'paiement_confirme': '#31A24C', 'signalement_traite': '#31A24C', 'boost': '#F7B928', 'tag': '#31A24C', 'tagged': '#31A24C', 'identification': '#31A24C', 'identifie': '#31A24C', 'photo_tag': '#31A24C', 'anniversaire': '#F3425F', 'birthday': '#F3425F', 'suggestion': '#1877F2', 'friend_suggestion': '#1877F2', 'suggestion_ami': '#1877F2', 'parental_invite': '#8E44AD', 'parental_reponse': '#31A24C', 'parental_demande': '#E67E22', 'parental_blocage': '#F02849', 'parental_deblocage': '#31A24C', 'parental_fin': '#8E44AD'} %}
+                {% set extra = notif.extra_data if notif.extra_data else {} %}
+                {% set ntype = notif.type %}
+                {% if ntype not in type_icons %}
+                    {% set _m = (notif.message or '')|lower %}
+                    {% if 'identifi' in _m %}{% set ntype = 'tag' %}
+                    {% elif 'anniversaire' in _m %}{% set ntype = 'anniversaire' %}
+                    {% elif 'suggestion' in _m %}{% set ntype = 'suggestion' %}
+                    {% elif 'accepté votre invitation' in _m or 'accepte votre invitation' in _m %}{% set ntype = 'friend_accept' %}
+                    {% elif 'aime' in _m %}{% set ntype = 'like' %}
+                    {% elif 'commenté' in _m or 'commente' in _m %}{% set ntype = 'comment' %}
+                    {% elif 'partagé' in _m %}{% set ntype = 'share' %}
+                    {% endif %}
+                {% endif %}
+                {% set icon_class = type_icons.get(ntype) or extra.get('icone') or 'fa-bell' %}
+                {% set badge_color = type_colors.get(ntype, '#1877F2') %}
+                {# Le clic passe par /notifications/ouvrir/<id> : la destination est calculée au clic (jamais de 404) #}
+                {% set lien = url_for('main.ouvrir_notification', notif_id=notif.id) %}
+
+                <div class="notif-item {% if not notif.is_read %}unread{% endif %} {% if lien %}clickable{% endif %}" data-notif-id="{{ notif.id }}"
+                     {% if lien %}data-href="{{ lien }}" onclick="handleNotifClick(event, this)"{% endif %}>
+
+                    {% if extra.get('support') or notif.type in ['blue_badge_sub', 'blue_badge_active', 'blue_badge_rejete', 'welcome'] %}
+                        <div class="notif-main">
+                            <div class="facenet-logo" role="img" aria-label="Support FaceNet"><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#fn-logo-support"/></svg></div>
+                            <div class="notif-content">
+                                <p><span class="facenet-support-header"><b>Support FaceNet</b> <i class="fas fa-check-circle verified-badge" title="Compte officiel"></i></span> {{ notif.message }} <small data-timestamp="{{ notif.created_at.isoformat() ~ 'Z' if notif.created_at else '' }}">{{ notif.created_at.strftime('%d/%m/%Y %H:%M') if notif.created_at else '' }}</small></p>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="notif-main">
+                            <div class="notif-avatar-wrap">
+                                {% if sender %}
+                                    <img class="notif-avatar" src="{{ url_for('static', filename='uploads/' + (sender.avatar if sender.avatar else 'default_avatar.png')) }}" alt="{{ sender.username }}">
+                                {% else %}
+                                    <div class="notif-avatar-generic"><i class="fas fa-bell"></i></div>
+                                {% endif %}
+                                <div class="notif-type-badge" style="background: {{ badge_color }};">{{ notif_icon(icon_class) }}</div>
+                            </div>
+                            <div class="notif-content">
+                                {% set msg = notif.message or '' %}
+                                {% set nom_exp = ((sender.nom_complet or sender.username) if sender else '')|string %}
+                                {% set ln = nom_exp|length %}
+                                <p>{% if ln and msg[:ln] == nom_exp %}<b>{{ nom_exp }}</b>{{ msg[ln:] }}{% else %}{{ msg }}{% endif %} <small data-timestamp="{{ notif.created_at.isoformat() ~ 'Z' if notif.created_at else '' }}">{{ notif.created_at.strftime('%d/%m/%Y %H:%M') if notif.created_at else '' }}</small></p>
+
+                                {% if notif.type in ['friend_request', 'invitation'] and sender and not extra.get('traitee') and (extra.get('demande_id') or notif.type == 'friend_request') %}
+                                    <div class="notif-actions" onclick="event.stopPropagation();">
+                                        <form action="{% if extra.get('demande_id') %}{{ url_for('main.gerer_invitation', demande_id=extra.get('demande_id'), action='accepter') }}{% elif 'accepter_demande' in config.get('ENDPOINTS', {}) %}{{ url_for('main.accepter_demande', user_id=sender.id) }}{% else %}#{% endif %}" method="POST" style="margin: 0;">
+                                            <button type="submit" class="btn-notif-confirm">Confirmer</button>
+                                        </form>
+                                        <form action="{% if extra.get('demande_id') %}{{ url_for('main.gerer_invitation', demande_id=extra.get('demande_id'), action='refuser') }}{% elif 'refuser_demande' in config.get('ENDPOINTS', {}) %}{{ url_for('main.refuser_demande', user_id=sender.id) }}{% else %}#{% endif %}" method="POST" style="margin: 0;">
+                                            <button type="submit" class="btn-notif-delete">Supprimer</button>
+                                        </form>
+                                    </div>
+                                {% endif %}
+
+                                {# AJOUT : invitation au cercle familial (famille.py) : Accepter / Refuser, comme les demandes d'amis #}
+                                {% if notif.type == 'family_invite' and not extra.get('traitee') and extra.get('famille_id') %}
+                                    <div class="notif-actions" onclick="event.stopPropagation();">
+                                        <form action="{{ url_for('main.famille_repondre', lien_id=extra.get('famille_id'), action='accepter') }}" method="POST" style="margin: 0;">
+                                            <button type="submit" class="btn-notif-confirm">Accepter</button>
+                                        </form>
+                                        <form action="{{ url_for('main.famille_repondre', lien_id=extra.get('famille_id'), action='refuser') }}" method="POST" style="margin: 0;">
+                                            <button type="submit" class="btn-notif-delete">Refuser</button>
+                                        </form>
+                                    </div>
+                                {% endif %}
+                                {% if notif.type == 'family_invite' and extra.get('traitee') %}<span class="notif-status"><i class="fas fa-check-circle"></i> {% if extra.get('statut') == 'accepte' %}Invitation acceptée{% elif extra.get('statut') == 'refuse' %}Invitation refusée{% else %}Invitation traitée{% endif %}</span>{% endif %}
+
+                                {# AJOUT : contrôle parental par invitation — Accepter / Refuser (enfant) et Autoriser / Ignorer (parent) directement dans la notification #}
+                                {% if notif.type == 'parental_invite' and extra.get('invitation_id') and not extra.get('traitee') %}
+                                    <div class="notif-actions" onclick="event.stopPropagation();">
+                                        <form class="notif-act" onsubmit="return parentalAction(event, this);" data-url="/api/fn/parental/enfants/repondre" data-body='{{ {"invitation_id": extra.get("invitation_id")|int, "accepter": true}|tojson }}' data-done="Invitation acceptée" data-confirm="Accepter le contrôle parental ? Votre parent pourra bloquer l'accès à votre compte à une date et une heure précises, et cet appareil sera mémorisé.">
+                                            <button type="submit" class="btn-notif-confirm">Accepter</button>
+                                        </form>
+                                        <form class="notif-act" onsubmit="return parentalAction(event, this);" data-url="/api/fn/parental/enfants/repondre" data-body='{{ {"invitation_id": extra.get("invitation_id")|int, "accepter": false}|tojson }}' data-done="Invitation refusée">
+                                            <button type="submit" class="btn-notif-delete">Refuser</button>
+                                        </form>
+                                    </div>
+                                {% endif %}
+                                {% if notif.type == 'parental_invite' and extra.get('traitee') %}<span class="notif-status"><i class="fas fa-check-circle"></i> {% if extra.get('statut') == 'acceptee' %}Invitation acceptée{% elif extra.get('statut') == 'refusee' %}Invitation refusée{% else %}Invitation traitée{% endif %}</span>{% endif %}
+                                {% if notif.type == 'parental_demande' and extra.get('auth_id') and not extra.get('traitee') %}
+                                    <div class="notif-actions" onclick="event.stopPropagation();">
+                                        <form class="notif-act" onsubmit="return parentalAction(event, this);" data-url="/api/fn/parental/enfants/demande" data-body='{{ {"id": extra.get("auth_id")|int, "autoriser": true}|tojson }}' data-done="Blocage levé">
+                                            <button type="submit" class="btn-notif-confirm">Autoriser</button>
+                                        </form>
+                                        <form class="notif-act" onsubmit="return parentalAction(event, this);" data-url="/api/fn/parental/enfants/demande" data-body='{{ {"id": extra.get("auth_id")|int, "autoriser": false}|tojson }}' data-done="Demande ignorée">
+                                            <button type="submit" class="btn-notif-delete">Ignorer</button>
+                                        </form>
+                                    </div>
+                                {% endif %}
+                                {% if notif.type == 'parental_demande' and extra.get('traitee') %}<span class="notif-status"><i class="fas fa-check-circle"></i> {% if extra.get('statut') == 'autorise' %}Blocage levé{% else %}Demande ignorée{% endif %}</span>{% endif %}
+
+                                {% if notif.type in ['friend_request', 'invitation'] and extra.get('traitee') %}<span class="notif-status"><i class="fas fa-check-circle"></i> Demande traitée</span>{% endif %}
+                                </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Menu Trois Points Sécurisé -->
+                    <div class="menu-btn" onclick="toggleMenu(event, this)" role="button" aria-label="Plus d'options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="4.5" cy="12" r="2.3"/><circle cx="12" cy="12" r="2.3"/><circle cx="19.5" cy="12" r="2.3"/></svg></div>
+                    <div class="dropdown-content">
+                        <a href="#">Ne plus recevoir pour cette publication</a>
+                        <a href="#">Ne plus recevoir ce genre de notifications</a>
+                        <a href="#" class="notif-delete-link" style="color: red;" onclick="return supprimerNotification(event, {{ notif.id }}, this);">Supprimer cette notification</a>
+                        <a href="#" style="color: red;">Signaler la notification</a>
+                    </div>
+                </div>
+            {% endfor %}
+            <div class="notif-end">
+                <i class="fas fa-check-circle"></i>
+                <strong>Vous avez tout vu !</strong>
+                <span>Fin de vos {{ notifications|length }} notification{{ 's' if notifications|length > 1 else '' }}. Vous êtes à jour.</span>
+            </div>
+            <script>if (typeof onNotificationReceived === 'function') { onNotificationReceived(); }</script>
+        {% else %}
+            <div class="notif-empty" id="empty-notif-box">
+                <i class="fas fa-bell"></i>
+                <p>Aucune notification pour l'instant.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    function toggleMenu(event, el) {
+        event.stopPropagation();
+        const menu = el.nextElementSibling;
+        document.querySelectorAll('.dropdown-content').forEach(function (m) {
+            if (m !== menu) m.style.display = 'none';
+        });
+        menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+    }
+
+    document.addEventListener('click', function () {
+        document.querySelectorAll('.dropdown-content').forEach(function (m) { m.style.display = 'none'; });
+    });
+
+    /* --- Suppression réelle d'une notification (le serveur la supprime, puis la ligne disparaît) --- */
+    function majResumeNotifications() {
+        var items = document.querySelectorAll('#notif-card-container .notif-item[data-notif-id]');
+        var total = items.length;
+        var nonLues = document.querySelectorAll('#notif-card-container .notif-item.unread[data-notif-id]').length;
+        var resume = document.querySelector('.notif-summary');
+        if (resume) {
+            if (!total) { resume.remove(); }
+            else {
+                resume.innerHTML = total + ' notification' + (total > 1 ? 's' : '') + ' · ' +
+                    (nonLues ? '<strong>' + nonLues + ' non lue' + (nonLues > 1 ? 's' : '') + '</strong>' : 'tout est lu');
+            }
+        }
+        var fin = document.querySelector('.notif-end span');
+        if (fin && total) fin.textContent = 'Fin de vos ' + total + ' notification' + (total > 1 ? 's' : '') + '. Vous êtes à jour.';
+        if (!total) {
+            var card = document.getElementById('notif-card-container');
+            var finBloc = document.querySelector('.notif-end');
+            if (finBloc) finBloc.remove();
+            if (card && !card.querySelector('.notif-item') && !document.getElementById('empty-notif-box')) {
+                card.insertAdjacentHTML('beforeend', '<div class="notif-empty" id="empty-notif-box"><i class="fas fa-bell"></i><p>Aucune notification pour l\'instant.</p></div>');
+            }
+        }
+    }
+
+    function supprimerNotification(event, notifId, lien) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (lien.classList.contains('is-busy')) return false;
+        lien.classList.add('is-busy');
+        var ligne = lien.closest('.notif-item');
+        fetch('/api/notifications/' + encodeURIComponent(notifId) + '/supprimer', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        }).then(function (r) {
+            return r.json().catch(function () { return null; }).then(function (d) { return { ok: r.ok, d: d }; });
+        }).then(function (res) {
+            if (!res.ok || !res.d || !res.d.success) throw new Error((res.d && res.d.error) || 'Suppression impossible.');
+            if (ligne) {
+                try { memoriserSuppression(ligne, notifId); } catch (e) {}
+                ligne.classList.add('notif-removing');
+                setTimeout(function () { ligne.remove(); majResumeNotifications(); }, 450);
+            }
+            if (window.fnToast) window.fnToast('Notification supprimée.', 'success');
+        }).catch(function (err) {
+            lien.classList.remove('is-busy');
+            if (window.fnToast) window.fnToast(err.message || 'Suppression impossible pour le moment. Réessayez.', 'error');
+        });
+        return false;
+    }
+
+    function handleNotifClick(event, el) {
+        if (event.target.closest('.menu-btn') || event.target.closest('.dropdown-content') || event.target.closest('.notif-actions')) return;
+        const href = el.getAttribute('data-href');
+        if (href) window.location.href = href;
+    }
+
+    /* --- Gestion automatique des vœux de Noël et du Nouvel An --- */
+    (function checkHolidayGreetings() {
+        const now = new Date();
+        const month = now.getMonth(); // 11 = Décembre, 0 = Janvier
+        const day = now.getDate();
+        const year = now.getFullYear();
+
+        let holidayMessage = "";
+
+        if (month === 11 && day === 25) {
+            holidayMessage = `🎄 Toute l'équipe de Support FaceNet vous souhaite un très Joyeux Noël ! Que cette fête vous apporte paix, joie, santé et bonheur auprès de vos proches. Merci de faire partie de notre communauté !`;
+        } else if (month === 0 && day === 1) {
+            holidayMessage = `🎆 L'équipe Support FaceNet vous adresse ses meilleurs vœux pour la nouvelle année ${year} ! Que cette année soit remplie de succès, d'épanouissement et de merveilleux moments partagés. Merci pour votre fidélité !`;
+        }
+
+        if (holidayMessage) {
+            const container = id => document.getElementById(id);
+            const card = container('notif-card-container');
+            const emptyBox = container('empty-notif-box');
+
+            if (emptyBox) emptyBox.style.display = 'none';
+
+            const notifItem = document.createElement('div');
+            notifItem.className = 'notif-item unread';
+            notifItem.innerHTML = `
+                <div class="notif-main">
+                    <div class="facenet-logo" role="img" aria-label="Support FaceNet"><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#fn-logo-support"/></svg></div>
+                    <div class="notif-content">
+                        <p><span class="facenet-support-header"><b>Support FaceNet</b> <i class="fas fa-check-circle verified-badge" title="Compte officiel"></i></span> ${holidayMessage} <small>1 m</small></p>
+                    </div>
+                </div>
+                <div class="menu-btn" onclick="toggleMenu(event, this)" role="button" aria-label="Plus d'options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="4.5" cy="12" r="2.3"/><circle cx="12" cy="12" r="2.3"/><circle cx="19.5" cy="12" r="2.3"/></svg></div>
+                <div class="dropdown-content">
+                    <a href="#">Ne plus recevoir ce genre de notifications</a>
+                </div>
+            `;
+
+            if (card) {
+                card.insertBefore(notifItem, card.firstChild);
+            }
+        }
+    })();
+
+    (function () {
+        function formatRelative(dateStr) {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return null;
+            const diffSec = Math.max(0, Math.floor((new Date() - date) / 1000));
+            const min = Math.floor(diffSec / 60);
+            if (min < 1) return "1 m";
+            if (min < 60) return min + " m";
+            const h = Math.floor(min / 60);
+            if (h < 24) return h + " h";
+            const j = Math.floor(h / 24);
+            if (j < 21) return j + " j";
+            if (j < 60) return Math.floor(j / 7) + " sem";
+            return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+
+        window.fnNotifRelatif = formatRelative;
+        document.querySelectorAll('.notif-content small[data-timestamp]').forEach(function (el) {
+            const ts = el.getAttribute('data-timestamp');
+            if (!ts) return;
+            const label = formatRelative(ts);
+            if (label) el.textContent = label;
+        });
+    })();
+</script>
+
+<script>
+(function () {
+    var derniere = null;
+
+    function toast(msg, type) {
+        if (window.fnToast) { window.fnToast(msg, type); return; }
+        var t = document.createElement('div');
+        t.className = 'notif-toast-fb';
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(function () { t.remove(); }, 3000);
+    }
+
+    function post(url) {
+        return fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        }).then(function (r) {
+            return r.json().catch(function () { return null; }).then(function (d) { return { ok: r.ok, d: d }; });
+        }).then(function (res) {
+            if (!res.ok || !res.d || !res.d.success) throw new Error((res.d && res.d.error) || '');
+            return res.d;
+        });
+    }
+
+    /* --- Bouton retour --- */
+    window.retourPagePrecedente = function () {
+        if (window.history.length > 1) window.history.back();
+        else window.location.href = '/';
+    };
+
+    /* --- Actualiser --- */
+    window.actualiserNotifications = function (btn) {
+        btn.classList.add('is-spinning');
+        btn.disabled = true;
+        if (typeof window.fnNotifVerifier !== 'function') { setTimeout(function () { window.location.reload(); }, 400); return; }
+        window.fnNotifVerifier(true).then(function (n) {
+            if (!n) toast('Aucune nouvelle notification.', 'success');
+        }).catch(function () {
+            setTimeout(function () { window.location.reload(); }, 200);
+        }).then(function () { btn.classList.remove('is-spinning'); btn.disabled = false; });
+    };
+
+    /* --- Mémorise la dernière notification supprimée (appelée par supprimerNotification) --- */
+    window.memoriserSuppression = function (ligne, notifId) {
+        var clone = ligne.cloneNode(true);
+        clone.classList.remove('notif-removing');
+        clone.querySelectorAll('.is-busy').forEach(function (el) { el.classList.remove('is-busy'); });
+        clone.querySelectorAll('.dropdown-content').forEach(function (m) { m.style.display = 'none'; });
+        var suivant = ligne.nextElementSibling;
+        derniere = { id: notifId, node: clone, suivantId: suivant ? suivant.getAttribute('data-notif-id') : null };
+        var b = document.getElementById('notif-btn-undo');
+        if (b) b.disabled = false;
+    };
+
+    /* --- Annuler la dernière suppression --- */
+    window.annulerDerniereSuppression = function (btn) {
+        if (!derniere || btn.disabled) return;
+        var d = derniere;
+        btn.disabled = true;
+        post('/api/notifications/' + encodeURIComponent(d.id) + '/restaurer').then(function () {
+            var card = document.getElementById('notif-card-container');
+            var vide = document.getElementById('empty-notif-box');
+            if (vide) vide.remove();
+            if (!card.querySelector('.notif-end')) {
+                card.insertAdjacentHTML('beforeend', '<div class="notif-end"><i class="fas fa-check-circle"></i><strong>Vous avez tout vu !</strong><span></span></div>');
+            }
+            if (!document.querySelector('.notif-summary')) {
+                document.querySelector('.notif-toolbar').insertAdjacentHTML('beforebegin', '<p class="notif-summary"></p>');
+            }
+            var ref = d.suivantId ? card.querySelector('.notif-item[data-notif-id="' + d.suivantId + '"]') : null;
+            if (!ref) ref = card.querySelector('.notif-end');
+            card.insertBefore(d.node, ref);
+            derniere = null;
+            majResumeNotifications();
+            toast('Notification restaurée.', 'success');
+        }).catch(function (err) {
+            btn.disabled = false;
+            toast(err.message || 'Annulation impossible pour le moment.', 'error');
+        });
+    };
+
+    /* --- Tout marquer comme lu --- */
+    window.toutMarquerCommeLu = function (btn) {
+        if (!document.querySelector('#notif-card-container .notif-item.unread')) {
+            toast('Tout est déjà lu.', 'success');
+            return;
+        }
+        btn.disabled = true;
+        post('/api/notifications/tout-lu').then(function () {
+            document.querySelectorAll('#notif-card-container .notif-item.unread').forEach(function (el) {
+                el.classList.remove('unread');
+                el.querySelectorAll('.notif-tag-new').forEach(function (t) { t.remove(); });
+                el.querySelectorAll('.notif-tags').forEach(function (t) { if (!t.children.length) t.remove(); });
+            });
+            majResumeNotifications();
+            toast('Toutes les notifications sont marquées comme lues.', 'success');
+        }).catch(function (err) {
+            toast(err.message || 'Action impossible pour le moment.', 'error');
+        }).then(function () { btn.disabled = false; });
+    };
+})();
+</script>
+
+<script>
+/* AJOUT : contrôle parental — actions des notifications (invitation, demande d'autorisation) */
+function parentalAction(event, form) {
+    event.preventDefault();
+    event.stopPropagation();
+    var bar = form.closest('.notif-actions');
+    if (!bar || bar.hasAttribute('data-busy')) return false;
+    if (form.getAttribute('data-confirm') && !window.confirm(form.getAttribute('data-confirm'))) return false;
+    bar.setAttribute('data-busy', '1');
+    var toast = function (m, t) { if (window.fnToast) window.fnToast(m, t); };
+    fetch('/api/fn/csrf', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+            if (!j.success) throw new Error(j.error || 'Session invalide');
+            return fetch(form.getAttribute('data-url'), { method: 'POST', credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-FN-CSRF': j.token },
+                body: form.getAttribute('data-body') });
+        })
+        .then(function (r) { return r.json().catch(function () { return null; }); })
+        .then(function (d) {
+            if (!d || !d.success) throw new Error((d && d.error) || 'Action impossible pour le moment.');
+            var s = document.createElement('span');
+            s.className = 'notif-status';
+            s.innerHTML = '<i class="fas fa-check-circle"></i> ';
+            s.appendChild(document.createTextNode(form.getAttribute('data-done') || 'Fait'));
+            bar.parentNode.replaceChild(s, bar);
+            var ligne = s.closest('.notif-item');
+            if (ligne) ligne.classList.remove('unread');
+            toast(form.getAttribute('data-done') || 'Fait', 'success');
+        })
+        .catch(function (err) {
+            bar.removeAttribute('data-busy');
+            toast(err.message || 'Action impossible pour le moment.', 'error');
+        });
+    return false;
+}
+</script>
+
+<script>
+/* ── Notifications en direct : les nouvelles arrivent par le haut de la liste ──
+   Réglages (page Paramètres › Préférences avancées › Notifications en direct) :
+   fn_notifs_direct = '0' pour désactiver · fn_notifs_freq = secondes entre deux vérifications (0 = manuel) */
+(function () {
+    var card = document.getElementById('notif-card-container');
+    if (!card) return;
+    var vus = {}, enCours = false, nouvellesNonVues = 0, pill = null, minuterie = null;
+
+    function reg(k, def) { try { var v = localStorage.getItem(k); return v === null ? def : v; } catch (e) { return def; } }
+    function actif() { return reg('fn_notifs_direct', '1') !== '0'; }
+    function frequence() { var f = parseInt(reg('fn_notifs_freq', '20'), 10); return isNaN(f) ? 20 : f; }
+
+    card.querySelectorAll('.notif-item[data-notif-id]').forEach(function (el) { vus[el.getAttribute('data-notif-id')] = 1; });
+
+    function annoncer(n) {
+        if ((window.scrollY || 0) < 120) return;
+        nouvellesNonVues += n;
+        if (!pill) {
+            pill = document.createElement('button');
+            pill.type = 'button';
+            pill.className = 'notif-nouvelles-pill';
+            pill.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+            document.body.appendChild(pill);
+        }
+        pill.textContent = '↑ ' + nouvellesNonVues + ' nouvelle' + (nouvellesNonVues > 1 ? 's' : '') + ' notification' + (nouvellesNonVues > 1 ? 's' : '');
+        pill.hidden = false;
+    }
+    window.addEventListener('scroll', function () {
+        if (pill && (window.scrollY || 0) < 60) { pill.hidden = true; nouvellesNonVues = 0; }
+    }, { passive: true });
+
+    function insererEnHaut(html) {
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        var recus = doc.querySelectorAll('#notif-card-container .notif-item[data-notif-id]');
+        var nouveaux = [];
+        recus.forEach(function (el) { if (!vus[el.getAttribute('data-notif-id')]) nouveaux.push(el); });
+        if (!nouveaux.length) return 0;
+
+        var vide = document.getElementById('empty-notif-box');
+        if (vide) vide.remove();
+        if (!card.querySelector('.notif-end')) {
+            card.insertAdjacentHTML('beforeend', '<div class="notif-end"><i class="fas fa-check-circle"></i><strong>Vous avez tout vu !</strong><span></span></div>');
+        }
+        if (!document.querySelector('.notif-summary')) {
+            var barre = document.querySelector('.notif-toolbar');
+            if (barre) barre.insertAdjacentHTML('beforebegin', '<p class="notif-summary"></p>');
+        }
+        // Le serveur les renvoie de la plus récente à la plus ancienne : on insère en partant de la plus ancienne
+        for (var i = nouveaux.length - 1; i >= 0; i--) {
+            var node = document.importNode(nouveaux[i], true);
+            vus[node.getAttribute('data-notif-id')] = 1;
+            node.classList.add('notif-arrive');
+            node.addEventListener('animationend', function (e) { e.currentTarget.classList.remove('notif-arrive'); }, { once: true });
+            node.querySelectorAll('.notif-content small[data-timestamp]').forEach(function (small) {
+                var label = window.fnNotifRelatif ? window.fnNotifRelatif(small.getAttribute('data-timestamp')) : null;
+                if (label) small.textContent = label;
+            });
+            card.insertBefore(node, card.firstChild);
+        }
+        if (typeof majResumeNotifications === 'function') majResumeNotifications();
+        annoncer(nouveaux.length);
+        return nouveaux.length;
+    }
+
+    /* Interroge le serveur ; renvoie une promesse avec le nombre de nouvelles notifications insérées */
+    window.fnNotifVerifier = function (force) {
+        if (enCours) return Promise.resolve(0);
+        if (!force && (document.hidden || !actif())) return Promise.resolve(0);
+        enCours = true;
+        return fetch(location.pathname + location.search, {
+            credentials: 'same-origin', cache: 'no-store',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' }
+        }).then(function (r) {
+            if (!r.ok || (r.redirected && new URL(r.url).pathname !== location.pathname)) throw new Error('HTTP ' + r.status);
+            return r.text();
+        }).then(insererEnHaut).then(function (n) { enCours = false; return n; },
+                                    function (e) { enCours = false; throw e; });
+    };
+
+    function planifier() {
+        clearTimeout(minuterie);
+        var f = frequence();
+        if (f <= 0) return;
+        minuterie = setTimeout(function () {
+            window.fnNotifVerifier(false).catch(function () {}).then(planifier);
+        }, Math.max(f, 5) * 1000);
+    }
+    document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) { window.fnNotifVerifier(false).catch(function () {}).then(planifier); }
+    });
+    window.addEventListener('online', function () { window.fnNotifVerifier(false).catch(function () {}); });
+    window.addEventListener('storage', planifier);
+    planifier();
+})();
+</script>
