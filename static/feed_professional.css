@@ -1,0 +1,29 @@
+/* feed_professional.css — chargé par feed.html (css/feed_professional.css)
+   Fichier volontairement minimal : il ne contient que la taille « Facebook »
+   des photos/vidéos du fil, identique au bloc ajouté dans feed.html.
+   Aucune autre règle : l'apparence existante de l'application ne change pas. */
+
+.feed-card img[onclick^="openPhotoViewer"],
+.feed-photo-music-wrap > img {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: 85vh;
+    object-fit: contain;
+}
+
+.feed-card .feed-video-wrapper video,
+.feed-card video {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: 85vh;
+    object-fit: contain;
+    background: #000;
+}
+
+@media (min-width: 768px) {
+    .main-container { max-width: 680px; }
+}
