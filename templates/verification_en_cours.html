@@ -1,0 +1,581 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+        :root, [data-theme="light"] {
+            --fn-blue: #0866FF;
+            --fn-blue-hover: #0052cc;
+            --fn-bg: #F0F2F5;
+            --fn-gray: #65676B;
+            --fn-border: #E4E6EB;
+            --white: #ffffff;
+            --text-dark: #1C1E21;
+            --card-shadow: rgba(0, 0, 0, 0.08);
+            --card-shadow-hover: rgba(8, 102, 255, 0.15);
+            --input-bg: #FAFAFA;
+            --section-bg: #F7F9FA;
+            --success-color: #12883B;
+            --error-color: #D92D20;
+            --fb-verified: #1877f2;
+            --placeholder-bg: #EAF1FB;
+        }
+        [data-theme="dark"] {
+            --fn-bg: #18191A;
+            --white: #242526;
+            --text-dark: #E4E6EB;
+            --fn-border: #3E4042;
+            --fn-gray: #B0B3B8;
+            --card-shadow: rgba(0, 0, 0, 0.35);
+            --card-shadow-hover: rgba(69, 153, 255, 0.25);
+            --input-bg: #3A3B3C;
+            --section-bg: #1E2021;
+            --success-color: #34C759;
+            --error-color: #FF453A;
+            --placeholder-bg: #2A2F38;
+        }
+        body {
+            background: var(--fn-bg);
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text-dark);
+            transition: background 0.3s ease, color 0.3s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .forfait-page-wrap {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 12px 60px 12px;
+            box-sizing: border-box;
+        }
+
+        /* ─── Back link ─── */
+        .forfait-back-link {
+            width: 100%;
+            max-width: 620px;
+            margin: 0 auto 16px auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--text-dark);
+            text-decoration: none;
+            transition: transform 0.2s ease;
+        }
+        .forfait-back-link i { color: var(--fn-blue); }
+        .forfait-back-link:hover { transform: translateX(-3px); text-decoration: underline; }
+
+        /* ─── Parcours steps ─── */
+        .fn-parcours-steps {
+            width: 100%;
+            max-width: 620px;
+            margin: 0 auto 18px auto;
+            background: var(--white);
+            border: 1px solid var(--fn-border);
+            border-radius: 14px;
+            padding: 14px 18px;
+            box-shadow: 0 2px 10px var(--card-shadow);
+        }
+        .fn-parcours-titre {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 12px;
+        }
+        .fn-parcours-titre i { color: var(--fn-blue); }
+        .fn-parcours-barre {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .fn-parcours-etape {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            background: var(--input-bg);
+            color: var(--fn-gray);
+            border: 1px solid var(--fn-border);
+            white-space: nowrap;
+        }
+        .fn-parcours-etape.active {
+            background: var(--fn-blue);
+            color: #fff;
+            border-color: var(--fn-blue);
+        }
+        .fn-parcours-etape.faite {
+            background: var(--success-color);
+            color: #fff;
+            border-color: var(--success-color);
+        }
+        .fn-parcours-fleche { color: var(--fn-gray); font-size: 11px; }
+
+        /* ─── Card ─── */
+        .tsapi-card-wrapper {
+            max-width: 620px;
+            width: 100%;
+            margin: 0 auto;
+            background: var(--white);
+            border-radius: 24px;
+            box-shadow: 0 16px 48px var(--card-shadow);
+            overflow: hidden;
+            border: 1px solid var(--fn-border);
+        }
+
+        /* ─── Gradient header ─── */
+        .tsapi-premium-header {
+            height: 190px;
+            background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 25%, #0866FF 60%, #7209b7 85%, #f72585 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .tsapi-premium-header::before {
+            content: '';
+            position: absolute;
+            top: -40px; right: -40px;
+            width: 200px; height: 200px;
+            background: radial-gradient(circle, rgba(255,215,0,0.35) 0%, transparent 70%);
+            border-radius: 50%;
+            filter: blur(10px);
+        }
+        .tsapi-premium-header::after {
+            content: '';
+            position: absolute;
+            bottom: -30px; right: 80px;
+            width: 140px; height: 140px;
+            background: radial-gradient(circle, rgba(72,149,239,0.4) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+        .header-decor-shapes { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+        .header-decor-shapes .shape-circle {
+            position: absolute;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 50%;
+        }
+        .shape-1 { width: 300px; height: 300px; top: -100px; right: -50px; }
+        .shape-2 { width: 180px; height: 180px; top: 10px; right: 120px; border-color: rgba(247,37,133,0.3) !important; }
+        .header-decor-shapes .star-glow {
+            position: absolute;
+            color: rgba(255,255,255,0.6);
+            font-size: 12px;
+            animation: pulseGlow 3s infinite alternate;
+        }
+        .star-1 { top: 25px; left: 40%; font-size: 16px; color: #ffd700; }
+        .star-2 { top: 70px; right: 25%; font-size: 10px; color: #4cc9f0; }
+        .star-3 { top: 30px; right: 10%; font-size: 14px; color: #f72585; }
+        @keyframes pulseGlow {
+            0% { opacity: 0.3; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1.2); }
+        }
+
+        /* ─── Big spinner inside header ─── */
+        .verif-spinner-wrap {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+        .verif-spinner {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            border: 5px solid rgba(255,255,255,0.2);
+            border-top-color: #ffffff;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .verif-spinner-label {
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+
+        /* ─── Content area ─── */
+        .tsapi-content-area {
+            padding: 36px 24px 36px 24px;
+            text-align: center;
+        }
+
+        /* ─── Status icon ─── */
+        .verif-icon-circle {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #EAF1FB, #dce8ff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px auto;
+            box-shadow: 0 4px 16px rgba(8,102,255,0.15);
+        }
+        [data-theme="dark"] .verif-icon-circle {
+            background: linear-gradient(135deg, #2A2F38, #1e2838);
+        }
+        .verif-icon-circle i {
+            font-size: 32px;
+            color: var(--fn-blue);
+            animation: pulseGlow 2.5s infinite alternate;
+        }
+
+        /* ─── Title / Subtitle ─── */
+        .verif-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text-dark);
+            margin: 0 0 10px 0;
+            line-height: 1.25;
+        }
+        .verif-subtitle {
+            font-size: 14px;
+            color: var(--fn-gray);
+            margin: 0 0 28px 0;
+            line-height: 1.6;
+            max-width: 420px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* ─── Info cards ─── */
+        .verif-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+        @media (max-width: 420px) {
+            .verif-info-grid { grid-template-columns: 1fr; }
+        }
+        .verif-info-card {
+            background: var(--section-bg);
+            border: 1px solid var(--fn-border);
+            border-radius: 14px;
+            padding: 18px 14px;
+            text-align: center;
+        }
+        .verif-info-card i {
+            font-size: 22px;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .verif-info-card .info-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--fn-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        .verif-info-card .info-value {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+        .card-blue i { color: var(--fn-blue); }
+        .card-orange i { color: #FF9500; }
+
+        /* ─── Progress bar ─── */
+        .verif-progress-wrap {
+            margin-bottom: 28px;
+            text-align: left;
+        }
+        .verif-progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--fn-gray);
+        }
+        .verif-progress-bar-bg {
+            background: var(--fn-border);
+            border-radius: 99px;
+            height: 8px;
+            overflow: hidden;
+        }
+        .verif-progress-bar-fill {
+            height: 100%;
+            border-radius: 99px;
+            background: linear-gradient(90deg, #0866FF, #7209b7);
+            width: 80%;
+            animation: progressPulse 2.5s ease-in-out infinite alternate;
+        }
+        @keyframes progressPulse {
+            0% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        /* ─── Steps checklist ─── */
+        .verif-steps-list {
+            list-style: none;
+            margin: 0 0 28px 0;
+            padding: 0;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .verif-steps-list li {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+        .step-icon-ok {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            background: var(--success-color);
+            color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        .step-icon-spin {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            border: 3px solid rgba(8,102,255,0.2);
+            border-top-color: var(--fn-blue);
+            flex-shrink: 0;
+            animation: spin 1s linear infinite;
+        }
+
+        /* ─── Notification block ─── */
+        .verif-notif-block {
+            background: linear-gradient(135deg, #EAF1FB, #f0f4ff);
+            border: 1px solid rgba(8,102,255,0.2);
+            border-radius: 14px;
+            padding: 18px 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            text-align: left;
+            margin-bottom: 0;
+        }
+        [data-theme="dark"] .verif-notif-block {
+            background: linear-gradient(135deg, #1e2838, #242f3e);
+            border-color: rgba(69,153,255,0.25);
+        }
+        .verif-notif-block i {
+            font-size: 20px;
+            color: var(--fn-blue);
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+        .verif-notif-block p {
+            margin: 0;
+            font-size: 13px;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+        .verif-notif-block p strong {
+            color: var(--fn-blue);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.001ms !important;
+            }
+        }
+    </style>
+
+{% set user_nom_complet = (current_user.nom_complet if current_user.is_authenticated and current_user.nom_complet else 'Utilisateur FaceNet') %}
+{% set statut = statut|default('attente') %}
+
+<div class="forfait-page-wrap">
+
+    <a href="{{ url_for('main.feed') }}" class="forfait-back-link" aria-label="Retour au fil d'actualité">
+        <i class="fas fa-arrow-left" aria-hidden="true"></i> Retour au fil d'actualité
+    </a>
+
+    <!-- Parcours : toutes les étapes faites, étape 5 active -->
+    <div class="fn-parcours-steps">
+        <div class="fn-parcours-titre">
+            <i class="fas fa-route" aria-hidden="true"></i>
+            Parcours de vérification.
+        </div>
+        <div class="fn-parcours-barre">
+            <span class="fn-parcours-etape faite">
+                <i class="fas fa-check" aria-hidden="true"></i> Forfait & paiement
+            </span>
+            <i class="fas fa-chevron-right fn-parcours-fleche" aria-hidden="true"></i>
+            <span class="fn-parcours-etape faite">
+                <i class="fas fa-check" aria-hidden="true"></i> Profil
+            </span>
+            <i class="fas fa-chevron-right fn-parcours-fleche" aria-hidden="true"></i>
+            <span class="fn-parcours-etape faite">
+                <i class="fas fa-check" aria-hidden="true"></i> Photo
+            </span>
+            <i class="fas fa-chevron-right fn-parcours-fleche" aria-hidden="true"></i>
+            <span class="fn-parcours-etape faite">
+                <i class="fas fa-check" aria-hidden="true"></i> Pièce
+            </span>
+            <i class="fas fa-chevron-right fn-parcours-fleche" aria-hidden="true"></i>
+            <span class="fn-parcours-etape active">
+                <i class="fas fa-5" aria-hidden="true"></i> Scan
+            </span>
+        </div>
+    </div>
+
+    <!-- Carte principale -->
+    <div class="tsapi-card-wrapper">
+
+        <!-- Bandeau coloré avec spinner -->
+        <div class="tsapi-premium-header">
+            <div class="header-decor-shapes" aria-hidden="true">
+                <div class="shape-circle shape-1"></div>
+                <div class="shape-circle shape-2"></div>
+                <i class="fas fa-star star-glow star-1"></i>
+                <i class="fas fa-sparkles star-glow star-2"></i>
+                <i class="fas fa-certificate star-glow star-3"></i>
+            </div>
+            {% if statut == 'attente' %}
+            <div class="verif-spinner-wrap" role="status" aria-label="Vérification en cours">
+                <div class="verif-spinner" aria-hidden="true"></div>
+                <span class="verif-spinner-label">Vérification en cours…</span>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if statut == 'approuve' %}
+        <div class="tsapi-content-area">
+            <div class="verif-icon-circle" aria-hidden="true"><i class="fas fa-circle-check"></i></div>
+            <h1 class="verif-title">Votre badge bleu est actif</h1>
+            <p class="verif-subtitle">
+                Bonjour <strong>{{ user_nom_complet }}</strong>, votre identité a été vérifiée.<br>
+                Le badge Tsapi Verified apparaît maintenant sur votre profil.
+            </p>
+            <a href="{{ url_for('main.profile', username=current_user.username) }}"
+               style="display:block; margin-top:20px; background:#1877f2; color:#fff; padding:14px; border-radius:10px; font-weight:700; text-align:center; text-decoration:none;">
+                Voir mon profil
+            </a>
+        </div>
+        {% elif statut == 'rejete' %}
+        <div class="tsapi-content-area">
+            <div class="verif-icon-circle" aria-hidden="true"><i class="fas fa-triangle-exclamation"></i></div>
+            <h1 class="verif-title">Votre pièce n'a pas pu être validée</h1>
+            <p class="verif-subtitle">
+                Bonjour <strong>{{ user_nom_complet }}</strong>, le document envoyé ne correspond pas aux informations de votre profil.<br>
+                Vérifiez vos informations, puis envoyez une nouvelle pièce d'identité lisible. Votre forfait reste valable.
+            </p>
+            <a href="{{ url_for('main.verification_etape_choix_piece') }}"
+               style="display:block; margin-top:20px; background:#1877f2; color:#fff; padding:14px; border-radius:10px; font-weight:700; text-align:center; text-decoration:none;">
+                Envoyer une nouvelle pièce
+            </a>
+            <a href="{{ url_for('main.verification_etape_confirmation') }}"
+               style="display:block; margin-top:10px; background:#fff; color:#1877f2; padding:14px; border-radius:10px; font-weight:700; text-align:center; text-decoration:none; border:2px solid #1877f2;">
+                Modifier mes informations
+            </a>
+        </div>
+        {% else %}
+        <!-- Contenu -->
+        <div class="tsapi-content-area">
+
+            <div class="verif-icon-circle" aria-hidden="true">
+                <i class="fas fa-shield-halved"></i>
+            </div>
+
+            <h1 class="verif-title">Nous vérifions vos informations</h1>
+            <p class="verif-subtitle">
+                Bonjour <strong>{{ user_nom_complet }}</strong>, votre dossier est bien reçu.<br>
+                Notre équipe procède à la vérification de votre identité et de vos documents.
+            </p>
+
+            <!-- Infos délai / notification -->
+            <div class="verif-info-grid">
+                <div class="verif-info-card card-blue">
+                    <i class="fas fa-clock" aria-hidden="true"></i>
+                    <div class="info-label">Délai estimé</div>
+                    <div class="info-value">24 à 48 heures</div>
+                </div>
+                <div class="verif-info-card card-orange">
+                    <i class="fas fa-bell" aria-hidden="true"></i>
+                    <div class="info-label">Notification</div>
+                    <div class="info-value">Automatique</div>
+                </div>
+            </div>
+
+            <!-- Barre de progression -->
+            <div class="verif-progress-wrap" aria-label="Progression de la vérification">
+                <div class="verif-progress-header">
+                    <span>Progression du dossier</span>
+                    <span>4 / 5 étapes</span>
+                </div>
+                <div class="verif-progress-bar-bg" role="progressbar" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100">
+                    <div class="verif-progress-bar-fill"></div>
+                </div>
+            </div>
+
+            <!-- Checklist des étapes -->
+            <ul class="verif-steps-list" aria-label="État des étapes">
+                <li>
+                    <span class="step-icon-ok" aria-hidden="true"><i class="fas fa-check"></i></span>
+                    Forfait choisi et paiement confirmé
+                </li>
+                <li>
+                    <span class="step-icon-ok" aria-hidden="true"><i class="fas fa-check"></i></span>
+                    Informations de profil soumises
+                </li>
+                <li>
+                    <span class="step-icon-ok" aria-hidden="true"><i class="fas fa-check"></i></span>
+                    Photo de profil confirmée
+                </li>
+                <li>
+                    <span class="step-icon-ok" aria-hidden="true"><i class="fas fa-check"></i></span>
+                    Pièce d'identité envoyée
+                </li>
+                <li>
+                    <span class="step-icon-spin" aria-label="En cours"></span>
+                    Vérification en cours par notre équipe
+                </li>
+            </ul>
+
+            <!-- Bloc notification -->
+            <div class="verif-notif-block" role="note">
+                <i class="fas fa-envelope-open-text" aria-hidden="true"></i>
+                <p>
+                    <strong>Vous serez notifié dès que tout sera prêt.</strong><br>
+                    Nous vous enverrons une notification dans l'application dès que votre identité sera vérifiée et votre badge bleu activé sur votre profil. Pas besoin de rester sur cette page.
+                </p>
+            </div>
+
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+{% if statut == 'attente' %}
+<script>
+/* Vérifie toutes les 30 s si le PDG a pris sa décision, puis recharge la page. */
+(function () {
+    setInterval(function () {
+        fetch("{{ url_for('main.verification_statut_api') }}", { credentials: 'same-origin' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (d) { if (d && d.success && d.statut && d.statut !== 'attente') { window.location.reload(); } })
+            .catch(function () {});
+    }, 30000);
+})();
+</script>
+{% endif %}
+
+{% endblock %}

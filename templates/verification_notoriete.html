@@ -1,0 +1,618 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certification & Vérification Officielle | FaceNet</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* --- SYSTÈME DE THÈMES DYNAMIQUES FACENET PREMIUM --- */
+        :root, [data-theme="light"] {
+            --fn-blue: #0866FF;
+            --fn-blue-hover: #0052cc;
+            --fn-bg: #F0F2F5;
+            --fn-gray: #65676B;
+            --fn-border: #E4E6EB;
+            --white: #FFFFFF;
+            --text-dark: #1C1E21;
+            --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            --input-bg: #F8F9FA;
+            --badge-glow: rgba(8, 102, 255, 0.12);
+        }
+
+        [data-theme="dark"] {
+            --fn-bg: #18191A;
+            --white: #242526;
+            --text-dark: #E4E6EB;
+            --fn-border: #3E4042;
+            --fn-gray: #B0B3B8;
+            --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            --input-bg: #3A3B3C;
+            --badge-glow: rgba(69, 153, 255, 0.15);
+        }
+
+        body {
+            background: var(--fn-bg);
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text-dark);
+            transition: background 0.3s ease, color 0.3s ease;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .fn-settings-main {
+            width: 100%;
+            min-height: 100vh;
+            padding: 30px 15px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+        }
+
+        .standalone-settings-wrap {
+            width: 100%;
+            max-width: 720px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* --- BARRE DE RETOUR PREMIUM --- */
+        .back-bar {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .back-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: var(--white);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-dark);
+            text-decoration: none;
+            font-size: 15px;
+            transition: all 0.2s ease;
+            border: 1px solid var(--fn-border);
+        }
+
+        .back-btn:hover {
+            background: var(--fn-blue);
+            color: #FFFFFF;
+            border-color: var(--fn-blue);
+            transform: translateX(-2px);
+        }
+
+        .back-title {
+            font-size: 22px;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: -0.3px;
+        }
+
+        /* --- BANNIÈRE D'EN-TÊTE HAUT DE GAMME --- */
+        .verif-hero-card {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--fn-border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .verif-hero-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, var(--fn-blue) 0%, #00d2ff 100%);
+        }
+
+        .verif-header-content {
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+        }
+
+        .verif-badge-icon-wrapper {
+            width: 60px;
+            height: 60px;
+            min-width: 60px;
+            border-radius: 16px;
+            background: var(--badge-glow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .verif-badge-icon-wrapper img {
+            width: 36px;
+            height: 36px;
+            object-fit: contain;
+        }
+
+        .verif-header-text h1 {
+            font-size: 20px;
+            font-weight: 800;
+            margin: 0 0 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .verif-tag {
+            background: rgba(8, 102, 255, 0.1);
+            color: var(--fn-blue);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .verif-header-text p {
+            color: var(--fn-gray);
+            font-size: 14px;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        /* --- SECTIONS DU FORMULAIRE EN ÉTAPES --- */
+        .form-step-card {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--fn-border);
+            margin-bottom: 20px;
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--fn-border);
+        }
+
+        .step-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--fn-blue);
+            color: #FFFFFF;
+            font-size: 13px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .step-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        /* --- STYLES DE SAISIE HARMONISÉS --- */
+        .tsapi-input-group {
+            margin-bottom: 18px;
+        }
+
+        .tsapi-input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--text-dark);
+        }
+
+        .tsapi-input-group select, 
+        .tsapi-input-group input[type="text"], 
+        .tsapi-input-group input[type="email"], 
+        .tsapi-input-group textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--fn-border);
+            border-radius: 10px;
+            font-size: 14px;
+            box-sizing: border-box;
+            background: var(--input-bg);
+            color: var(--text-dark);
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .tsapi-input-group select:focus, 
+        .tsapi-input-group input:focus {
+            outline: none;
+            border-color: var(--fn-blue);
+            box-shadow: 0 0 0 3px rgba(8, 102, 255, 0.15);
+            background: var(--white);
+        }
+
+        /* Liens de preuve */
+        .notoriety-links-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .notoriety-link-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid var(--fn-border);
+            border-radius: 10px;
+            padding: 4px 6px 4px 14px;
+            background: var(--input-bg);
+            transition: border-color 0.2s;
+        }
+
+        .notoriety-link-box:focus-within {
+            border-color: var(--fn-blue);
+            background: var(--white);
+        }
+
+        .notoriety-link-box i.link-icon {
+            color: var(--fn-gray);
+            font-size: 14px;
+        }
+
+        .notoriety-link-box input[type="url"] {
+            flex: 1;
+            border: none;
+            outline: none;
+            background: transparent;
+            padding: 10px 0;
+            font-size: 13px;
+            color: var(--text-dark);
+            font-family: inherit;
+        }
+
+        .btn-remove-link {
+            border: none;
+            background: transparent;
+            color: var(--fn-gray);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-remove-link:hover {
+            color: #d92d20;
+            background: rgba(217, 45, 32, 0.1);
+        }
+
+        .btn-add-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px dashed var(--fn-blue);
+            background: rgba(8, 102, 255, 0.03);
+            color: var(--fn-blue);
+            font-weight: 700;
+            font-size: 13px;
+            padding: 11px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .btn-add-link:hover {
+            background: rgba(8, 102, 255, 0.08);
+            border-style: solid;
+        }
+
+        /* Zone d'importation de fichiers */
+        .file-upload-box {
+            border: 2px dashed var(--fn-border);
+            padding: 22px 16px;
+            border-radius: 12px;
+            text-align: center;
+            background: var(--input-bg);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .file-upload-box:hover {
+            border-color: var(--fn-blue);
+            background: rgba(8, 102, 255, 0.02);
+            transform: translateY(-1px);
+        }
+
+        .file-upload-icon {
+            font-size: 26px;
+            color: var(--fn-blue);
+            margin-bottom: 8px;
+        }
+
+        .upload-feedback {
+            font-size: 12px;
+            margin-top: 8px;
+            font-weight: 700;
+        }
+
+        .upload-feedback.ok { color: #128753; }
+        .upload-feedback.error { color: #d92d20; }
+
+        /* Bouton de soumission */
+        .btn-submit-executive {
+            background: linear-gradient(135deg, #1c1e21 0%, #000000 100%);
+            color: #FFFFFF;
+            border: none;
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            transition: all 0.2s ease;
+        }
+
+        [data-theme="dark"] .btn-submit-executive {
+            background: linear-gradient(135deg, #0866FF 0%, #0052cc 100%);
+        }
+
+        .btn-submit-executive:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+            opacity: 0.95;
+        }
+
+        /* Masquage Google Traduction */
+        .goog-te-banner-frame, .goog-te-gadget, #goog-gt-tt { display: none !important; }
+        body { top: 0 !important; }
+    </style>
+</head>
+<body>
+
+<div class="fn-settings-main">
+    <div class="standalone-settings-wrap">
+        
+        <!-- BARRE DE NAVIGATION REVOLUT/FACEBOOK STYLE -->
+        <div class="back-bar">
+            <a href="{{ url_for('main.settings') }}" class="back-btn" title="Retour aux paramètres">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <h2 class="back-title">Demande de Certification</h2>
+        </div>
+
+        <!-- BANNIÈRE EN-TÊTE HAUT DE GAMME -->
+        <div class="verif-hero-card">
+            <div class="verif-header-content">
+                <div class="verif-badge-icon-wrapper">
+                    <img src="{{ url_for('static', filename='images/badge_bleu.png') }}" alt="Badge vérifié">
+                </div>
+                <div class="verif-header-text">
+                    <h1>
+                        Badge d'Authenticité 
+                        <span class="verif-tag">Accès Officiel</span>
+                    </h1>
+                    <p>
+                        Procédure réservée aux personnalités publiques, créateurs de contenu majeurs, figures gouvernementales et marques. 
+                        <strong>Inclut la protection prioritaire contre l'usurpation d'identité.</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- FORMULAIRE PRINCIPAL -->
+        <form action="/api/verify-notoriety" method="POST" enctype="multipart/form-data">
+            
+            <!-- ÉTAPE 1 : CATÉGORIE & NOTORIÉTÉ -->
+            <div class="form-step-card">
+                <div class="step-header">
+                    <div class="step-number">1</div>
+                    <h3 class="step-title">Profil & Domaine d'Activité</h3>
+                </div>
+
+                <div class="tsapi-input-group">
+                    <label for="notoriety_category">Catégorie ou domaine d'influence</label>
+                    <select name="notoriety_category" id="notoriety_category" required>
+                        <option value="news">Journaliste / Média / Presse</option>
+                        <option value="sports">Athlète / Sportif Professionnel</option>
+                        <option value="government">Gouvernement / Politique / Droit</option>
+                        <option value="music_art">Artiste / Musicien / Compositeur</option>
+                        <option value="influencer">Influenceur / Créateur de contenu</option>
+                        <option value="business">Grande Entreprise / Marque Officielle</option>
+                        <option value="entrepreneur">Chef d'entreprise / Entrepreneur</option>
+                        <option value="actor">Acteur / Cinéma / Télévision</option>
+                        <option value="writer">Écrivain / Auteur / Éditeur</option>
+                        <option value="fashion">Mode / Designer / Styliste</option>
+                        <option value="chef">Chef Cuisinier / Gastronomie</option>
+                        <option value="health">Médecin / Professionnel de santé</option>
+                        <option value="law">Avocat / Juriste / Expert judiciaire</option>
+                        <option value="academic">Enseignant / Chercheur / Universitaire</option>
+                        <option value="religious">Leader d'opinion / Dignitaire</option>
+                        <option value="ngo">ONG / Organisation à but non lucratif</option>
+                        <option value="tech">Entrepreneur Tech / Fondateur Startup</option>
+                        <option value="other">Autre personnalité publique</option>
+                    </select>
+                </div>
+
+                <div class="tsapi-input-group">
+                    <label>Références de notoriété publique</label>
+                    <p style="margin:0 0 10px; font-size:12px; color: var(--fn-gray);">
+                        Fournis au moins 5 liens officiels attestant de ta visibilité (articles de presse, interviews, comptes vérifiés).
+                    </p>
+                    <div class="notoriety-links-list" id="notoriety-links-container">
+                        <div class="notoriety-link-box">
+                            <i class="fas fa-link link-icon"></i>
+                            <input type="url" name="press_links[]" placeholder="https://... (lien n°1)" required>
+                        </div>
+                        <div class="notoriety-link-box">
+                            <i class="fas fa-link link-icon"></i>
+                            <input type="url" name="press_links[]" placeholder="https://... (lien n°2)" required>
+                        </div>
+                        <div class="notoriety-link-box">
+                            <i class="fas fa-link link-icon"></i>
+                            <input type="url" name="press_links[]" placeholder="https://... (lien n°3)" required>
+                        </div>
+                        <div class="notoriety-link-box">
+                            <i class="fas fa-link link-icon"></i>
+                            <input type="url" name="press_links[]" placeholder="https://... (lien n°4)" required>
+                        </div>
+                        <div class="notoriety-link-box">
+                            <i class="fas fa-link link-icon"></i>
+                            <input type="url" name="press_links[]" placeholder="https://... (lien n°5)" required>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-add-link" onclick="ajouterLienNotoriety()">
+                        <i class="fas fa-plus"></i> Ajouter un lien complémentaire
+                    </button>
+                </div>
+            </div>
+
+            <!-- ÉTAPE 2 : IDENTIFICATION OFFICIELLE -->
+            <div class="form-step-card">
+                <div class="step-header">
+                    <div class="step-number">2</div>
+                    <h3 class="step-title">Vérification de l'Identité</h3>
+                </div>
+
+                <div class="tsapi-input-group">
+                    <label for="id_doc_type">Type de document gouvernemental</label>
+                    <select name="id_doc_type" id="id_doc_type" required onchange="gererAffichageDocIdentite()">
+                        <option value="">-- Sélectionnez un document --</option>
+                        <option value="passport">Passeport (Recto / Verso)</option>
+                        <option value="national_id">Carte d'identité nationale (CNI) (Recto / Verso)</option>
+                        <option value="residence_permit">Carte de séjour (Recto / Verso)</option>
+                        <option value="driver_license">Permis de conduire (Recto / Verso)</option>
+                        <option value="voter_card">Carte d'électeur (Face unique)</option>
+                        <option value="health_card">Carte d'assurance maladie / Santé (Face unique)</option>
+                        <option value="other">Autre document officiel avec photo</option>
+                    </select>
+                </div>
+
+                <!-- CHAMP RECTO -->
+                <div class="tsapi-input-group">
+                    <label id="label_recto">Pièce d'identité - Recto (Face avant)</label>
+                    <div class="file-upload-box" onclick="document.getElementById('notoriety_doc_recto').click()">
+                        <i class="fas fa-cloud-upload-alt file-upload-icon"></i>
+                        <p style="margin:0; font-size:13px; font-weight:700;" id="upload_txt_notoriety_recto">Importer le Recto</p>
+                        <p style="margin:4px 0 0 0; font-size:11px; color:var(--fn-gray);">Format JPG, PNG ou PDF (max 10 Mo)</p>
+                        <input type="file" id="notoriety_doc_recto" name="notoriety_doc_recto" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="handleFileUpload(this, 'upload_txt_notoriety_recto', 'upload_feedback_notoriety_recto')" required>
+                    </div>
+                    <div class="upload-feedback" id="upload_feedback_notoriety_recto"></div>
+                </div>
+
+                <!-- CHAMP VERSO (Dynamique) -->
+                <div class="tsapi-input-group" id="champ_verso_container" style="display: none;">
+                    <label id="label_verso">Pièce d'identité - Verso (Face arrière)</label>
+                    <div class="file-upload-box" onclick="document.getElementById('notoriety_doc_verso').click()">
+                        <i class="fas fa-cloud-upload-alt file-upload-icon"></i>
+                        <p style="margin:0; font-size:13px; font-weight:700;" id="upload_txt_notoriety_verso">Importer le Verso</p>
+                        <p style="margin:4px 0 0 0; font-size:11px; color:var(--fn-gray);">Format JPG, PNG ou PDF (max 10 Mo)</p>
+                        <input type="file" id="notoriety_doc_verso" name="notoriety_doc_verso" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="handleFileUpload(this, 'upload_txt_notoriety_verso', 'upload_feedback_notoriety_verso')">
+                    </div>
+                    <div class="upload-feedback" id="upload_feedback_notoriety_verso"></div>
+                </div>
+            </div>
+
+            <!-- BOUTON DE SOUMISSION EXÉCUTIF -->
+            <button type="submit" class="btn-submit-executive">
+                <i class="fas fa-shield-alt"></i> Soumettre le dossier pour examen
+            </button>
+        </form>
+
+    </div>
+</div>
+
+<script>
+    function ajouterLienNotoriety() {
+        const container = document.getElementById('notoriety-links-container');
+        const index = container.querySelectorAll('.notoriety-link-box').length + 1;
+
+        const box = document.createElement('div');
+        box.className = 'notoriety-link-box';
+        box.innerHTML = `
+            <i class="fas fa-link link-icon"></i>
+            <input type="url" name="press_links[]" placeholder="https://... (lien n°${index})">
+            <button type="button" class="btn-remove-link" onclick="this.parentElement.remove()" title="Supprimer">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        container.appendChild(box);
+    }
+
+    function handleFileUpload(input, textId, feedbackId) {
+        const textEl = document.getElementById(textId);
+        const feedbackEl = document.getElementById(feedbackId);
+        const file = input.files && input.files[0];
+        if (!file) return;
+        textEl.innerText = file.name;
+        feedbackEl.textContent = 'Fichier prêt pour l\'envoi ✓';
+        feedbackEl.className = 'upload-feedback ok';
+    }
+
+    function gererAffichageDocIdentite() {
+        const typeDoc = document.getElementById('id_doc_type').value;
+        const champVerso = document.getElementById('champ_verso_container');
+        const inputVerso = document.getElementById('notoriety_doc_verso');
+        const labelRecto = document.getElementById('label_recto');
+        const labelVerso = document.getElementById('label_verso');
+
+        const documentsAvecVerso = ['passport', 'national_id', 'residence_permit', 'driver_license'];
+
+        if (documentsAvecVerso.includes(typeDoc)) {
+            champVerso.style.display = 'block';
+            inputVerso.required = true;
+            labelRecto.innerText = "Pièce d'identité - Recto (Face avant)";
+            labelVerso.innerText = "Pièce d'identité - Verso (Face arrière)";
+        } else {
+            champVerso.style.display = 'none';
+            inputVerso.required = false;
+            inputVerso.value = '';
+            document.getElementById('upload_txt_notoriety_verso').innerText = 'Importer le Verso';
+            document.getElementById('upload_feedback_notoriety_verso').textContent = '';
+            
+            if (typeDoc === 'voter_card') {
+                labelRecto.innerText = "Carte d'électeur - Recto (Face unique)";
+            } else if (typeDoc === 'health_card') {
+                labelRecto.innerText = "Carte de santé - Recto (Face unique)";
+            } else {
+                labelRecto.innerText = "Pièce d'identité - Recto (Face unique)";
+            }
+        }
+    }
+
+    function changerThemeGlobal(theme) {
+        if (theme === 'system') {
+            const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        } else {
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        changerThemeGlobal('system');
+        gererAffichageDocIdentite();
+    });
+</script>
+</body>
+</html>
+{% endblock %}

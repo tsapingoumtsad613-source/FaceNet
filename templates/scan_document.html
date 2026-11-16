@@ -1,0 +1,1392 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    :root {
+        --scan-blue: #0866FF; --scan-blue-dark: #0052cc;
+        --scan-green: #12883B; --scan-red: #D92D20; --scan-yellow: #F2A600;
+        --scan-surface: #FFFFFF; --scan-text: #1C1E21; --scan-text-muted: #65676B; --scan-border: #E4E6EB;
+    }
+    [data-theme="dark"] { --scan-surface: #242526; --scan-text: #E4E6EB; --scan-text-muted: #B0B3B8; --scan-border: #3E4042; }
+    .scan-page { max-width: 720px; margin: 0 auto; padding: 16px 12px 40px; box-sizing: border-box; color: var(--scan-text); }
+    .scan-header { text-align: center; margin-bottom: 16px; }
+    .scan-header h1 { font-size: 20px; margin: 0 0 4px; font-weight: 800; }
+    .scan-header p { font-size: 13px; color: var(--scan-text-muted); margin: 0; line-height: 1.5; }
+    .scan-steps { display: flex; justify-content: center; align-items: center; gap: 4px; flex-wrap: wrap; margin-bottom: 16px; }
+    .scan-step { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; background: #F0F2F5; color: #65676B; border: 1px solid #E4E6EB; white-space: nowrap; }
+    .scan-step.done { background: #E7F3FF; color: var(--scan-blue); border-color: var(--scan-blue); }
+    .scan-step.active { background: var(--scan-blue); color: #fff; border-color: var(--scan-blue); }
+    [data-theme="dark"] .scan-step { background: #3A3B3C; color: #B0B3B8; border-color: #3E4042; }
+    .scan-progress { width: 100%; height: 6px; background: #E4E6EB; border-radius: 99px; overflow: hidden; margin-bottom: 20px; }
+    .scan-progress > div { height: 100%; background: linear-gradient(90deg, var(--scan-blue), var(--scan-blue-dark)); border-radius: 99px; transition: width 0.35s ease; width: 0%; }
+    .scan-sides-bar { display: flex; gap: 8px; margin-bottom: 14px; justify-content: center; }
+    .scan-side-pill { flex: 1; max-width: 200px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 14px; border-radius: 10px; background: #F0F2F5; border: 2px solid #E4E6EB; color: #65676B; font-weight: 700; font-size: 13px; transition: all 0.25s; }
+    .scan-side-pill.done { background: #E6F6EC; border-color: var(--scan-green); color: #0A5B27; }
+    .scan-side-pill.active { background: #E7F3FF; border-color: var(--scan-blue); color: var(--scan-blue); animation: pulseSide 1.6s infinite alternate; }
+    .scan-side-pill.pending { background: #F0F2F5; border-color: #E4E6EB; color: #65676B; opacity: 0.6; }
+    @keyframes pulseSide { from { opacity: 0.75; } to { opacity: 1; } }
+    [data-theme="dark"] .scan-side-pill { background: #3A3B3C; border-color: #3E4042; }
+    [data-theme="dark"] .scan-side-pill.done { background: #14351D; border-color: var(--scan-green); }
+    [data-theme="dark"] .scan-side-pill.active { background: #0B2A4D; border-color: var(--scan-blue); }
+    .scan-camera-wrap { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #000; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.25); }
+    .scan-camera-wrap video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .scan-cam-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .scan-side-badge { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(8, 102, 255, 0.95); color: #fff; padding: 6px 16px; border-radius: 99px; font-size: 12px; font-weight: 700; letter-spacing: 1px; box-shadow: 0 4px 14px rgba(0,0,0,0.4); z-index: 5; display: inline-flex; align-items: center; gap: 6px; }
+    .scan-side-badge.verso { background: rgba(114, 9, 183, 0.95); }
+    .scan-guide { position: absolute; inset: 8% 6%; border-radius: 14px; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0,0,0,0.35); transition: box-shadow 0.25s; }
+    .scan-guide::before, .scan-guide::after, .scan-guide .corner-tr, .scan-guide .corner-bl { content: ''; position: absolute; width: 36px; height: 36px; border: 3px solid #B0B3B8; border-radius: 8px; transition: border-color 0.25s, box-shadow 0.25s; }
+    .scan-guide::before { top: -2px; left: -2px; border-right: none; border-bottom: none; }
+    .scan-guide::after { bottom: -2px; right: -2px; border-left: none; border-top: none; }
+    .scan-guide .corner-tr { top: -2px; right: -2px; border-left: none; border-bottom: none; }
+    .scan-guide .corner-bl { bottom: -2px; left: -2px; border-right: none; border-top: none; }
+    .scan-guide.state-searching::before, .scan-guide.state-searching::after, .scan-guide.state-searching .corner-tr, .scan-guide.state-searching .corner-bl { border-color: #B0B3B8; }
+    .scan-guide.state-partial::before, .scan-guide.state-partial::after, .scan-guide.state-partial .corner-tr, .scan-guide.state-partial .corner-bl { border-color: var(--scan-yellow); animation: pulseYellow 1.2s infinite alternate; }
+    @keyframes pulseYellow { from { opacity: 0.6; } to { opacity: 1; } }
+    .scan-guide.state-locked::before, .scan-guide.state-locked::after, .scan-guide.state-locked .corner-tr, .scan-guide.state-locked .corner-bl { border-color: #34C759; box-shadow: 0 0 14px rgba(52,199,89,0.7); }
+    .scan-guide.state-locked { box-shadow: 0 0 0 9999px rgba(0,0,0,0.45), inset 0 0 0 2px rgba(52,199,89,0.5); }
+    .scan-line { position: absolute; left: 8%; right: 8%; height: 2px; background: linear-gradient(90deg, transparent, #00E5FF, #00E5FF, transparent); box-shadow: 0 0 20px 4px rgba(0,229,255,0.7); top: 8%; opacity: 0; pointer-events: none; }
+    .scan-line.active { opacity: 1; animation: scanLine 2.2s ease-in-out infinite; }
+    @keyframes scanLine { 0% { top: 8%; } 50% { top: 88%; } 100% { top: 8%; } }
+    .scan-quality { position: absolute; top: 46px; left: 12px; right: 12px; display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap; }
+    .scan-chip { display: inline-flex; align-items: center; gap: 5px; background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); color: #fff; padding: 5px 9px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+    .scan-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: #B0B3B8; transition: background 0.2s; }
+    .scan-chip.good .dot { background: #34C759; box-shadow: 0 0 8px #34C759; }
+    .scan-chip.bad  .dot { background: #FF453A; box-shadow: 0 0 8px #FF453A; }
+    .scan-chip.warn .dot { background: #FFB800; box-shadow: 0 0 8px #FFB800; }
+    .scan-auto-bar { position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%); width: 60%; height: 4px; background: rgba(255,255,255,0.25); border-radius: 99px; overflow: hidden; opacity: 0; transition: opacity 0.2s; }
+    .scan-auto-bar.active { opacity: 1; }
+    .scan-auto-bar > div { height: 100%; background: #fff; width: 0%; transition: width 0.15s linear; }
+    .scan-actions { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px; background: linear-gradient(to top, rgba(0,0,0,0.65), transparent); display: flex; justify-content: center; align-items: center; gap: 20px; }
+    .scan-shutter { width: 68px; height: 68px; border-radius: 50%; background: #fff; border: 4px solid rgba(255,255,255,0.4); cursor: pointer; box-shadow: 0 4px 20px rgba(0,0,0,0.4); transition: transform 0.15s, background 0.2s; }
+    .scan-shutter:active { transform: scale(0.92); }
+    .scan-shutter.locked { background: #34C759; border-color: rgba(52,199,89,0.5); box-shadow: 0 0 24px rgba(52,199,89,0.9); }
+    .scan-flip { width: 48px; height: 48px; border-radius: 50%; background: rgba(0,0,0,0.5); color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; backdrop-filter: blur(6px); }
+    .scan-flip:hover { background: rgba(0,0,0,0.7); }
+    .scan-instruction { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-size: 15px; font-weight: 700; text-shadow: 0 2px 8px rgba(0,0,0,0.85); text-align: center; width: 85%; pointer-events: none; line-height: 1.4; }
+    .scan-capture-flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; z-index: 6;
+        background-color: rgba(20,20,20,0.5);
+        background-image: radial-gradient(rgba(245,245,245,0.9) 1.4px, transparent 1.6px);
+        background-size: 7px 7px; }
+    .scan-capture-flash.fire { animation: scanCaptureFlash 0.4s ease-out 1; }
+    @keyframes scanCaptureFlash { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) { .scan-capture-flash.fire { animation: none; } }
+    .scan-loading { position: absolute; inset: 0; background: rgba(0,0,0,0.7); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; gap: 12px; font-size: 14px; z-index: 10; }
+    .scan-loading .spinner { width: 34px; height: 34px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .scan-preview { display: none; text-align: center; }
+    .scan-preview.active { display: block; }
+    .scan-preview img { max-width: 100%; max-height: 60vh; border-radius: 12px; border: 2px solid var(--scan-border); box-shadow: 0 8px 30px rgba(0,0,0,0.2); }
+    .scan-preview-actions { display: flex; gap: 12px; margin-top: 16px; justify-content: center; flex-wrap: wrap; }
+    .scan-preview-side-label { display: inline-block; padding: 6px 14px; border-radius: 99px; font-weight: 700; font-size: 12px; letter-spacing: 1px; margin-bottom: 12px; color: #fff; background: var(--scan-blue); }
+    .scan-preview-side-label.verso { background: #7209B7; }
+    .scan-btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; border: none; transition: transform 0.15s, background 0.2s; text-decoration: none; }
+    .scan-btn:active { transform: translateY(1px); }
+    .scan-btn.primary { background: var(--scan-blue); color: #fff; }
+    .scan-btn.primary:hover { background: var(--scan-blue-dark); }
+    .scan-btn.secondary { background: transparent; color: var(--scan-text); border: 2px solid var(--scan-border); }
+    .scan-btn.success { background: var(--scan-green); color: #fff; }
+    .scan-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .scan-upload-fallback { margin-top: 16px; text-align: center; font-size: 13px; color: var(--scan-text-muted); }
+    .scan-upload-fallback input[type="file"] { display: none; }
+    .scan-upload-fallback label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; color: var(--scan-blue); font-weight: 600; text-decoration: underline; margin-right: 12px; }
+    .scan-alert { padding: 12px 14px; border-radius: 10px; font-size: 13px; margin-top: 16px; line-height: 1.5; display: none; }
+    .scan-alert.error { display: block; background: #FFEBEA; color: #7A170F; border: 1px solid #FFC9C5; }
+    .scan-alert.info  { display: block; background: #E7F3FF; color: #0A47A1; border: 1px solid #B6D6FF; }
+    .scan-alert.success { display: block; background: #E6F6EC; color: #0A5B27; border: 1px solid #B7E6C6; }
+    .scan-side-warning { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(217, 45, 32, 0.95); color: #fff; padding: 16px 20px; border-radius: 12px; font-size: 14px; font-weight: 700; text-align: center; max-width: 85%; box-shadow: 0 10px 40px rgba(0,0,0,0.5); z-index: 8; display: none; line-height: 1.5; border: 2px solid #fff; animation: shake 0.5s; }
+    .scan-side-warning.active { display: block; }
+    .scan-side-warning i { font-size: 24px; display: block; margin-bottom: 8px; }
+    @keyframes shake { 0%, 100% { transform: translate(-50%, -50%) rotate(0deg); } 25% { transform: translate(-52%, -50%) rotate(-2deg); } 75% { transform: translate(-48%, -50%) rotate(2deg); } }
+    .scan-start-block { text-align: center; padding: 20px 0; }
+    .scan-start-block h3 { margin: 0 0 10px; font-size: 17px; }
+    .scan-start-block p { margin: 0 0 18px; font-size: 13px; color: var(--scan-text-muted); line-height: 1.6; }
+    .scan-start-block .scan-info-box { background: #E7F3FF; border: 1px solid #B6D6FF; color: #0A47A1; padding: 12px 14px; border-radius: 10px; font-size: 13px; text-align: left; margin-bottom: 18px; line-height: 1.6; }
+    .scan-detect-banner { margin-top: 12px; padding: 10px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; text-align: center; border: 1px solid var(--scan-border); background: var(--scan-surface); color: var(--scan-text-muted); transition: all 0.25s; }
+    .scan-detect-banner.detecting { background: #FFF8E5; color: #7A5A00; border-color: #FFE58F; }
+    .scan-detect-banner.locked { background: #E6F6EC; color: #0A5B27; border-color: #B7E6C6; }
+    .scan-detect-banner.refused { background: #FFEBEA; color: #7A170F; border-color: #FFC9C5; }
+    .scan-cam-error { padding: 16px; background: #FFEBEA; border: 1px solid #FFC9C5; border-radius: 10px; color: #7A170F; font-size: 13px; line-height: 1.6; margin-bottom: 16px; }
+    .scan-cam-error strong { display: block; margin-bottom: 6px; }
+    .scan-verif-panel { margin-bottom: 18px; padding: 16px; border-radius: 12px; background: var(--scan-surface); border: 1px solid var(--scan-border); }
+    .scan-verif-status { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; color: var(--scan-text-muted); }
+    .spinner-sm { width: 16px; height: 16px; border: 2px solid var(--scan-border); border-top-color: var(--scan-blue); border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+    .scan-verif-row { margin-top: 12px; }
+    .scan-verif-row label { display: block; font-size: 12px; font-weight: 700; color: var(--scan-text-muted); margin-bottom: 5px; }
+    .scan-verif-row select { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--scan-border); background: var(--scan-surface); color: var(--scan-text); font-size: 14px; font-family: inherit; box-sizing: border-box; }
+    .scan-verif-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700; margin-left: 8px; }
+    .scan-verif-badge.fiable { background: #E6F6EC; color: #0A5B27; }
+    .scan-verif-badge.aconfirmer { background: #FFF8E5; color: #7A5A00; }
+    .scan-verif-hint { margin: 12px 0 0; font-size: 12px; color: var(--scan-text-muted); line-height: 1.5; }
+
+    @media (max-width: 480px) {
+        .scan-header h1 { font-size: 17px; }
+        .scan-step { font-size: 10px; padding: 4px 8px; }
+        .scan-camera-wrap { border-radius: 12px; }
+        .scan-side-pill { font-size: 11px; padding: 8px 10px; }
+    }
+
+    /* ── Écran épuré + cadre en forme de carte d'identité (ISO/IEC 7810 ID-1 : 85,6 × 54 mm) ── */
+    .scan-camera-wrap { aspect-ratio: 4 / 3; }
+    .scan-guide { inset: auto; left: 50%; top: 50%; width: 90%; aspect-ratio: 85.6 / 54; transform: translate(-50%, -50%); border-radius: 12px; }
+    #scan_side_badge, .scan-quality, .scan-line, .scan-instruction,
+    .scan-auto-bar, #btn_flip { display: none !important; }
+    .scan-actions { top: 0; bottom: auto; background: none; justify-content: flex-end; pointer-events: none; }
+    #btn_cancel { pointer-events: auto; }
+    /* Bouton de capture manuelle (sous la caméra) */
+    .scan-capture-row { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 14px; }
+    .scan-btn.scan-capture-btn { min-width: 200px; justify-content: center; font-size: 15px; padding: 14px 26px; box-shadow: 0 4px 14px rgba(8,102,255,0.35); }
+    .scan-btn.scan-capture-btn.locked { background: var(--scan-green); box-shadow: 0 0 18px rgba(52,199,89,0.8); }
+    .scan-capture-hint { font-size: 12px; color: var(--scan-text-muted); text-align: center; }
+    /* ═══ Caméra plein écran — style scan d'identité (cadre, coins, feuille de conseils, écran de traitement) ═══ */
+    body:has(#scan_camera_view[style*="block"]) { overflow: hidden; }
+    #scan_camera_view { position: fixed; inset: 0; z-index: 10000; background: #000; }
+    .scan-fs { max-width: 560px; height: 100%; margin: 0 auto; display: flex; flex-direction: column; padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); box-sizing: border-box; }
+    .scan-topbar { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; flex-shrink: 0; }
+    .scan-topbtn { background: none; border: none; color: #fff; font-size: 20px; line-height: 1; padding: 10px 12px; border-radius: 10px; cursor: pointer; font-family: inherit; }
+    .scan-topbtn:active { background: rgba(255,255,255,0.14); }
+    .scan-help-btn { font-size: 17px; font-weight: 600; letter-spacing: 0.2px; }
+    #scan_camera_view .scan-camera-wrap { flex: 1 1 0; min-height: 0; aspect-ratio: auto; width: 100%; border-radius: 22px; box-shadow: none; }
+    #scan_camera_view .scan-camera-wrap video { position: absolute; inset: 0; }
+
+    /* Cadre : coins blancs, bleus pendant la capture */
+    #scan_camera_view .scan-guide { width: 88%; max-width: 520px; top: 46%; box-shadow: 0 0 0 9999px rgba(0,0,0,0.45); }
+    .scan-guide::before, .scan-guide::after, .scan-guide .corner-tr, .scan-guide .corner-bl { width: 46px; height: 46px; border-width: 4px; border-radius: 20px; border-color: #fff; }
+    .scan-guide::before { top: -5px; left: -5px; }
+    .scan-guide::after { bottom: -5px; right: -5px; }
+    .scan-guide .corner-tr { top: -5px; right: -5px; }
+    .scan-guide .corner-bl { bottom: -5px; left: -5px; }
+    .scan-guide.state-searching::before, .scan-guide.state-searching::after, .scan-guide.state-searching .corner-tr, .scan-guide.state-searching .corner-bl { border-color: #fff; }
+    .scan-guide.state-partial::before, .scan-guide.state-partial::after, .scan-guide.state-partial .corner-tr, .scan-guide.state-partial .corner-bl { border-color: #fff; animation: pulseCorner 0.9s infinite alternate; }
+    @keyframes pulseCorner { from { opacity: 0.5; } to { opacity: 1; } }
+    .scan-guide.state-locked::before, .scan-guide.state-locked::after, .scan-guide.state-locked .corner-tr, .scan-guide.state-locked .corner-bl,
+    .scan-guide[data-capturing]::before, .scan-guide[data-capturing]::after, .scan-guide[data-capturing] .corner-tr, .scan-guide[data-capturing] .corner-bl { border-color: #0866FF; box-shadow: 0 0 16px rgba(8,102,255,0.85); animation: none; opacity: 1; }
+    .scan-guide.state-locked, .scan-guide[data-capturing] { box-shadow: 0 0 0 9999px rgba(0,0,0,0.45), inset 0 0 0 2px rgba(8,102,255,0.55); }
+
+    /* Pointillés pendant la capture */
+    .scan-capture-flash { transition: opacity 0.18s ease; }
+    .scan-capture-flash.hold { opacity: 1; }
+
+    /* Zone du bas : état + bouton de capture rond */
+    .scan-bottom { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 14px 16px 18px; }
+    #scan_camera_view .scan-detect-banner { margin: 0; padding: 0; min-height: 18px; background: none; border: none; color: #c9ccd1; font-size: 13px; }
+    #scan_camera_view .scan-detect-banner.detecting { background: none; border: none; color: #ffd666; }
+    #scan_camera_view .scan-detect-banner.locked { background: none; border: none; color: #7fb2ff; }
+    #scan_camera_view .scan-detect-banner.refused { background: none; border: none; color: #ff9d94; }
+    .scan-shutter-round { width: 76px; height: 76px; border-radius: 50%; border: 5px solid rgba(255,255,255,0.55); background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s, border-color 0.25s; }
+    .scan-shutter-round span { display: block; width: 56px; height: 56px; border-radius: 50%; background: #fff; transition: background 0.25s, transform 0.15s, box-shadow 0.25s; }
+    .scan-shutter-round:active span { transform: scale(0.9); }
+    .scan-shutter-round.locked { border-color: rgba(8,102,255,0.6); }
+    .scan-shutter-round.locked span { background: #0866FF; box-shadow: 0 0 22px rgba(8,102,255,0.9); }
+
+    /* Feuille « Conseils » */
+    .scan-tips-backdrop { position: fixed; inset: 0; z-index: 10002; background: rgba(0,0,0,0.45); opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+    .scan-tips-backdrop.open { opacity: 1; pointer-events: auto; }
+    .scan-tips-sheet { position: absolute; left: 50%; bottom: 0; width: 100%; max-width: 560px; transform: translate(-50%, 100%); background: var(--scan-surface); color: var(--scan-text); border-radius: 24px 24px 0 0; padding: 10px 22px calc(22px + env(safe-area-inset-bottom, 0px)); box-sizing: border-box; transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+    .scan-tips-backdrop.open .scan-tips-sheet { transform: translate(-50%, 0); }
+    .scan-tips-handle { width: 44px; height: 5px; border-radius: 99px; background: #CED0D4; margin: 0 auto 16px; }
+    .scan-tips-sheet h3 { text-align: center; font-size: 19px; margin: 0 0 18px; }
+    .scan-tip { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 16px; }
+    .scan-tip-ic { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; background: #E7F3FF; color: var(--scan-blue); display: flex; align-items: center; justify-content: center; font-size: 13px; margin-top: 2px; }
+    [data-theme="dark"] .scan-tip-ic { background: #0B2A4D; }
+    .scan-tip strong { display: block; font-size: 16px; margin-bottom: 2px; }
+    .scan-tip .t { display: block; font-size: 14px; color: var(--scan-text-muted); line-height: 1.45; }
+    .scan-tips-ok { width: 100%; justify-content: center; margin-top: 6px; }
+
+    /* Écran de traitement (étape suivante) */
+    .scan-import { position: fixed; inset: 0; z-index: 10001; background: var(--scan-surface); color: var(--scan-text); display: none; flex-direction: column; }
+    .scan-import.open { display: flex; animation: scanImportIn 0.2s ease-out; }
+    @keyframes scanImportIn { from { opacity: 0; } to { opacity: 1; } }
+    .scan-import-top { display: flex; justify-content: flex-end; padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px; }
+    .scan-import .scan-help-btn { color: var(--scan-text-muted); }
+    .scan-import-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 0 28px 80px; }
+    .scan-import-ring { width: 44px; height: 44px; border: 4px solid #D8DADF; border-top-color: var(--scan-text); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    .scan-import-body h2 { font-size: 24px; font-weight: 600; margin: 8px 0 0; }
+    .scan-import-body p { font-size: 15px; color: var(--scan-text-muted); margin: 0; line-height: 1.5; }
+</style>
+
+<div class="scan-page">
+    <div class="scan-header">
+        <h1>Scan de votre pièce d'identité</h1>
+        <p id="scan_subtitle">Le recto ET le verso de votre document seront scannés.</p>
+    </div>
+
+    <div class="scan-steps">
+        <span class="scan-step done">1. Forfait</span>
+        <i class="fas fa-chevron-right" style="color:#65676b; font-size:10px;"></i>
+        <span class="scan-step done">2. Profil</span>
+        <i class="fas fa-chevron-right" style="color:#65676b; font-size:10px;"></i>
+        <span class="scan-step done">3. Photo</span>
+        <i class="fas fa-chevron-right" style="color:#65676b; font-size:10px;"></i>
+        <span class="scan-step done">4. Pièce</span>
+        <i class="fas fa-chevron-right" style="color:#65676b; font-size:10px;"></i>
+        <span class="scan-step active">5. Scan</span>
+    </div>
+
+    <div class="scan-progress"><div id="scan_progress_bar"></div></div>
+
+    <div class="scan-sides-bar" id="scan_sides_bar" style="display:none;">
+        <div class="scan-side-pill pending" id="side_pill_recto"><i class="fas fa-square"></i> Recto</div>
+        <div class="scan-side-pill pending" id="side_pill_verso"><i class="fas fa-square"></i> Verso</div>
+    </div>
+
+    <div id="scan_start" class="scan-start-block" style="display:none;">
+        <h3 id="scan_start_title">Prêt à scanner votre pièce</h3>
+        <p id="scan_start_text">Vous allez scanner les deux faces de votre document officiel.</p>
+        <div class="scan-info-box">
+            <strong><i class="fas fa-info-circle"></i> Important</strong>
+            <ul style="margin:8px 0 0 18px; padding:0;">
+                <li>Placez le document <strong>bien à plat</strong> dans le cadre</li>
+                <li>Remplissez le rectangle avec votre pièce (ni trop loin, ni trop près)</li>
+                <li>La photo se prend <strong>automatiquement</strong> quand la pièce est reconnue — sinon appuyez sur <strong>Filmer</strong></li>
+                <li id="scan_info_faces">Vous scannerez d'abord le <strong>recto</strong>, puis le <strong>verso</strong></li>
+            </ul>
+        </div>
+        <button type="button" class="scan-btn primary" id="btn_scan_start"><i class="fas fa-video"></i> Filmer</button>
+    </div>
+
+    <div id="scan_camera_view" style="display:none;">
+        <div class="scan-fs">
+            <div class="scan-topbar">
+                <button type="button" class="scan-topbtn" id="btn_cancel" title="Retour" aria-label="Retour"><i class="fas fa-arrow-left"></i></button>
+                <button type="button" class="scan-topbtn scan-help-btn" id="btn_help">Aide</button>
+            </div>
+            <div class="scan-camera-wrap">
+                <video id="scan_video" playsinline autoplay muted></video>
+                <canvas class="scan-cam-overlay" id="scan_overlay_canvas"></canvas>
+                <div class="scan-side-badge" id="scan_side_badge"><i class="fas fa-square"></i> RECTO 1/2</div>
+                <div class="scan-guide state-searching" id="scan_guide"><div class="corner-tr"></div><div class="corner-bl"></div></div>
+                <div class="scan-line" id="scan_line"></div>
+                <div class="scan-quality">
+                    <span class="scan-chip" id="chip_brightness"><span class="dot"></span> Lumière</span>
+                    <span class="scan-chip" id="chip_stability"><span class="dot"></span> Stabilité</span>
+                    <span class="scan-chip" id="chip_document"><span class="dot"></span> <span id="chip_document_label">Document</span></span>
+                </div>
+                <div class="scan-instruction" id="scan_instruction">Présentez votre pièce d'identité</div>
+                <div class="scan-side-warning" id="scan_side_warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div id="scan_side_warning_text">Vous avez déjà scanné le recto. Présentez le verso.</div>
+                </div>
+                <div class="scan-auto-bar" id="scan_auto_bar"><div></div></div>
+                <div class="scan-actions">
+                    <button type="button" class="scan-flip" id="btn_flip" title="Changer de caméra"><i class="fas fa-sync-alt"></i></button>
+                </div>
+                <div class="scan-capture-flash" id="scan_capture_flash"></div>
+                <div class="scan-loading" id="scan_loading" style="display:none;"><div class="spinner"></div><span>Capture en cours...</span></div>
+            </div>
+            <div class="scan-bottom">
+                <div class="scan-detect-banner" id="scan_detect_banner">Analyse en cours…</div>
+                <button type="button" class="scan-shutter-round" id="btn_shutter" title="Prendre la photo" aria-label="Prendre la photo"><span></span></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="scan-tips-backdrop" id="scan_tips">
+        <div class="scan-tips-sheet" role="dialog" aria-label="Conseils pour un bon scan">
+            <div class="scan-tips-handle"></div>
+            <h3>Conseils pour un bon scan</h3>
+            <div class="scan-tip"><div class="scan-tip-ic"><i class="fas fa-check"></i></div><div><strong>Posez le document à plat</strong><span class="t">Évitez de le tenir en main : posez-le sur une table ou un support stable.</span></div></div>
+            <div class="scan-tip"><div class="scan-tip-ic"><i class="fas fa-check"></i></div><div><strong>Chassez reflets et ombres</strong><span class="t">Choisissez un endroit bien éclairé, sans lumière directement au-dessus du document.</span></div></div>
+            <div class="scan-tip"><div class="scan-tip-ic"><i class="fas fa-check"></i></div><div><strong>Remplissez le cadre</strong><span class="t">Faites coïncider les quatre coins du document avec les coins du cadre.</span></div></div>
+            <button type="button" class="scan-btn primary scan-tips-ok" id="btn_tips_ok">J'ai compris</button>
+        </div>
+    </div>
+
+    <div class="scan-import" id="scan_import">
+        <div class="scan-import-top"><button type="button" class="scan-topbtn scan-help-btn" id="btn_import_help">Aide</button></div>
+        <div class="scan-import-body">
+            <div class="scan-import-ring"></div>
+            <h2>Traitement de votre pièce</h2>
+            <p>Analyse de la photo en cours, merci de patienter.</p>
+        </div>
+    </div>
+
+    <div class="scan-preview" id="scan_preview_view">
+        <div id="scan_preview_side_label" class="scan-preview-side-label">RECTO</div>
+        <div><img id="scan_preview_img" src="" alt="Aperçu du document"></div>
+        <div class="scan-preview-actions">
+            <button type="button" class="scan-btn secondary" id="btn_retake"><i class="fas fa-redo"></i> Reprendre cette face</button>
+            <button type="button" class="scan-btn success" id="btn_confirm"><i class="fas fa-check"></i> <span id="btn_confirm_label">Valider le recto</span></button>
+        </div>
+    </div>
+
+    <div id="scan_recap" style="display:none;">
+        <div class="scan-verif-panel" id="scan_verif_panel">
+            <div class="scan-verif-status" id="scan_verif_status"><div class="spinner-sm"></div> Vérification automatique du document en cours…</div>
+            <div id="scan_verif_result" style="display:none;">
+                <div class="scan-verif-row">
+                    <label for="scan_verif_type">Type de document</label>
+                    <select id="scan_verif_type"></select>
+                </div>
+                <div class="scan-verif-row">
+                    <label for="scan_verif_country">Pays émetteur</label>
+                    <select id="scan_verif_country"></select>
+                </div>
+                <p class="scan-verif-hint" id="scan_verif_hint"></p>
+            </div>
+        </div>
+        <div id="scan_recap_content"></div>
+        <div style="text-align:center; margin-top:20px;">
+            <button type="button" class="scan-btn primary" id="btn_submit"><i class="fas fa-upload"></i> Envoyer pour vérification</button>
+        </div>
+    </div>
+
+    <div class="scan-alert" id="scan_alert"></div>
+
+    <div class="scan-upload-fallback" id="scan_upload_fallback" style="display:none;">
+        <p>Caméra indisponible. Importez vos deux photos :</p>
+        <input type="file" id="fallback_recto" accept="image/*" capture="environment">
+        <label for="fallback_recto"><i class="fas fa-image"></i> Photo recto</label>
+        <input type="file" id="fallback_verso" accept="image/*" capture="environment">
+        <label for="fallback_verso"><i class="fas fa-image"></i> Photo verso</label>
+    </div>
+</div>
+
+<script>
+(function () {
+    "use strict";
+
+    const state = {
+        typeDocument: "{{ type_document or 'cni' }}",
+        step: "start",
+        rectoImage: null, versoImage: null,
+        rectoFingerprint: null,
+        stream: null, facingMode: "environment", capturing: false,
+        lastFrameData: null, lastFingerprintCheck: 0,
+        consecutiveDoc: 0, consecutiveNoDoc: 0, isLocked: false, lockProgress: 0,
+        sameSideWarningUntil: 0
+    };
+
+    state.confirmedType = null;
+    state.confirmedCountry = null;
+    state.analysisPromise = null;
+    state.analysisDone = false;
+
+    /* ═══════════════════════════════════════════════════════════════
+       TYPES DE DOCUMENTS ACCEPTÉS — règles recto / verso
+       verification_piece.html envoie : cni, passport, permis, sejour
+       -> on les ramène aux clés canoniques utilisées par ce scan.
+       faces : 2 = recto + verso obligatoires ; 1 = recto seul.
+    ═══════════════════════════════════════════════════════════════ */
+    const DOC_ALIASES = { permis: "driver_license", sejour: "residence_permit",
+        carte_identite: "cni", national_id: "cni", passeport: "passport" };
+    const DOC_RULES = {
+        cni:              { faces: 2, nom: "Carte Nationale d'Identité" },
+        passport:         { faces: 1, nom: "Passeport" },
+        driver_license:   { faces: 2, nom: "Permis de conduire" },
+        residence_permit: { faces: 2, nom: "Carte de séjour" }
+    };
+    function normalizeDocType(k) {
+        k = (k || "cni").toString().toLowerCase().trim();
+        k = DOC_ALIASES[k] || k;
+        return DOC_RULES[k] ? k : "cni";
+    }
+    state.typeDocument = normalizeDocType(state.typeDocument);
+    state.faces = DOC_RULES[state.typeDocument].faces;
+
+    /* ═══════════════════════════════════════════════════════════════
+       IDENTIFICATION DU DOCUMENT — pays (ISO 3166) + type
+       - COUNTRIES : code MRZ/ICAO (alpha-3) -> nom du pays en français
+       - COUNTRY_SEARCH : [nom normalisé FR/EN, code alpha-3] pour la
+         recherche par mots-clés quand il n'y a pas de MRZ (permis,
+         carte de séjour, cartes sans zone lisible-machine)
+    ═══════════════════════════════════════════════════════════════ */
+    const COUNTRIES = {"ABW":"Aruba","AFG":"Afghanistan","AGO":"Angola","AIA":"Anguilla","ALA":"Îles Åland","ALB":"Albanie","AND":"Andorre","ARE":"Émirats arabes unis","ARG":"Argentine","ARM":"Arménie","ASM":"Samoa américaines","ATA":"Antarctique","ATF":"Terres australes françaises","ATG":"Antigua-et-Barbuda","AUS":"Australie","AUT":"Autriche","AZE":"Azerbaïdjan","BDI":"Burundi","BEL":"Belgique","BEN":"Bénin","BES":"Pays-Bas caribéens","BFA":"Burkina Faso","BGD":"Bangladesh","BGR":"Bulgarie","BHR":"Bahreïn","BHS":"Bahamas","BIH":"Bosnie-Herzégovine","BLM":"Saint-Barthélemy","BLR":"Biélorussie","BLZ":"Belize","BMU":"Bermudes","BOL":"Bolivie","BRA":"Brésil","BRB":"Barbade","BRN":"Brunéi Darussalam","BTN":"Bhoutan","BVT":"Île Bouvet","BWA":"Botswana","CAF":"République centrafricaine","CAN":"Canada","CCK":"Îles Cocos","CHE":"Suisse","CHL":"Chili","CHN":"Chine","CIV":"Côte d’Ivoire","CMR":"Cameroun","COD":"Congo-Kinshasa","COG":"Congo-Brazzaville","COK":"Îles Cook","COL":"Colombie","COM":"Comores","CPV":"Cap-Vert","CRI":"Costa Rica","CUB":"Cuba","CUW":"Curaçao","CXR":"Île Christmas","CYM":"Îles Caïmans","CYP":"Chypre","CZE":"Tchéquie","D":"Allemagne","DEU":"Allemagne","DJI":"Djibouti","DMA":"Dominique","DNK":"Danemark","DOM":"République dominicaine","DZA":"Algérie","ECU":"Équateur","EGY":"Égypte","ERI":"Érythrée","ESH":"Sahara occidental","ESP":"Espagne","EST":"Estonie","ETH":"Éthiopie","FIN":"Finlande","FJI":"Fidji","FLK":"Îles Malouines","FRA":"France","FRO":"Îles Féroé","FSM":"États fédérés de Micronésie","GAB":"Gabon","GBR":"Royaume-Uni","GEO":"Géorgie","GGY":"Guernesey","GHA":"Ghana","GIB":"Gibraltar","GIN":"Guinée","GLP":"Guadeloupe","GMB":"Gambie","GNB":"Guinée-Bissau","GNQ":"Guinée équatoriale","GRC":"Grèce","GRD":"Grenade","GRL":"Groenland","GTM":"Guatemala","GUF":"Guyane française","GUM":"Guam","GUY":"Guyana","HKG":"R.A.S. chinoise de Hong Kong","HMD":"Îles Heard et McDonald","HND":"Honduras","HRV":"Croatie","HTI":"Haïti","HUN":"Hongrie","IDN":"Indonésie","IMN":"Île de Man","IND":"Inde","IOT":"Territoire britannique de l’océan Indien","IRL":"Irlande","IRN":"Iran","IRQ":"Irak","ISL":"Islande","ISR":"Israël","ITA":"Italie","JAM":"Jamaïque","JEY":"Jersey","JOR":"Jordanie","JPN":"Japon","KAZ":"Kazakhstan","KEN":"Kenya","KGZ":"Kirghizistan","KHM":"Cambodge","KIR":"Kiribati","KNA":"Saint-Christophe-et-Niévès","KOR":"Corée du Sud","KWT":"Koweït","LAO":"Laos","LBN":"Liban","LBR":"Libéria","LBY":"Libye","LCA":"Sainte-Lucie","LIE":"Liechtenstein","LKA":"Sri Lanka","LSO":"Lesotho","LTU":"Lituanie","LUX":"Luxembourg","LVA":"Lettonie","MAC":"R.A.S. chinoise de Macao","MAF":"Saint-Martin","MAR":"Maroc","MCO":"Monaco","MDA":"Moldavie","MDG":"Madagascar","MDV":"Maldives","MEX":"Mexique","MHL":"Îles Marshall","MKD":"Macédoine du Nord","MLI":"Mali","MLT":"Malte","MMR":"Myanmar (Birmanie)","MNE":"Monténégro","MNG":"Mongolie","MNP":"Îles Mariannes du Nord","MOZ":"Mozambique","MRT":"Mauritanie","MSR":"Montserrat","MTQ":"Martinique","MUS":"Maurice","MWI":"Malawi","MYS":"Malaisie","MYT":"Mayotte","NAM":"Namibie","NCL":"Nouvelle-Calédonie","NER":"Niger","NFK":"Île Norfolk","NGA":"Nigéria","NIC":"Nicaragua","NIU":"Niue","NLD":"Pays-Bas","NOR":"Norvège","NPL":"Népal","NRU":"Nauru","NZL":"Nouvelle-Zélande","OMN":"Oman","PAK":"Pakistan","PAN":"Panama","PCN":"Îles Pitcairn","PER":"Pérou","PHL":"Philippines","PLW":"Palaos","PNG":"Papouasie-Nouvelle-Guinée","POL":"Pologne","PRI":"Porto Rico","PRK":"Corée du Nord","PRT":"Portugal","PRY":"Paraguay","PSE":"Territoires palestiniens","PYF":"Polynésie française","QAT":"Qatar","REU":"La Réunion","ROU":"Roumanie","RUS":"Russie","RWA":"Rwanda","SAU":"Arabie saoudite","SDN":"Soudan","SEN":"Sénégal","SGP":"Singapour","SGS":"Géorgie du Sud et îles Sandwich du Sud","SHN":"Sainte-Hélène","SJM":"Svalbard et Jan Mayen","SLB":"Îles Salomon","SLE":"Sierra Leone","SLV":"Salvador","SMR":"Saint-Marin","SOM":"Somalie","SPM":"Saint-Pierre-et-Miquelon","SRB":"Serbie","SSD":"Soudan du Sud","STP":"Sao Tomé-et-Principe","SUR":"Suriname","SVK":"Slovaquie","SVN":"Slovénie","SWE":"Suède","SWZ":"Eswatini","SXM":"Saint-Martin (partie néerlandaise)","SYC":"Seychelles","SYR":"Syrie","TCA":"Îles Turques-et-Caïques","TCD":"Tchad","TGO":"Togo","THA":"Thaïlande","TJK":"Tadjikistan","TKL":"Tokelau","TKM":"Turkménistan","TLS":"Timor oriental","TON":"Tonga","TTO":"Trinité-et-Tobago","TUN":"Tunisie","TUR":"Turquie","TUV":"Tuvalu","TWN":"Taïwan","TZA":"Tanzanie","UGA":"Ouganda","UKR":"Ukraine","UMI":"Îles mineures éloignées des États-Unis","UNA":"Apatride","UNK":"Inconnu","UNO":"Refugie (ONU)","URY":"Uruguay","USA":"États-Unis","UZB":"Ouzbékistan","VAT":"État de la Cité du Vatican","VCT":"Saint-Vincent-et-les-Grenadines","VEN":"Venezuela","VGB":"Îles Vierges britanniques","VIR":"Îles Vierges des États-Unis","VNM":"Vietnam","VUT":"Vanuatu","WLF":"Wallis-et-Futuna","WSM":"Samoa","XXA":"Apatride","XXB":"Refugie","XXC":"Refugie (autre)","XXX":"Inconnu","YEM":"Yémen","ZAF":"Afrique du Sud","ZMB":"Zambie","ZWE":"Zimbabwe"};
+    const COUNTRY_SEARCH = [["REPUBLIQUE DU CAMEROUN","CMR"],["REPUBLIC OF CAMEROON","CMR"],["REPUBLIQUE DU TCHAD","TCD"],["REPUBLIC OF CHAD","TCD"],["REPUBLIQUE GABONAISE","GAB"],["REPUBLIQUE DU CONGO","COG"],["REPUBLIQUE DEMOCRATIQUE DU CONGO","COD"],["REPUBLIQUE CENTRAFRICAINE","CAF"],["REPUBLIQUE DE GUINEE EQUATORIALE","GNQ"],["REPUBLIQUE FEDERALE DU NIGERIA","NGA"],["FEDERAL REPUBLIC OF NIGERIA","NGA"],["REPUBLIQUE DU SENEGAL","SEN"],["REPUBLIQUE DE COTE D IVOIRE","CIV"],["REPUBLIQUE DU MALI","MLI"],["REPUBLIQUE DU BENIN","BEN"],["REPUBLIQUE TOGOLAISE","TGO"],["REPUBLIQUE DU GHANA","GHA"],["BURKINA FASO","BFA"],["REPUBLIQUE DU NIGER","NER"],["REPUBLIQUE DE GUINEE","GIN"],["ROYAUME DU MAROC","MAR"],["KINGDOM OF MOROCCO","MAR"],["REPUBLIQUE ALGERIENNE","DZA"],["REPUBLIQUE TUNISIENNE","TUN"],["REPUBLIQUE FRANCAISE","FRA"],["FRANCAISE","FRA"],["ROYAUME DE BELGIQUE","BEL"],["KONINKRIJK BELGIE","BEL"],["BUNDESREPUBLIK DEUTSCHLAND","DEU"],["DEUTSCHLAND","DEU"],["REINO DE ESPANA","ESP"],["ESPANA","ESP"],["REPUBBLICA ITALIANA","ITA"],["REPUBLICA PORTUGUESA","PRT"],["CONFEDERATION SUISSE","CHE"],["SCHWEIZERISCHE EIDGENOSSENSCHAFT","CHE"],["KONINKRIJK DER NEDERLANDEN","NLD"],["UNITED KINGDOM OF GREAT BRITAIN","GBR"],["UNITED KINGDOM","GBR"],["UNITED STATES OF AMERICA","USA"],["REPUBLIQUE FEDERALE DU BRESIL","BRA"],["REPUBLIQUE POPULAIRE DE CHINE","CHN"],["REPUBLIQUE LIBANAISE","LBN"],["REPUBLIQUE DE TURQUIE","TUR"],["TURKIYE CUMHURIYETI","TUR"],["REPUBLIQUE ARABE D EGYPTE","EGY"],["UNITED KINGDOM OF GREAT BRITAIN AND NORTHERN IRELAND","GBR"],["SOUTH GEORGIA AND THE SOUTH SANDWICH ISLANDS","SGS"],["SAINT HELENA ASCENSION AND TRISTAN DA CUNHA","SHN"],["TERRITOIRE BRITANNIQUE DE LOCEAN INDIEN","IOT"],["GEORGIE DU SUD ET ILES SANDWICH DU SUD","SGS"],["ILES MINEURES ELOIGNEES DES ETATS UNIS","UMI"],["KOREA DEMOCRATIC PEOPLE S REPUBLIC OF","PRK"],["UNITED STATES MINOR OUTLYING ISLANDS","UMI"],["HEARD ISLAND AND MCDONALD ISLANDS","HMD"],["CONGO DEMOCRATIC REPUBLIC OF THE","COD"],["LAO PEOPLE S DEMOCRATIC REPUBLIC","LAO"],["SAINT VINCENT AND THE GRENADINES","VCT"],["SAINT MARTIN PARTIE NEERLANDAISE","SXM"],["VENEZUELA BOLIVARIAN REPUBLIC OF","VEN"],["BONAIRE SINT EUSTATIUS AND SABA","BES"],["SAINT VINCENT ET LES GRENADINES","VCT"],["BOLIVIA PLURINATIONAL STATE OF","BOL"],["BRITISH INDIAN OCEAN TERRITORY","IOT"],["MICRONESIA FEDERATED STATES OF","FSM"],["TERRES AUSTRALES FRANCAISES","ATF"],["FRENCH SOUTHERN TERRITORIES","ATF"],["R A S CHINOISE DE HONG KONG","HKG"],["ETATS FEDERES DE MICRONESIE","FSM"],["TANZANIA UNITED REPUBLIC OF","TZA"],["ILES VIERGES DES ETATS UNIS","VIR"],["ETAT DE LA CITE DU VATICAN","VAT"],["NETHERLANDS KINGDOM OF THE","NLD"],["SAINT CHRISTOPHE ET NIEVES","KNA"],["REPUBLIQUE CENTRAFRICAINE","CAF"],["FALKLAND ISLANDS MALVINAS","FLK"],["PAPOUASIE NOUVELLE GUINEE","PNG"],["SAINT PIERRE AND MIQUELON","SPM"],["ILES VIERGES BRITANNIQUES","VGB"],["CENTRAL AFRICAN REPUBLIC","CAF"],["IRAN ISLAMIC REPUBLIC OF","IRN"],["NORTHERN MARIANA ISLANDS","MNP"],["TERRITOIRES PALESTINIENS","PSE"],["SAINT MARTIN FRENCH PART","MAF"],["SAINT PIERRE ET MIQUELON","SPM"],["TAIWAN PROVINCE OF CHINA","TWN"],["TURKS AND CAICOS ISLANDS","TCA"],["UNITED STATES OF AMERICA","USA"],["R A S CHINOISE DE MACAO","MAC"],["SINT MAARTEN DUTCH PART","SXM"],["ILES TURQUES ET CAIQUES","TCA"],["BOSNIA AND HERZEGOVINA","BIH"],["REPUBLIQUE DOMINICAINE","DOM"],["ILES HEARD ET MCDONALD","HMD"],["ILES MARIANNES DU NORD","MNP"],["SVALBARD AND JAN MAYEN","SJM"],["VIRGIN ISLANDS BRITISH","VGB"],["COCOS KEELING ISLANDS","CCK"],["SAINT KITTS AND NEVIS","KNA"],["SAO TOME AND PRINCIPE","STP"],["SVALBARD ET JAN MAYEN","SJM"],["SAO TOME ET PRINCIPE","STP"],["SYRIAN ARAB REPUBLIC","SYR"],["UNITED ARAB EMIRATES","ARE"],["ANTIGUA AND BARBUDA","ATG"],["POLYNESIE FRANCAISE","PYF"],["MOLDOVA REPUBLIC OF","MDA"],["TRINIDAD AND TOBAGO","TTO"],["EMIRATS ARABES UNIS","ARE"],["ANTIGUA ET BARBUDA","ATG"],["PAYS BAS CARIBEENS","BES"],["BOSNIE HERZEGOVINE","BIH"],["DOMINICAN REPUBLIC","DOM"],["GUINEE EQUATORIALE","GNQ"],["NOUVELLE CALEDONIE","NCL"],["PALESTINE STATE OF","PSE"],["RUSSIAN FEDERATION","RUS"],["VIRGIN ISLANDS U S","VIR"],["SAMOA AMERICAINES","ASM"],["BRUNEI DARUSSALAM","BRN"],["CONGO BRAZZAVILLE","COG"],["EQUATORIAL GUINEA","GNQ"],["KOREA REPUBLIC OF","KOR"],["MACEDOINE DU NORD","MKD"],["TRINITE ET TOBAGO","TTO"],["WALLIS AND FUTUNA","WLF"],["SAHARA OCCIDENTAL","ESH"],["CHRISTMAS ISLAND","CXR"],["GUYANE FRANCAISE","GUF"],["FRENCH POLYNESIA","PYF"],["MARSHALL ISLANDS","MHL"],["MYANMAR BIRMANIE","MMR"],["NOUVELLE ZELANDE","NZL"],["PAPUA NEW GUINEA","PNG"],["SAINT BARTHELEMY","BLM"],["WALLIS ET FUTUNA","WLF"],["NORTH MACEDONIA","MKD"],["ARABIE SAOUDITE","SAU"],["SOLOMON ISLANDS","SLB"],["AMERICAN SAMOA","ASM"],["CAYMAN ISLANDS","CYM"],["CONGO KINSHASA","COD"],["ILES MALOUINES","FLK"],["NORFOLK ISLAND","NFK"],["AFRIQUE DU SUD","ZAF"],["TIMOR ORIENTAL","TLS"],["WESTERN SAHARA","ESH"],["ALAND ISLANDS","ALA"],["BOUVET ISLAND","BVT"],["ILE CHRISTMAS","CXR"],["COTE D IVOIRE","CIV"],["FAROE ISLANDS","FRO"],["FRENCH GUIANA","GUF"],["GUINEE BISSAU","GNB"],["GUINEA BISSAU","GNB"],["COREE DU NORD","PRK"],["LIECHTENSTEIN","LIE"],["ILES MARSHALL","MHL"],["NEW CALEDONIA","NCL"],["ILES PITCAIRN","PCN"],["SAINTE HELENE","SHN"],["SOUDAN DU SUD","SSD"],["BURKINA FASO","BFA"],["ILES CAIMANS","CYM"],["COOK ISLANDS","COK"],["COTE DIVOIRE","CIV"],["COREE DU SUD","KOR"],["KIRGHIZISTAN","KGZ"],["SAINTE LUCIE","LCA"],["SAINT MARTIN","MAF"],["SAUDI ARABIA","SAU"],["SIERRA LEONE","SLE"],["ILES SALOMON","SLB"],["SOUTH AFRICA","ZAF"],["TURKMENISTAN","TKM"],["AFGHANISTAN","AFG"],["ANTARCTIQUE","ATA"],["AZERBAIDJAN","AZE"],["BIELORUSSIE","BLR"],["EL SALVADOR","SLV"],["ISLE OF MAN","IMN"],["NEW ZEALAND","NZL"],["ILE NORFOLK","NFK"],["PHILIPPINES","PHL"],["PUERTO RICO","PRI"],["SAINT LUCIA","LCA"],["SAINT MARIN","SMR"],["SOUTH SUDAN","SSD"],["SWITZERLAND","CHE"],["TADJIKISTAN","TJK"],["TIMOR LESTE","TLS"],["ROYAUME UNI","GBR"],["OUZBEKISTAN","UZB"],["ILES ALAND","ALA"],["ANTARCTICA","ATA"],["AZERBAIJAN","AZE"],["BANGLADESH","BGD"],["ILE BOUVET","BVT"],["CABO VERDE","CPV"],["ILES COCOS","CCK"],["COSTA RICA","CRI"],["ILES FEROE","FRO"],["GUADELOUPE","GLP"],["ILE DE MAN","IMN"],["KAZAKHSTAN","KAZ"],["KYRGYZSTAN","KGZ"],["LUXEMBOURG","LUX"],["MADAGASCAR","MDG"],["MARTINIQUE","MTQ"],["MAURITANIE","MRT"],["MAURITANIA","MRT"],["MONTENEGRO","MNE"],["MONTSERRAT","MSR"],["MOZAMBIQUE","MOZ"],["PORTO RICO","PRI"],["LA REUNION","REU"],["SAN MARINO","SMR"],["SEYCHELLES","SYC"],["TAJIKISTAN","TJK"],["ETATS UNIS","USA"],["UZBEKISTAN","UZB"],["ARGENTINE","ARG"],["ARGENTINA","ARG"],["AUSTRALIE","AUS"],["AUSTRALIA","AUS"],["ILES COOK","COK"],["DOMINIQUE","DMA"],["ALLEMAGNE","DEU"],["GIBRALTAR","GIB"],["GROENLAND","GRL"],["GREENLAND","GRL"],["GUATEMALA","GTM"],["GUERNESEY","GGY"],["HONG KONG","HKG"],["INDONESIE","IDN"],["INDONESIA","IDN"],["LITHUANIA","LTU"],["MAURITIUS","MUS"],["NICARAGUA","NIC"],["SINGAPOUR","SGP"],["SINGAPORE","SGP"],["SLOVAQUIE","SVK"],["SRI LANKA","LKA"],["THAILANDE","THA"],["VENEZUELA","VEN"],["ANGUILLA","AIA"],["AUTRICHE","AUT"],["BARBADOS","BRB"],["BELGIQUE","BEL"],["BERMUDES","BMU"],["BOTSWANA","BWA"],["BULGARIE","BGR"],["BULGARIA","BGR"],["CAP VERT","CPV"],["CAMBODGE","KHM"],["CAMBODIA","KHM"],["CAMEROUN","CMR"],["CAMEROON","CMR"],["COLOMBIE","COL"],["COLOMBIA","COL"],["TCHEQUIE","CZE"],["DANEMARK","DNK"],["DJIBOUTI","DJI"],["DOMINICA","DMA"],["EQUATEUR","ECU"],["SALVADOR","SLV"],["ERYTHREE","ERI"],["ESWATINI","SWZ"],["ETHIOPIE","ETH"],["ETHIOPIA","ETH"],["FINLANDE","FIN"],["GUERNSEY","GGY"],["HOLY SEE","VAT"],["HONDURAS","HND"],["JAMAIQUE","JAM"],["JORDANIE","JOR"],["KIRIBATI","KIR"],["LETTONIE","LVA"],["LITUANIE","LTU"],["MALAISIE","MYS"],["MALAYSIA","MYS"],["MALDIVES","MDV"],["MOLDAVIE","MDA"],["MONGOLIE","MNG"],["MONGOLIA","MNG"],["PAYS BAS","NLD"],["PAKISTAN","PAK"],["PARAGUAY","PRY"],["PITCAIRN","PCN"],["PORTUGAL","PRT"],["ROUMANIE","ROU"],["SLOVAKIA","SVK"],["SLOVENIE","SVN"],["SLOVENIA","SVN"],["SURINAME","SUR"],["TANZANIE","TZA"],["THAILAND","THA"],["VIET NAM","VNM"],["ZIMBABWE","ZWE"],["ALBANIE","ALB"],["ALBANIA","ALB"],["ALGERIE","DZA"],["ALGERIA","DZA"],["ANDORRE","AND"],["ANDORRA","AND"],["ARMENIE","ARM"],["ARMENIA","ARM"],["AUSTRIA","AUT"],["BAHAMAS","BHS"],["BAHREIN","BHR"],["BAHRAIN","BHR"],["BARBADE","BRB"],["BELARUS","BLR"],["BELGIUM","BEL"],["BERMUDA","BMU"],["BHOUTAN","BTN"],["BOLIVIE","BOL"],["BURUNDI","BDI"],["COMORES","COM"],["COMOROS","COM"],["CROATIE","HRV"],["CROATIA","HRV"],["CURACAO","CUW"],["CZECHIA","CZE"],["DENMARK","DNK"],["ECUADOR","ECU"],["ERITREA","ERI"],["ESTONIE","EST"],["ESTONIA","EST"],["FINLAND","FIN"],["GEORGIE","GEO"],["GEORGIA","GEO"],["GERMANY","DEU"],["GRENADE","GRD"],["GRENADA","GRD"],["HONGRIE","HUN"],["HUNGARY","HUN"],["ISLANDE","ISL"],["ICELAND","ISL"],["IRLANDE","IRL"],["IRELAND","IRL"],["JAMAICA","JAM"],["LEBANON","LBN"],["LESOTHO","LSO"],["LIBERIA","LBR"],["MAURICE","MUS"],["MAYOTTE","MYT"],["MEXIQUE","MEX"],["MOROCCO","MAR"],["MYANMAR","MMR"],["NAMIBIE","NAM"],["NAMIBIA","NAM"],["NIGERIA","NGA"],["NORVEGE","NOR"],["POLOGNE","POL"],["REUNION","REU"],["ROMANIA","ROU"],["SENEGAL","SEN"],["SOMALIE","SOM"],["SOMALIA","SOM"],["ESPAGNE","ESP"],["TOKELAU","TKL"],["TUNISIE","TUN"],["TUNISIA","TUN"],["TURQUIE","TUR"],["TURKIYE","TUR"],["OUGANDA","UGA"],["UKRAINE","UKR"],["URUGUAY","URY"],["VANUATU","VUT"],["VIETNAM","VNM"],["ANGOLA","AGO"],["BELIZE","BLZ"],["BHUTAN","BTN"],["BRESIL","BRA"],["BRAZIL","BRA"],["CANADA","CAN"],["CHYPRE","CYP"],["CYPRUS","CYP"],["EGYPTE","EGY"],["FRANCE","FRA"],["GAMBIE","GMB"],["GAMBIA","GMB"],["GREECE","GRC"],["GUINEE","GIN"],["GUINEA","GIN"],["GUYANA","GUY"],["ISRAEL","ISR"],["ITALIE","ITA"],["JERSEY","JEY"],["JORDAN","JOR"],["KOWEIT","KWT"],["KUWAIT","KWT"],["LATVIA","LVA"],["MALAWI","MWI"],["MEXICO","MEX"],["MONACO","MCO"],["NORWAY","NOR"],["PALAOS","PLW"],["PANAMA","PAN"],["POLAND","POL"],["RUSSIE","RUS"],["RWANDA","RWA"],["SERBIE","SRB"],["SERBIA","SRB"],["SOUDAN","SDN"],["SWEDEN","SWE"],["SUISSE","CHE"],["TAIWAN","TWN"],["TUVALU","TUV"],["UGANDA","UGA"],["ZAMBIE","ZMB"],["ZAMBIA","ZMB"],["ARUBA","ABW"],["BENIN","BEN"],["TCHAD","TCD"],["CHILI","CHL"],["CHILE","CHL"],["CHINE","CHN"],["CHINA","CHN"],["CONGO","COG"],["EGYPT","EGY"],["FIDJI","FJI"],["GABON","GAB"],["GHANA","GHA"],["GRECE","GRC"],["HAITI","HTI"],["INDIA","IND"],["ITALY","ITA"],["JAPON","JPN"],["JAPAN","JPN"],["KENYA","KEN"],["LIBAN","LBN"],["LIBYE","LBY"],["LIBYA","LBY"],["MACAO","MAC"],["MALTE","MLT"],["MALTA","MLT"],["MAROC","MAR"],["NAURU","NRU"],["NEPAL","NPL"],["NIGER","NER"],["PALAU","PLW"],["PEROU","PER"],["QATAR","QAT"],["SAMOA","WSM"],["SPAIN","ESP"],["SUDAN","SDN"],["SUEDE","SWE"],["SYRIE","SYR"],["TONGA","TON"],["YEMEN","YEM"],["CHAD","TCD"],["CUBA","CUB"],["FIJI","FJI"],["GUAM","GUM"],["INDE","IND"],["IRAN","IRN"],["IRAK","IRQ"],["IRAQ","IRQ"],["LAOS","LAO"],["MALI","MLI"],["NIUE","NIU"],["OMAN","OMN"],["PERU","PER"],["TOGO","TGO"]];
+
+    const DOC_TYPES = [
+        { key: "cni", label: "Carte Nationale d'Identité" },
+        { key: "passport", label: "Passeport" },
+        { key: "driver_license", label: "Permis de conduire" },
+        { key: "residence_permit", label: "Carte de séjour" }
+    ];
+
+    // Mots-clés multilingues utilisés uniquement quand aucune zone MRZ
+    // n'est trouvée (permis de conduire, cartes de séjour, CNI sans MRZ).
+    const DOC_KEYWORDS = {
+        passport: ["PASSPORT", "PASSEPORT", "PASAPORTE", "REISEPASS", "PASSAPORTO", "PASSAPORTE", "PASZPORT"],
+        driver_license: ["DRIVING LICENCE", "DRIVING LICENSE", "DRIVER LICENSE", "DRIVERS LICENSE", "PERMIS DE CONDUIRE",
+            "LICENCIA DE CONDUCIR", "FUHRERSCHEIN", "CARTA DI GUIDA", "CARTEIRA NACIONAL DE HABILITACAO", "CARTA NACIONAL DE HABILITACAO"],
+        residence_permit: ["RESIDENCE PERMIT", "CARTE DE SEJOUR", "TITRE DE SEJOUR", "AUFENTHALTSTITEL",
+            "PERMESSO DI SOGGIORNO", "PERMISO DE RESIDENCIA", "RESIDENCE CARD", "AUFENTHALTSERLAUBNIS"],
+        cni: ["NATIONAL IDENTITY CARD", "CARTE NATIONALE D IDENTITE", "CARTE D IDENTITE", "DOCUMENTO NACIONAL DE IDENTIDAD",
+            "PERSONALAUSWEIS", "CARTA D IDENTITA", "IDENTITY CARD", "CEDULA DE IDENTIDAD"]
+    };
+
+    function normalizeOcrText(s) {
+        return (s || "")
+            .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+            .toUpperCase()
+            .replace(/[^A-Z0-9<\n ]/g, " ")
+            .replace(/[ \t]+/g, " ");
+    }
+
+    /* ── Décodage MRZ (ICAO 9303 — passeports TD3, cartes ID TD1/TD2) ──
+       Dans les trois formats, les caractères 3 à 5 de la première ligne
+       MRZ contiennent toujours le code pays émetteur (alpha-3). C'est
+       la même norme que celle utilisée par les scanners d'aéroport et
+       la vérification d'identité de la plupart des grandes plateformes. */
+    function extractMRZ(rawText) {
+        const lines = normalizeOcrText(rawText).split("\n")
+            .map(l => l.replace(/ /g, "")).filter(Boolean);
+        const candidates = lines.filter(l => /^[A-Z0-9<]{25,44}$/.test(l) && (l.match(/</g) || []).length >= 2);
+        if (!candidates.length) return null;
+
+        for (const len of [44, 36, 30]) {
+            const group = candidates.filter(l => Math.abs(l.length - len) <= 2);
+            if (group.length >= 2) {
+                const first = group[0];
+                if (first.length < 5) continue;
+                const docChar = first[0];
+                const countryRaw = first.substring(2, 5).replace(/</g, "");
+                if (countryRaw.length >= 2 && /^[A-Z]+$/.test(countryRaw)) {
+                    return { docChar, countryCode: countryRaw.length === 3 ? countryRaw : null, format: len, raw: group.join(" / ") };
+                }
+            }
+        }
+        return null;
+    }
+
+    function docCharToType(ch) {
+        if (ch === "P" || ch === "V") return "passport"; // V = visa, rare cas, on l'assimile au passeport pour l'affichage
+        if (ch === "I" || ch === "A" || ch === "C") return null; // carte ID/séjour : la MRZ seule ne distingue pas les deux de façon fiable
+        return null;
+    }
+
+    function detectCountryFromText(text) {
+        const norm = normalizeOcrText(text).replace(/\n/g, " ");
+        for (const [name, code] of COUNTRY_SEARCH) {
+            if (norm.indexOf(name) !== -1) return code;
+        }
+        return null;
+    }
+
+    function detectDocTypeFromText(text) {
+        const norm = normalizeOcrText(text).replace(/\n/g, " ").replace(/'/g, " ");
+        for (const key of Object.keys(DOC_KEYWORDS)) {
+            for (const kw of DOC_KEYWORDS[key]) {
+                if (norm.indexOf(kw) !== -1) return key;
+            }
+        }
+        return null;
+    }
+
+    /* ── Chargement paresseux de Tesseract.js (OCR), une seule fois ── */
+    let tesseractLoadPromise = null;
+    function loadTesseract() {
+        if (window.Tesseract) return Promise.resolve(window.Tesseract);
+        if (tesseractLoadPromise) return tesseractLoadPromise;
+        tesseractLoadPromise = new Promise((resolve, reject) => {
+            const s = document.createElement("script");
+            s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js";
+            s.onload = () => resolve(window.Tesseract);
+            s.onerror = () => reject(new Error("OCR indisponible (chargement impossible)."));
+            document.head.appendChild(s);
+        });
+        return tesseractLoadPromise;
+    }
+
+    /* ── Analyse du document capturé : MRZ d'abord (fiable), puis
+       mots-clés OCR en secours (permis / carte de séjour / CNI sans MRZ) ── */
+    async function runOcr(dataURL) {
+        const Tesseract = await loadTesseract();
+        const worker = await Tesseract.createWorker("eng");
+        try {
+            const { data } = await worker.recognize(dataURL);
+            return data.text || "";
+        } finally {
+            await worker.terminate();
+        }
+    }
+
+    async function analyzeDocument() {
+        const result = { type: null, country: null, reliable: false, raw: "" };
+        try {
+            const textRecto = state.rectoImage ? await runOcr(state.rectoImage) : "";
+            let mrz = extractMRZ(textRecto);
+            let textVerso = "";
+            if (!mrz && state.versoImage) {
+                textVerso = await runOcr(state.versoImage);
+                mrz = extractMRZ(textVerso);
+            }
+            const fullText = textRecto + "\n" + textVerso;
+
+            if (mrz && mrz.countryCode && COUNTRIES[mrz.countryCode]) {
+                result.country = mrz.countryCode;
+                result.reliable = true;
+                result.type = docCharToType(mrz.docChar) || detectDocTypeFromText(fullText) || state.typeDocument;
+            } else {
+                result.type = detectDocTypeFromText(fullText) || state.typeDocument;
+                result.country = detectCountryFromText(fullText);
+                result.reliable = false;
+            }
+        } catch (e) {
+            result.error = e && e.message ? e.message : "Analyse impossible.";
+        }
+        state.analysisDone = true;
+        return result;
+    }
+
+    function populateVerifSelects() {
+        const typeSel = $("scan_verif_type");
+        const countrySel = $("scan_verif_country");
+        if (!typeSel.options.length) {
+            DOC_TYPES.forEach(d => {
+                const o = document.createElement("option");
+                o.value = d.key; o.textContent = d.label;
+                typeSel.appendChild(o);
+            });
+        }
+        if (!countrySel.options.length) {
+            const ph = document.createElement("option");
+            ph.value = ""; ph.textContent = "Sélectionnez un pays…";
+            countrySel.appendChild(ph);
+            Object.keys(COUNTRIES).sort((a, b) => COUNTRIES[a].localeCompare(COUNTRIES[b], "fr"))
+                .forEach(code => {
+                    const o = document.createElement("option");
+                    o.value = code; o.textContent = COUNTRIES[code];
+                    countrySel.appendChild(o);
+                });
+        }
+    }
+
+    async function renderVerifPanel() {
+        const statusEl = $("scan_verif_status");
+        const resultEl = $("scan_verif_result");
+        const hintEl = $("scan_verif_hint");
+        populateVerifSelects();
+        statusEl.style.display = "flex";
+        resultEl.style.display = "none";
+
+        if (!state.analysisPromise) state.analysisPromise = analyzeDocument();
+        const result = await state.analysisPromise;
+
+        statusEl.style.display = "none";
+        resultEl.style.display = "block";
+
+        const typeSel = $("scan_verif_type");
+        const countrySel = $("scan_verif_country");
+        typeSel.value = result.type || state.typeDocument;
+        countrySel.value = result.country || "";
+        state.confirmedType = typeSel.value;
+        state.confirmedCountry = countrySel.value || null;
+
+        if (result.country && result.reliable) {
+            hintEl.innerHTML = 'Détecté automatiquement via la zone lisible-machine du document <span class="scan-verif-badge fiable">✔ fiable</span>. Vérifiez puis corrigez si besoin.';
+        } else if (result.country) {
+            hintEl.innerHTML = 'Détecté automatiquement par lecture du texte <span class="scan-verif-badge aconfirmer">à confirmer</span>. Merci de vérifier que c\'est correct.';
+        } else {
+            hintEl.textContent = "Détection automatique impossible sur cette image (qualité, éclairage ou document sans zone lisible). Merci de sélectionner le type et le pays manuellement.";
+        }
+        typeSel.addEventListener("change", () => { state.confirmedType = typeSel.value; });
+        countrySel.addEventListener("change", () => { state.confirmedCountry = countrySel.value || null; });
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       PARAMÈTRES — ÉQUILIBRÉS (ni trop strict, ni trop permissif)
+       Règle : un document doit remplir LES 4 CONDITIONS :
+         1. Ratio d'aspect entre 1.20 et 2.10 (la zone analysée = le cadre)
+         2. Les contours couvrent >= 40% du cadre
+         3. Densité de contours >= 3% (le doc a du texte / une photo)
+         4. Équilibre H/V >= 0.2 (le doc a des bords H et V)
+         5. Contours répartis sur >= 45% des cellules du cadre (grille 8×5)
+    ═══════════════════════════════════════════════════════════════ */
+    const LOCK_FRAMES = 5;
+    const REJECT_FRAMES = 15;
+    const MIN_ASPECT = 1.20, MAX_ASPECT = 2.10;
+    const MIN_COVERAGE = 0.40, MAX_COVERAGE = 1.00;
+    const GOOD_COVERAGE = 0.55;
+    const MIN_EDGE_DENSITY = 0.03;
+    const MIN_BALANCE = 0.20;
+    const GRID_C = 8, GRID_R = 5;
+    const MIN_CELL_DENSITY = 0.03;
+    const MIN_GRID_FILL = 0.45;
+    const FINGERPRINT_INTERVAL_MS = 700;
+    const SAME_SIDE_THRESHOLD = 0.72;
+
+    const $ = (id) => document.getElementById(id);
+    const video = $("scan_video");
+    const previewImg = $("scan_preview_img");
+    const startView = $("scan_start");
+    const cameraView = $("scan_camera_view");
+    const previewView = $("scan_preview_view");
+    const recapView = $("scan_recap");
+    const sidesBar = $("scan_sides_bar");
+    const sidePillRecto = $("side_pill_recto");
+    const sidePillVerso = $("side_pill_verso");
+    const progressBar = $("scan_progress_bar");
+    const subtitle = $("scan_subtitle");
+    const alertBox = $("scan_alert");
+    const chipBrightness = $("chip_brightness");
+    const chipStability = $("chip_stability");
+    const chipDocument = $("chip_document");
+    const chipDocumentLabel = $("chip_document_label");
+    const instruction = $("scan_instruction");
+    const autoBar = $("scan_auto_bar");
+    const autoBarFill = autoBar.querySelector("div");
+    const detectBanner = $("scan_detect_banner");
+    const guide = $("scan_guide");
+    const shutter = $("btn_shutter");
+    const scanLine = $("scan_line");
+    const sideBadge = $("scan_side_badge");
+    const previewSideLabel = $("scan_preview_side_label");
+    const btnConfirmLabel = $("btn_confirm_label");
+    const sideWarning = $("scan_side_warning");
+    const sideWarningText = $("scan_side_warning_text");
+    const overlay = $("scan_overlay_canvas");
+    const overlayCtx = overlay.getContext("2d");
+    const captureFlash = $("scan_capture_flash");
+    const tipsBackdrop = $("scan_tips");
+    const importScreen = $("scan_import");
+
+    function setProgress(p) { progressBar.style.width = Math.max(0, Math.min(100, p)) + "%"; }
+    function showAlert(msg, type = "info") { alertBox.textContent = msg; alertBox.className = "scan-alert " + type; }
+    function clearAlert() { alertBox.className = "scan-alert"; alertBox.textContent = ""; }
+    function labelFor(doc) {
+        const map = { cni: "Carte Nationale d'Identité", passport: "Passeport", driver_license: "Permis de conduire",
+            residence_permit: "Carte de séjour", sejour: "Carte de séjour", national_id: "Pièce d'identité nationale", permis: "Permis", carte_identite: "Carte d'identité" };
+        return map[(doc || "").toLowerCase()] || "Pièce d'identité";
+    }
+    function currentSide() { return state.step === "camera_verso" || state.step === "preview_verso" ? "verso" : "recto"; }
+
+    function updateSidesBar() {
+        sidePillRecto.className = "scan-side-pill";
+        sidePillVerso.className = "scan-side-pill";
+        sidePillVerso.style.display = state.faces === 1 ? "none" : "";
+        const step = state.step;
+        if (step === "camera_recto") sidePillRecto.classList.add("active");
+        else if (["preview_recto", "camera_verso", "preview_verso", "recap"].includes(step)) sidePillRecto.classList.add("done");
+        else sidePillRecto.classList.add("pending");
+        if (step === "camera_verso" || step === "preview_verso") sidePillVerso.classList.add("active");
+        else if (step === "recap") sidePillVerso.classList.add("done");
+        else sidePillVerso.classList.add("pending");
+        sidePillRecto.querySelector("i").className = sidePillRecto.classList.contains("done") ? "fas fa-check-circle" : "fas fa-square";
+        sidePillVerso.querySelector("i").className = sidePillVerso.classList.contains("done") ? "fas fa-check-circle" : "fas fa-square";
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       EMPREINTE VISUELLE (pour détecter "même côté")
+    ═══════════════════════════════════════════════════════════════ */
+    function computeFingerprint(dataURL) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                const W = 24, H = 16;
+                const c = document.createElement("canvas");
+                c.width = W; c.height = H;
+                const ctx = c.getContext("2d");
+                ctx.drawImage(img, 0, 0, W, H);
+                const d = ctx.getImageData(0, 0, W, H).data;
+                const arr = new Float32Array(W * H);
+                let mean = 0;
+                for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+                    const g = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) / 255;
+                    arr[p] = g; mean += g;
+                }
+                mean /= (W * H);
+                for (let i = 0; i < arr.length; i++) arr[i] -= mean;
+                resolve(arr);
+            };
+            img.src = dataURL;
+        });
+    }
+    function similarity(fp1, fp2) {
+        if (!fp1 || !fp2 || fp1.length !== fp2.length) return 0;
+        let num = 0, d1 = 0, d2 = 0;
+        for (let i = 0; i < fp1.length; i++) { num += fp1[i] * fp2[i]; d1 += fp1[i] * fp1[i]; d2 += fp2[i] * fp2[i]; }
+        if (d1 === 0 || d2 === 0) return 0;
+        return num / (Math.sqrt(d1) * Math.sqrt(d2));
+    }
+    function captureCurrentFingerprint() {
+        const W = 24, H = 16;
+        const c = document.createElement("canvas");
+        c.width = W; c.height = H;
+        const crop = getGuideCrop();
+        c.getContext("2d").drawImage(video, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, W, H);
+        const d = c.getContext("2d").getImageData(0, 0, W, H).data;
+        const arr = new Float32Array(W * H);
+        let mean = 0;
+        for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+            const g = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) / 255;
+            arr[p] = g; mean += g;
+        }
+        mean /= (W * H);
+        for (let i = 0; i < arr.length; i++) arr[i] -= mean;
+        return arr;
+    }
+    function showSideWarning(text) {
+        sideWarningText.textContent = text;
+        sideWarning.classList.add("active");
+        state.sameSideWarningUntil = performance.now() + 2200;
+    }
+    function hideSideWarningIfExpired() {
+        if (sideWarning.classList.contains("active") && performance.now() > state.sameSideWarningUntil) {
+            sideWarning.classList.remove("active");
+        }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       CAMÉRA
+    ═══════════════════════════════════════════════════════════════ */
+    async function startCamera(facing = "environment") {
+        stopCamera();
+        state.facingMode = facing;
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showCameraError("Navigateur non compatible avec la caméra."); return false;
+        }
+        try {
+            state.stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: facing }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false
+            });
+            video.srcObject = state.stream;
+            await video.play();
+            video.setAttribute("playsinline", "");
+            cameraView.style.display = "block";
+            startView.style.display = "none";
+            $("scan_upload_fallback").style.display = "none";
+            clearAlert();
+            updateSideBadge();
+            resetDetection();
+            scanLine.classList.add("active");
+            startLoop();
+            if (!state.tipsShown) { state.tipsShown = true; openTips(); }   // conseils à la 1re ouverture
+            return true;
+        } catch (err) {
+            let msg = "Impossible d'accéder à la caméra.";
+            if (err.name === "NotAllowedError") msg = "Accès caméra refusé.";
+            else if (err.name === "NotFoundError") msg = "Aucune caméra détectée.";
+            else if (err.name === "NotReadableError") msg = "Caméra déjà utilisée.";
+            showCameraError(msg); return false;
+        }
+    }
+    function updateSideBadge() {
+        if (currentSide() === "verso") { sideBadge.className = "scan-side-badge verso"; sideBadge.innerHTML = '<i class="fas fa-square"></i> VERSO 2/2'; }
+        else { sideBadge.className = "scan-side-badge"; sideBadge.innerHTML = '<i class="fas fa-square"></i> RECTO ' + (state.faces === 1 ? '1/1' : '1/2'); }
+    }
+    function showCameraError(message) {
+        cameraView.style.display = "none";
+        $("scan_upload_fallback").style.display = "block";
+        const ex = document.querySelector(".scan-cam-error"); if (ex) ex.remove();
+        const div = document.createElement("div");
+        div.className = "scan-cam-error";
+        div.innerHTML = "<strong><i class='fas fa-exclamation-triangle'></i> Caméra indisponible</strong>" + message;
+        cameraView.parentNode.insertBefore(div, cameraView);
+        showAlert(message, "error");
+    }
+    function stopCamera() {
+        if (state.stream) { state.stream.getTracks().forEach(t => t.stop()); state.stream = null; }
+        stopLoop();
+        scanLine.classList.remove("active");
+        autoBar.classList.remove("active");
+        autoBarFill.style.width = "0%";
+    }
+    async function flipCamera() {
+        await startCamera(state.facingMode === "environment" ? "user" : "environment");
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       BOUCLE DE DÉTECTION
+    ═══════════════════════════════════════════════════════════════ */
+    const SAMPLE_W = 192, SAMPLE_H = 121;   // même ratio que la carte (≈ 1,586)
+    const sampleCanvas = document.createElement("canvas");
+    const sampleCtx = sampleCanvas.getContext("2d", { willReadFrequently: true });
+    sampleCanvas.width = SAMPLE_W; sampleCanvas.height = SAMPLE_H;
+
+    /* Rectangle de la vidéo qui se trouve exactement sous le cadre carte.
+       La vidéo est en object-fit: cover : on recalcule la correspondance
+       écran -> pixels vidéo pour analyser et capturer ce que l'utilisateur voit dans le cadre. */
+    function getGuideCrop() {
+        const vw = video.videoWidth, vh = video.videoHeight;
+        const wrapR = video.parentElement.getBoundingClientRect();
+        const gR = guide.getBoundingClientRect();
+        if (!vw || !vh || !wrapR.width || !wrapR.height || !gR.width) {
+            const sw = Math.min(vw, vh * 1.586), sh = sw / 1.586;
+            return { sx: (vw - sw) / 2, sy: (vh - sh) / 2, sw, sh, rect: { x: 0, y: 0, w: wrapR.width || 1, h: wrapR.height || 1 } };
+        }
+        const scale = Math.max(wrapR.width / vw, wrapR.height / vh);
+        const offX = (wrapR.width - vw * scale) / 2;
+        const offY = (wrapR.height - vh * scale) / 2;
+        let sx = (gR.left - wrapR.left - offX) / scale;
+        let sy = (gR.top - wrapR.top - offY) / scale;
+        let sw = gR.width / scale, sh = gR.height / scale;
+        sx = Math.max(0, Math.min(sx, vw - 2)); sy = Math.max(0, Math.min(sy, vh - 2));
+        sw = Math.min(sw, vw - sx); sh = Math.min(sh, vh - sy);
+        return { sx, sy, sw, sh, rect: { x: gR.left - wrapR.left, y: gR.top - wrapR.top, w: gR.width, h: gR.height } };
+    }
+
+    let loopId = null;
+    function startLoop() {
+        if (loopId) cancelAnimationFrame(loopId);
+        function tick() {
+            if (!state.stream || video.readyState < 2) { loopId = requestAnimationFrame(tick); return; }
+            processFrame(); loopId = requestAnimationFrame(tick);
+        }
+        loopId = requestAnimationFrame(tick);
+    }
+    function stopLoop() {
+        if (loopId) { cancelAnimationFrame(loopId); loopId = null; }
+        state.lastFrameData = null;
+        clearOverlay();
+    }
+
+    function clearOverlay() {
+        const wrap = video.parentElement.getBoundingClientRect();
+        overlay.width = wrap.width; overlay.height = wrap.height;
+        overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
+    }
+
+    function drawDetectionBox(bbox, valid, gRect) {
+        const wrap = video.parentElement.getBoundingClientRect();
+        overlay.width = wrap.width; overlay.height = wrap.height;
+        overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
+        if (!bbox || !gRect || bbox.w <= 0 || bbox.h <= 0) return;
+        const rx = gRect.w / SAMPLE_W;
+        const ry = gRect.h / SAMPLE_H;
+        overlayCtx.strokeStyle = valid ? "#3D8BFF" : "rgba(255,255,255,0.85)";
+        overlayCtx.lineWidth = 3;
+        overlayCtx.setLineDash([8, 6]);
+        overlayCtx.strokeRect(gRect.x + bbox.x * rx, gRect.y + bbox.y * ry, bbox.w * rx, bbox.h * ry);
+        overlayCtx.setLineDash([]);
+    }
+
+    function processFrame() {
+        hideSideWarningIfExpired();
+        const crop = getGuideCrop();
+        sampleCtx.drawImage(video, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, SAMPLE_W, SAMPLE_H);
+        let img;
+        try { img = sampleCtx.getImageData(0, 0, SAMPLE_W, SAMPLE_H); }
+        catch (e) { return; }
+        const d = img.data;
+
+        const gray = new Uint8ClampedArray(SAMPLE_W * SAMPLE_H);
+        let brightness = 0;
+        for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+            const g = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+            gray[p] = g; brightness += g;
+        }
+        brightness /= (SAMPLE_W * SAMPLE_H);
+
+        let variance = 0;
+        if (state.lastFrameData && state.lastFrameData.length === gray.length) {
+            let sum = 0, count = 0;
+            for (let i = 0; i < gray.length; i += 3) { sum += Math.abs(gray[i] - state.lastFrameData[i]); count++; }
+            variance = sum / count;
+        }
+        state.lastFrameData = gray;
+
+        const detection = detectCardShape(gray, SAMPLE_W, SAMPLE_H);
+        drawDetectionBox(detection.bbox, detection.valid, crop.rect);
+
+        // Vérification "même côté" pendant le verso
+        if (state.step === "camera_verso" && state.rectoFingerprint) {
+            const now = performance.now();
+            if (now - state.lastFingerprintCheck > FINGERPRINT_INTERVAL_MS) {
+                state.lastFingerprintCheck = now;
+                if (detection.coverage >= GOOD_COVERAGE && detection.valid) {
+                    const fp = captureCurrentFingerprint();
+                    const sim = similarity(fp, state.rectoFingerprint);
+                    if (sim > SAME_SIDE_THRESHOLD) {
+                        showSideWarning("Vous avez déjà scanné le recto. Présentez le verso.");
+                    }
+                }
+            }
+        }
+
+        updateLightChip(brightness);
+        updateStabilityChip(variance);
+        handleDetection(detection, brightness, variance);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       DÉTECTION — 4 CONDITIONS OBLIGATOIRES
+    ═══════════════════════════════════════════════════════════════ */
+    function detectCardShape(gray, w, h) {
+        const gx = new Float32Array(w * h);
+        const gy = new Float32Array(w * h);
+        let totalGrad = 0;
+        for (let y = 1; y < h - 1; y++) {
+            for (let x = 1; x < w - 1; x++) {
+                const i = y * w + x;
+                const sx = -gray[i - w - 1] - 2 * gray[i - 1] - gray[i + w - 1] +
+                            gray[i - w + 1] + 2 * gray[i + 1] + gray[i + w + 1];
+                const sy = -gray[i - w - 1] - 2 * gray[i - w] - gray[i - w + 1] +
+                            gray[i + w - 1] + 2 * gray[i + w] + gray[i + w + 1];
+                gx[i] = sx; gy[i] = sy;
+                totalGrad += Math.abs(sx) + Math.abs(sy);
+            }
+        }
+        const avgGrad = totalGrad / (w * h);
+        // Seuil adaptatif modéré : assez haut pour ignorer les visages/murs,
+        // assez bas pour capter une carte même peu contrastée
+        const threshold = Math.max(50, avgGrad * 1.4);
+
+        let minX = w, maxX = 0, minY = h, maxY = 0, edgeCount = 0;
+        let hEdges = 0, vEdges = 0;
+
+        // Zone centrale uniquement (là où le cadre guide est dessiné)
+        const mx = Math.floor(w * 0.03), my = Math.floor(h * 0.04);
+        const x0 = mx, x1 = w - mx, y0 = my, y1 = h - my;
+        const cellEdges = new Uint16Array(GRID_C * GRID_R);
+
+        for (let y = y0; y < y1; y++) {
+            for (let x = x0; x < x1; x++) {
+                const i = y * w + x;
+                const mag = Math.abs(gx[i]) + Math.abs(gy[i]);
+                if (mag > threshold) {
+                    edgeCount++;
+                    if (x < minX) minX = x; if (x > maxX) maxX = x;
+                    if (y < minY) minY = y; if (y > maxY) maxY = y;
+                    const cx = Math.min(GRID_C - 1, Math.floor((x - x0) / (x1 - x0) * GRID_C));
+                    const cy = Math.min(GRID_R - 1, Math.floor((y - y0) / (y1 - y0) * GRID_R));
+                    cellEdges[cy * GRID_C + cx]++;
+                    if (Math.abs(gx[i]) > Math.abs(gy[i]) * 1.3) vEdges++;
+                    else if (Math.abs(gy[i]) > Math.abs(gx[i]) * 1.3) hEdges++;
+                }
+            }
+        }
+
+        if (edgeCount === 0) { minX = 0; maxX = 0; minY = 0; maxY = 0; }
+        const bw = maxX - minX;
+        const bh = maxY - minY;
+        const aspect = bh > 0 ? bw / bh : 0;
+        const coverage = (bw * bh) / (w * h);
+        const edgeDensity = edgeCount / ((x1 - x0) * (y1 - y0));
+        const balance = edgeCount > 0 ? 1 - Math.abs(hEdges - vEdges) / edgeCount : 0;
+        // Répartition : un document est texturé sur toute sa surface (texte, photo, motifs)
+        const cellArea = ((x1 - x0) / GRID_C) * ((y1 - y0) / GRID_R);
+        let filledCells = 0;
+        for (let k = 0; k < cellEdges.length; k++) { if (cellEdges[k] / cellArea >= MIN_CELL_DENSITY) filledCells++; }
+        const gridFill = filledCells / cellEdges.length;
+
+        // ── LES 4 CONDITIONS OBLIGATOIRES ──
+        const aspectOk = aspect >= MIN_ASPECT && aspect <= MAX_ASPECT;
+        const coverageOk = coverage >= MIN_COVERAGE && coverage <= MAX_COVERAGE;
+        const edgeOk = edgeDensity >= MIN_EDGE_DENSITY;
+        const balanceOk = balance >= MIN_BALANCE;
+        const gridOk = gridFill >= MIN_GRID_FILL;
+
+        // Le document est reconnu SEULEMENT si les 5 conditions passent
+        const valid = aspectOk && coverageOk && edgeOk && balanceOk && gridOk;
+
+        // Score indicatif (0..1)
+        const aspectScore = aspectOk ? 1 - Math.min(1, Math.abs(aspect - 1.55) / 0.55) : 0;
+        const coverageScore = coverageOk ? Math.min(1, coverage * 2.5) : 0;
+        const edgeScore = edgeOk ? Math.min(1, edgeDensity * 12) : 0;
+        const balanceScore = balanceOk ? balance : 0;
+        const score = aspectScore * 0.25 + coverageScore * 0.25 + edgeScore * 0.2 + balanceScore * 0.1 + Math.min(1, gridFill) * 0.2;
+
+        // Indice de distance
+        let distanceHint = null;
+        if (coverage < MIN_COVERAGE && coverage > 0.02) distanceHint = "far";
+        else if (coverage > MAX_COVERAGE) distanceHint = "tooNear";
+        else if (coverage < GOOD_COVERAGE) distanceHint = "near";
+
+        return {
+            score: Number(score.toFixed(3)),
+            aspect: Number(aspect.toFixed(2)),
+            coverage: Number(coverage.toFixed(3)),
+            edgeDensity: Number(edgeDensity.toFixed(3)),
+            balance: Number(balance.toFixed(2)),
+            gridFill: Number(gridFill.toFixed(2)),
+            aspectOk, coverageOk, edgeOk, balanceOk, gridOk,
+            valid, distanceHint,
+            bbox: { x: minX, y: minY, w: bw, h: bh }
+        };
+    }
+
+    function handleDetection(det, brightness, variance) {
+        const goodLight = brightness > 50 && brightness < 240;
+        const stable = variance < 12;
+        const versoLock = (state.step === "camera_verso" && sideWarning.classList.contains("active"));
+
+        if (det.valid && goodLight && stable && !versoLock) {
+            state.consecutiveDoc++;
+            state.consecutiveNoDoc = 0;
+        } else {
+            state.consecutiveNoDoc++;
+            state.consecutiveDoc = Math.max(0, state.consecutiveDoc - 1);
+        }
+
+        if (state.isLocked && state.consecutiveNoDoc >= REJECT_FRAMES) { unlockDocument(); return; }
+        if (!state.isLocked && state.consecutiveDoc >= LOCK_FRAMES) { lockDocument(); return; }
+        if (state.isLocked) return;
+
+        if (state.consecutiveDoc > 0 && state.consecutiveDoc < LOCK_FRAMES) {
+            guide.className = "scan-guide state-partial";
+            chipDocument.classList.remove("good", "bad");
+            chipDocument.classList.add("warn");
+            chipDocumentLabel.textContent = "Détection…";
+            detectBanner.className = "scan-detect-banner detecting";
+            detectBanner.textContent = `Analyse ${state.consecutiveDoc}/${LOCK_FRAMES}...`;
+            instruction.textContent = "Ne bougez pas...";
+            return;
+        }
+
+        if (!goodLight) {
+            guide.className = "scan-guide state-partial";
+            chipDocument.classList.remove("good", "bad");
+            chipDocument.classList.add("warn");
+            chipDocumentLabel.textContent = "Lumière";
+            detectBanner.className = "scan-detect-banner detecting";
+            detectBanner.textContent = brightness < 50 ? "Trop sombre. Cherchez plus de lumière." : "Trop clair. Évitez le flash.";
+            instruction.textContent = brightness < 50 ? "Trop sombre" : "Trop clair";
+            return;
+        }
+
+        if (!stable) {
+            guide.className = "scan-guide state-partial";
+            chipDocument.classList.remove("good", "bad");
+            chipDocument.classList.add("warn");
+            chipDocumentLabel.textContent = "Stabilité";
+            detectBanner.className = "scan-detect-banner detecting";
+            detectBanner.textContent = "Stabilisez l'appareil pour que la photo soit nette.";
+            instruction.textContent = "Ne bougez pas";
+            return;
+        }
+
+        guide.className = "scan-guide state-searching";
+        chipDocument.classList.remove("good", "warn");
+        chipDocument.classList.add("bad");
+        chipDocumentLabel.textContent = "Non détecté";
+        detectBanner.className = "scan-detect-banner refused";
+
+        // Messages de guidage selon le contexte
+        if (det.distanceHint === "far") {
+            detectBanner.textContent = "Rapprochez votre pièce d'identité";
+            instruction.textContent = "Rapprochez votre pièce d'identité";
+        } else if (det.distanceHint === "near") {
+            detectBanner.textContent = "Rapprochez un peu votre pièce d'identité";
+            instruction.textContent = "Rapprochez un peu votre pièce d'identité";
+        } else if (det.distanceHint === "tooNear") {
+            detectBanner.textContent = "Éloignez légèrement votre pièce d'identité";
+            instruction.textContent = "Éloignez légèrement votre pièce";
+        } else {
+            const sideTxt = currentSide() === "verso" ? "le verso" : "le recto";
+            detectBanner.textContent = `Présentez ${sideTxt} de votre pièce d'identité dans le cadre.`;
+            instruction.textContent = `Présentez ${sideTxt} dans le cadre`;
+        }
+    }
+
+    function lockDocument() {
+        state.isLocked = true;
+        guide.className = "scan-guide state-locked";
+        shutter.classList.add("locked");
+        chipDocument.classList.remove("warn", "bad");
+        chipDocument.classList.add("good");
+        chipDocumentLabel.textContent = "Officiel";
+        detectBanner.className = "scan-detect-banner locked";
+        detectBanner.textContent = "✔ Pièce reconnue — capture automatique…";
+        instruction.textContent = "Appuyez pour capturer";
+        clearTimeout(state.autoTimer);
+        state.autoTimer = setTimeout(() => {
+            if (state.isLocked && !state.capturing && !state.tipsOpen && performance.now() > (state.cooldownUntil || 0)) takePicture(true);
+        }, 700);
+    }
+    function unlockDocument() {
+        clearTimeout(state.autoTimer);
+        state.isLocked = false;
+        state.consecutiveDoc = 0;
+        shutter.classList.remove("locked");
+        guide.className = "scan-guide state-searching";
+    }
+    function resetDetection() {
+        clearTimeout(state.autoTimer);
+        state.consecutiveDoc = 0; state.consecutiveNoDoc = 0; state.isLocked = false;
+        state.lastFingerprintCheck = 0;
+        guide.className = "scan-guide state-searching";
+        shutter.classList.remove("locked");
+        chipDocument.classList.remove("good", "warn");
+        detectBanner.className = "scan-detect-banner";
+        detectBanner.textContent = "Analyse en cours…";
+        sideWarning.classList.remove("active");
+        endCaptureLook();
+    }
+    function updateLightChip(b) {
+        chipBrightness.classList.remove("good", "bad", "warn");
+        if (b < 50) chipBrightness.classList.add("bad");
+        else if (b < 90 || b > 220) chipBrightness.classList.add("warn");
+        else chipBrightness.classList.add("good");
+    }
+    function updateStabilityChip(v) {
+        chipStability.classList.remove("good", "bad", "warn");
+        if (v < 6) chipStability.classList.add("good");
+        else if (v < 16) chipStability.classList.add("warn");
+        else chipStability.classList.add("bad");
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       CAPTURE
+    ═══════════════════════════════════════════════════════════════ */
+    async function verifierPieceServeur(dataURL) {
+        try {
+            const blob = await (await fetch(dataURL)).blob();
+            const fd = new FormData();
+            fd.append("image", blob, "frame.jpg");
+            fd.append("type_piece", state.typeDocument);
+            fd.append("cote", currentSide());
+            const res = await fetch("/verification/analyser-piece", { method: "POST", body: fd });
+            if (!res.ok) return { ok: true };   // ne bloque jamais si le serveur répond mal
+            return await res.json();
+        } catch (e) { return { ok: true }; }
+    }
+
+    /* ── Look de capture, écran de traitement, feuille de conseils ── */
+    function endCaptureLook() { delete guide.dataset.capturing; captureFlash.classList.remove("hold"); }
+    function showImportScreen() { importScreen.classList.add("open"); }
+    function hideImportScreen() { importScreen.classList.remove("open"); }
+    function openTips() { state.tipsOpen = true; tipsBackdrop.classList.add("open"); }
+    function closeTips() {
+        state.tipsOpen = false;
+        tipsBackdrop.classList.remove("open");
+        if (state.isLocked && !state.capturing) {
+            clearTimeout(state.autoTimer);
+            state.autoTimer = setTimeout(() => { if (state.isLocked && !state.capturing && !state.tipsOpen) takePicture(true); }, 700);
+        }
+    }
+    function takePicture(auto = false) {
+        if (state.capturing) return;
+        if (video.readyState < 2) return;
+        state.capturing = true;
+        clearTimeout(state.autoTimer);
+        const crop = getGuideCrop();   // l'image enregistrée = exactement ce qui est dans le cadre carte
+        const c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(crop.sw)); c.height = Math.max(1, Math.round(crop.sh));
+        c.getContext("2d").drawImage(video, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, c.width, c.height);
+        const dataURL = c.toDataURL("image/jpeg", 0.92);
+        guide.dataset.capturing = "1";          // coins du cadre en bleu pendant la capture
+        shutter.classList.add("locked");
+        captureFlash.classList.add("hold");     // pointillés sur l'image
+        const importAt = performance.now();
+        setTimeout(async () => {
+            showImportScreen();                 // étape suivante : écran de traitement
+            const verdict = await verifierPieceServeur(dataURL);
+            state.capturing = false;
+            if (!verdict.ok) {
+                hideImportScreen();
+                endCaptureLook();
+                state.cooldownUntil = performance.now() + 2000;
+                unlockDocument();
+                detectBanner.className = "scan-detect-banner refused";
+                detectBanner.textContent = verdict.raison || "Pièce refusée, réessayez.";
+                return;
+            }
+            const rest = 1000 - (performance.now() - importAt);
+            if (rest > 0) await new Promise(r => setTimeout(r, rest));
+            stopLoop();
+            scanLine.classList.remove("active");
+            showPreview(dataURL);
+            hideImportScreen();
+            endCaptureLook();
+        }, 450);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       APERÇU / ENCHAÎNEMENT
+    ═══════════════════════════════════════════════════════════════ */
+    function showPreview(dataURL) {
+        const isVerso = state.step === "camera_verso";
+        state.step = isVerso ? "preview_verso" : "preview_recto";
+        cameraView.style.display = "none";
+        previewView.classList.add("active");
+        previewImg.src = dataURL;
+        $("scan_upload_fallback").style.display = "none";
+        if (isVerso) {
+            previewSideLabel.className = "scan-preview-side-label verso";
+            previewSideLabel.textContent = "VERSO (2/2)";
+            btnConfirmLabel.textContent = "Valider le verso et terminer";
+            setProgress(80);
+            subtitle.textContent = "Vérifiez le verso. S'il est net, validez-le.";
+        } else {
+            previewSideLabel.className = "scan-preview-side-label";
+            const seul = state.faces === 1;
+            previewSideLabel.textContent = seul ? "RECTO (1/1)" : "RECTO (1/2)";
+            btnConfirmLabel.textContent = seul ? "Valider et continuer" : "Valider le recto et passer au verso";
+            setProgress(seul ? 70 : 40);
+            subtitle.textContent = seul ? "Vérifiez la photo. Si elle est nette, validez-la."
+                                        : "Vérifiez le recto. Puis vous scannerez le verso.";
+        }
+        updateSidesBar();
+    }
+    function backToCamera() {
+        previewView.classList.remove("active");
+        if (state.step === "preview_verso") state.step = "camera_verso";
+        else state.step = "camera_recto";
+        updateSidesBar();
+        startCamera(state.facingMode);
+    }
+    async function confirmCurrentSide() {
+        const dataURL = previewImg.src;
+        if (state.step === "preview_verso") {
+            if (state.rectoFingerprint) {
+                const fpVerso = await computeFingerprint(dataURL);
+                const sim = similarity(fpVerso, state.rectoFingerprint);
+                if (sim > 0.85) {
+                    showAlert("Vous avez scanné deux fois le même côté. Le verso doit être différent.", "error");
+                    return;
+                }
+            }
+            state.versoImage = dataURL;
+            showRecap();
+        } else {
+            state.rectoImage = dataURL;
+            state.rectoFingerprint = await computeFingerprint(dataURL);
+            state.analysisPromise = analyzeDocument(); // lancé en arrière-plan pendant le scan du verso
+            if (state.faces === 1) { previewView.classList.remove("active"); showRecap(); return; } // recto seul
+            state.step = "camera_verso";
+            previewView.classList.remove("active");
+            setProgress(60);
+            updateSidesBar();
+            clearAlert();
+            setTimeout(() => { showAlert("Recto enregistré. Présentez maintenant le verso.", "info"); }, 100);
+            startCamera(state.facingMode);
+        }
+    }
+    function showRecap() {
+        if (!state.rectoImage || (state.faces === 2 && !state.versoImage)) {
+            showAlert(state.faces === 2 ? "Les deux faces sont obligatoires." : "La photo est obligatoire.", "error");
+            state.step = state.rectoImage ? "camera_verso" : "camera_recto";
+            previewView.classList.remove("active"); updateSidesBar();
+            startCamera(state.facingMode); return;
+        }
+        state.step = "recap";
+        previewView.classList.remove("active");
+        cameraView.style.display = "none";
+        recapView.style.display = "block";
+        sidesBar.style.display = "none";
+        setProgress(100);
+        subtitle.textContent = state.faces === 2 ? "Vérifiez les deux faces avant l'envoi." : "Vérifiez la photo avant l'envoi.";
+        clearAlert(); updateSidesBar();
+        renderVerifPanel();
+        const rH = `<div style="margin-bottom:16px;"><div style="font-size:12px;color:#65676b;margin-bottom:6px;font-weight:600;display:flex;align-items:center;gap:6px;"><i class="fas fa-check-circle" style="color:#12883B;"></i> RECTO</div><img src="${state.rectoImage}" style="max-width:100%;border-radius:10px;border:1px solid #E4E6EB;"></div>`;
+        const vH = `<div style="margin-bottom:16px;"><div style="font-size:12px;color:#65676b;margin-bottom:6px;font-weight:600;display:flex;align-items:center;gap:6px;"><i class="fas fa-check-circle" style="color:#12883B;"></i> VERSO</div><img src="${state.versoImage}" style="max-width:100%;border-radius:10px;border:1px solid #E4E6EB;"></div>`;
+        $("scan_recap_content").innerHTML = rH + (state.faces === 2 ? vH : "");
+    }
+    async function submitToServer() {
+        if (!state.rectoImage || (state.faces === 2 && !state.versoImage)) { showAlert(state.faces === 2 ? "Les deux faces sont obligatoires." : "La photo est obligatoire.", "error"); return; }
+        const btn = $("btn_submit");
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi...';
+        try {
+            const combined = state.faces === 2 ? await combineRectoVerso(state.rectoImage, state.versoImage) : state.rectoImage;
+            const blob = await (await fetch(combined)).blob();
+            const fd = new FormData();
+            fd.append("type_piece", state.confirmedType || state.typeDocument);
+            fd.append("pays_document", state.confirmedCountry || "");
+            fd.append("document", blob, "document_" + state.typeDocument + ".jpg");
+            {% if reverif_modif_id %}fd.append("csrf_token", "{{ csrf_token }}");{% endif %}
+            const res = await fetch("{% if reverif_modif_id %}{{ url_for('main.reverif_piece_envoi', modif_id=reverif_modif_id) }}{% else %}{{ url_for('main.enregistrer_piece_identite') }}{% endif %}", { method: "POST", body: fd });
+            const json = await res.json();
+            if (json.success) {
+                btn.innerHTML = '<i class="fas fa-hourglass-half"></i> Vérification en cours';
+                showAlert("Document envoyé. Vérification en cours — votre badge sera activé une fois votre pièce d'identité examinée par notre équipe.", "success");
+                setTimeout(() => { window.location.href = "{% if reverif_modif_id %}{{ url_for('main.reverif_statut') }}{% else %}{{ url_for('main.verification_en_cours') }}{% endif %}"; }, 1800);
+            } else {
+                showAlert(json.error || "Échec.", "error");
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-upload"></i> Envoyer pour vérification';
+            }
+        } catch (e) {
+            showAlert("Erreur réseau.", "error");
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-upload"></i> Envoyer pour vérification';
+        }
+    }
+    function combineRectoVerso(recto, verso) {
+        return new Promise((resolve) => {
+            const imgR = new Image();
+            imgR.onload = () => {
+                const imgV = new Image();
+                imgV.onload = () => {
+                    const gap = 20;
+                    const w = Math.max(imgR.width, imgV.width);
+                    const h = imgR.height + gap + imgV.height;
+                    const c = document.createElement("canvas");
+                    c.width = w; c.height = h;
+                    const ctx = c.getContext("2d");
+                    ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0, 0, w, h);
+                    ctx.drawImage(imgR, 0, 0);
+                    ctx.drawImage(imgV, 0, imgR.height + gap);
+                    resolve(c.toDataURL("image/jpeg", 0.92));
+                };
+                imgV.src = verso;
+            };
+            imgR.src = recto;
+        });
+    }
+    function showStart() {
+        state.step = "start";
+        startView.style.display = "block";
+        cameraView.style.display = "none";
+        previewView.classList.remove("active");
+        recapView.style.display = "none";
+        sidesBar.style.display = "flex";
+        $("scan_upload_fallback").style.display = "none";
+        clearAlert(); setProgress(0); updateSidesBar();
+        $("scan_start_title").textContent = "Prêt à scanner votre " + labelFor(state.typeDocument);
+        $("scan_start_text").textContent = state.faces === 2 ? "Vous allez scanner les deux faces : d'abord le recto, puis le verso." : "Vous allez scanner une seule face : la page avec votre photo.";
+        const li = $("scan_info_faces"); if (li) li.innerHTML = state.faces === 2 ? "Vous scannerez d'abord le <strong>recto</strong>, puis le <strong>verso</strong>" : "Une seule photo est nécessaire : la <strong>page avec votre photo</strong>";
+        subtitle.textContent = state.faces === 2 ? "Recto ET verso obligatoires." : "Recto seul : page avec votre photo.";
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       UI
+    ═══════════════════════════════════════════════════════════════ */
+    $("btn_scan_start").addEventListener("click", () => {
+        state.step = "camera_recto";
+        startView.style.display = "none";
+        setProgress(20); updateSidesBar();
+        startCamera(state.facingMode);
+    });
+    shutter.addEventListener("click", () => takePicture(false));
+    $("btn_flip").addEventListener("click", flipCamera);
+    $("btn_cancel").addEventListener("click", () => { stopCamera(); showStart(); });
+    $("btn_help").addEventListener("click", openTips);
+    $("btn_import_help").addEventListener("click", openTips);
+    $("btn_tips_ok").addEventListener("click", closeTips);
+    tipsBackdrop.addEventListener("click", (e) => { if (e.target === tipsBackdrop) closeTips(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && state.tipsOpen) closeTips(); });
+    $("btn_retake").addEventListener("click", backToCamera);
+    $("btn_confirm").addEventListener("click", confirmCurrentSide);
+    $("btn_submit").addEventListener("click", submitToServer);
+
+    $("fallback_recto").addEventListener("change", (e) => {
+        const f = e.target.files && e.target.files[0]; if (!f) return;
+        readFileAsDataURL(f).then(async url => {
+            state.rectoImage = url;
+            state.rectoFingerprint = await computeFingerprint(url);
+            state.analysisPromise = analyzeDocument();
+            if (state.faces === 1) { showRecap(); return; }
+            state.step = "camera_verso"; updateSidesBar();
+            showAlert("Recto importé. Importez maintenant le verso.", "info");
+        });
+    });
+    $("fallback_verso").addEventListener("change", (e) => {
+        const f = e.target.files && e.target.files[0]; if (!f) return;
+        readFileAsDataURL(f).then(async url => {
+            if (state.rectoFingerprint) {
+                const fpV = await computeFingerprint(url);
+                if (similarity(fpV, state.rectoFingerprint) > 0.85) {
+                    showAlert("Cette image est identique au recto. Importez une photo différente.", "error");
+                    return;
+                }
+            }
+            state.versoImage = url; showRecap();
+        });
+    });
+    function readFileAsDataURL(file) {
+        return new Promise(resolve => {
+            const r = new FileReader();
+            r.onload = ev => resolve(ev.target.result);
+            r.readAsDataURL(file);
+        });
+    }
+
+    document.addEventListener("visibilitychange", () => { if (document.hidden) stopCamera(); });
+    window.addEventListener("beforeunload", () => { stopCamera(); });
+
+    if (state.faces === 1) {
+        const lv = document.querySelector('label[for="fallback_verso"]'); if (lv) lv.style.display = "none";
+    }
+    showStart();
+})();
+</script>
+{% endblock %}

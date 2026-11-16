@@ -1,0 +1,1441 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studio Musical & Effets | FaceNet</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* --- SYSTÈME DE THÈMES DYNAMIQUES FACENET --- */
+        :root, [data-theme="light"] {
+            --fn-blue: #0866FF;
+            --fn-bg: #F0F2F5;
+            --fn-gray: #65676B;
+            --fn-border: #e4e6eb;
+            --white: #ffffff;
+            --text-dark: #1c1e21;
+            --card-shadow: rgba(0,0,0,0.1);
+            --input-bg: #fafafa;
+        }
+
+        [data-theme="dark"] {
+            --fn-bg: #18191A;
+            --white: #242526;
+            --text-dark: #E4E6EB;
+            --fn-border: #3E4042;
+            --fn-gray: #B0B3B8;
+            --card-shadow: rgba(0,0,0,0.3);
+            --input-bg: #3A3B3C;
+        }
+
+        body {
+            background: var(--fn-bg);
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-dark);
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        .fn-settings-container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- SIDEBAR DE NAVIGATION --- */
+        .fn-settings-nav {
+            width: 360px;
+            background: var(--white);
+            border-right: 1px solid var(--fn-border);
+            display: flex;
+            flex-direction: column;
+            transition: background 0.3s, border-color 0.3s;
+        }
+
+        .nav-title {
+            padding: 20px 16px;
+            font-size: 24px;
+            font-weight: 800;
+            margin: 0;
+        }
+
+        .fn-account-center-card {
+            background: rgba(0, 0, 0, 0.03);
+            margin: 0 16px 15px;
+            padding: 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .fn-account-center-card:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .fn-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .fn-desc-small {
+            font-size: 12px;
+            color: var(--fn-gray);
+            margin: 5px 0 0 28px;
+        }
+
+        /* Liens de la Sidebar */
+        .nav-scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 8px;
+        }
+
+        .nav-group-label {
+            font-size: 12px;
+            color: var(--fn-gray);
+            font-weight: 700;
+            margin: 20px 12px 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-dark);
+            text-decoration: none;
+            transition: 0.2s;
+        }
+
+        .nav-item:hover {
+            background: rgba(0, 0, 0, 0.04);
+        }
+
+        .nav-item.active {
+            background: #ebf5ff;
+            color: var(--fn-blue);
+        }
+        [data-theme="dark"] .nav-item.active {
+            background: #263951;
+            color: #4599ff;
+        }
+
+        .nav-item i {
+            width: 24px;
+            text-align: center;
+            font-size: 18px;
+        }
+
+        .nav-item img.nav-custom-icon {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+        }
+
+        .nav-badge-icon {
+            width: 20px;
+            height: 20px;
+            object-fit: contain;
+        }
+
+        .title-badge-icon {
+            width: 22px;
+            height: 22px;
+            object-fit: contain;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        /* --- Barre de recherche dans la sidebar --- */
+        .fn-nav-search {
+            margin: 0 16px 10px;
+            position: relative;
+        }
+
+        .fn-nav-search input {
+            width: 100%;
+            padding: 10px 12px 10px 34px;
+            border-radius: 20px;
+            border: 1px solid var(--fn-border);
+            background: var(--fn-bg);
+            color: var(--text-dark);
+            font-size: 13px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        .fn-nav-search input:focus {
+            outline: none;
+            border-color: var(--fn-blue);
+            background: var(--white);
+        }
+
+        .fn-nav-search i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--fn-gray);
+            font-size: 13px;
+        }
+
+        .nav-item.nav-hidden {
+            display: none !important;
+        }
+
+        .upload-feedback {
+            font-size: 12px;
+            margin-top: 6px;
+            font-weight: 600;
+        }
+
+        .upload-feedback.ok { color: #17803d; }
+        .upload-feedback.error { color: #d92d20; }
+
+        /* Bouton 🚪Déconnexion Latéral Harmonisé */
+        .btn-deconnexion-sidebar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 10px 16px 5px 16px;
+            padding: 12px 16px;
+            background-color: rgba(255, 59, 48, 0.1);
+            color: #ff3b30;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-deconnexion-sidebar:hover {
+            background-color: #ff3b30;
+            color: white;
+        }
+
+        .btn-deconnexion-sidebar i {
+            font-size: 16px;
+        }
+
+        /* Bouton Tsapi Verified */
+        .fn-verified-card-sidebar {
+            background: linear-gradient(135deg, #e7f3ff 0%, var(--white) 100%);
+            margin: 10px 15px 15px 15px;
+            padding: 15px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 2px 8px var(--card-shadow);
+            cursor: pointer;
+            border: 1px solid #cce4ff;
+            transition: transform 0.2s;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        [data-theme="dark"] .fn-verified-card-sidebar {
+            background: linear-gradient(135deg, #1c2d42 0%, var(--white) 100%);
+            border: 1px solid #263951;
+        }
+
+        .fn-verified-card-sidebar:hover {
+            transform: translateY(-2px);
+        }
+
+        .v-badge-wrapper {
+            background: #fff;
+            border-radius: 50%;
+            padding: 5px;
+            display: flex;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .v-badge-svg {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+        }
+
+        .v-card-text strong {
+            display: block;
+            font-size: 14px;
+            color: var(--text-dark);
+        }
+
+        .v-card-text p {
+            margin: 0;
+            font-size: 11px;
+            color: var(--fn-gray);
+        }
+
+        /* --- ZONE PRINCIPALE DE CONTENU --- */
+        .fn-settings-main {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .settings-page {
+            display: none;
+            width: 100%;
+            max-width: 680px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .settings-page.active {
+            display: block;
+        }
+
+        .fn-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px var(--card-shadow);
+            margin-bottom: 20px;
+            transition: background 0.3s;
+        }
+
+        .fn-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--fn-border);
+        }
+
+        .row-label {
+            font-weight: 600;
+        }
+
+        .row-action {
+            color: var(--fn-blue);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        /* Formulaire global */
+        .tsapi-input-group {
+            margin-bottom: 15px;
+            position: relative;
+        }
+        .tsapi-input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        .tsapi-input-group select, 
+        .tsapi-input-group input[type="text"], 
+        .tsapi-input-group input[type="email"], 
+        .tsapi-input-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--fn-border);
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+            background: var(--input-bg);
+            color: var(--text-dark);
+            font-family: inherit;
+        }
+
+        /* Style pour l'indicateur de type de carte */
+        .card-type-icon {
+            position: absolute;
+            right: 15px;
+            top: 38px;
+            font-size: 20px;
+            color: var(--fn-gray);
+            transition: color 0.2s;
+        }
+
+        /* Interrupteur iOS */
+        .fn-switch { position: relative; display: inline-block; width: 46px; height: 24px; }
+        .fn-switch input { opacity: 0; width: 0; height: 0; }
+        .fn-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .fn-slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .fn-slider { background-color: var(--fn-blue); }
+        input:checked + .fn-slider:before { transform: translateX(22px); }
+
+        /* Grille pour aligner Expiration et CVV côte à côte */
+        .tsapi-input-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .tsapi-input-row .tsapi-input-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .file-upload-box {
+            border: 2px dashed #bcc0c4;
+            padding: 18px;
+            border-radius: 8px;
+            text-align: center;
+            background: var(--input-bg);
+            cursor: pointer;
+        }
+        .file-upload-box:hover {
+            border-color: var(--fn-blue);
+            background: #f4f9ff;
+        }
+
+        /* Barres de liens (preuves de notoriété) */
+        .notoriety-links-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .notoriety-link-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid var(--fn-border);
+            border-radius: 8px;
+            padding: 4px 4px 4px 12px;
+            background: var(--input-bg);
+        }
+        .notoriety-link-box i.link-icon {
+            color: var(--fn-gray);
+            font-size: 13px;
+        }
+        .notoriety-link-box input[type="url"] {
+            flex: 1;
+            border: none;
+            outline: none;
+            background: transparent;
+            padding: 10px 4px;
+            font-size: 14px;
+            color: var(--text-dark);
+            font-family: inherit;
+        }
+        .notoriety-link-box .btn-remove-link {
+            border: none;
+            background: transparent;
+            color: var(--fn-gray);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 8px;
+            border-radius: 50%;
+            line-height: 1;
+        }
+        .notoriety-link-box .btn-remove-link:hover {
+            color: #d92d20;
+            background: rgba(217,45,32,0.08);
+        }
+        .btn-add-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px dashed var(--fn-blue);
+            background: transparent;
+            color: var(--fn-blue);
+            font-weight: 600;
+            font-size: 13px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            justify-content: center;
+        }
+        .btn-add-link:hover {
+            background: #f4f9ff;
+        }
+
+        /* --- VÉRIFICATION TÉLÉPHONE / EMAIL --- */
+        .section-desc {
+            color: var(--fn-gray);
+            font-size: 14px;
+            line-height: 1.5;
+            margin: -6px 0 20px 0;
+        }
+
+        .phone-input-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .phone-dialcode {
+            flex: 0 0 auto;
+            padding: 12px 14px;
+            border: 1px solid var(--fn-border);
+            border-radius: 8px;
+            background: var(--fn-border);
+            font-weight: 700;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+        }
+
+        .phone-input-row input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid var(--fn-border);
+            border-radius: 8px;
+            font-size: 14px;
+            background: var(--input-bg);
+            color: var(--text-dark);
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        #phone_country_select {
+            font-size: 14px;
+        }
+
+        .otp-channel-toggle {
+            display: flex;
+            gap: 10px;
+        }
+
+        .channel-btn {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid var(--fn-border);
+            border-radius: 8px;
+            background: var(--input-bg);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            color: var(--text-dark);
+            transition: 0.2s;
+        }
+
+        .channel-btn i { margin-right: 6px; }
+
+        .channel-btn.active {
+            background: #ebf5ff;
+            border-color: var(--fn-blue);
+            color: var(--fn-blue);
+        }
+
+        .otp-code-input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid var(--fn-border);
+            border-radius: 8px;
+            font-size: 22px;
+            letter-spacing: 8px;
+            text-align: center;
+            box-sizing: border-box;
+            font-family: inherit;
+            background: var(--input-bg);
+            color: var(--text-dark);
+        }
+
+        .otp-sent-text {
+            font-size: 14px;
+            color: var(--fn-gray);
+            margin-bottom: 16px;
+        }
+
+        .otp-links {
+            font-size: 13px;
+            margin-top: 14px;
+        }
+
+        .otp-links a {
+            color: var(--fn-blue);
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .otp-links span {
+            color: var(--fn-gray);
+            margin: 0 6px;
+        }
+
+        .verif-success {
+            background: #e9f9ee;
+            color: #17803d;
+            border: 1px solid #bdeecb;
+            border-radius: 10px;
+            padding: 16px;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .verif-success i { margin-right: 8px; }
+
+        .btn-subscribe-tsapi:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* --- STYLISATION DU FORFAIT BLEU ET PLANS DÉFILANTS --- */
+        .tsapi-card-wrapper {
+            max-width: 550px;
+            width: 100%;
+            margin: 0 auto;
+            background: var(--white);
+            border-radius: 22px;
+            box-shadow: 0 12px 40px var(--card-shadow);
+            overflow: hidden;
+            border: 1px solid var(--fn-border);
+        }
+
+        .tsapi-premium-header {
+            height: 180px;
+            background: linear-gradient(135deg, #f5e3ca 0%, #edd2cc 50%, #e3becc 100%);
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-start;
+            padding: 0 0 20px 25px;
+            position: relative;
+        }
+
+        .tsapi-avatar-container {
+            position: relative;
+            width: 85px;
+            height: 85px;
+            border-radius: 50%;
+            border: 4px solid var(--white);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: -50px;
+            z-index: 2;
+        }
+
+        .tsapi-avatar-container .main-badge-icon {
+            width: 55px;
+            height: 55px;
+            object-fit: contain;
+        }
+
+        .tsapi-content-area {
+            padding: 65px 25px 30px 25px;
+            text-align: left;
+        }
+
+        .tsapi-verified-title {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin: 0 0 6px 0;
+            letter-spacing: -0.5px;
+        }
+
+        .tsapi-verified-subtitle {
+            color: var(--fn-gray);
+            font-size: 15px;
+            margin: 0 0 25px 0;
+            line-height: 1.4;
+        }
+
+        .form-section-title {
+            font-weight: 700;
+            font-size: 15px;
+            margin-bottom: 12px;
+            color: var(--text-dark);
+        }
+
+        /* Zone de défilement horizontal pour les cartes de forfaits */
+        .tsapi-plans-scroll-container {
+            display: flex;
+            gap: 14px;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            padding: 5px 2px 15px 2px;
+            margin-bottom: 25px;
+        }
+
+        .tsapi-plan-card {
+            flex: 0 0 260px;
+            scroll-snap-align: start;
+            border: 2px solid var(--fn-border);
+            border-radius: 16px;
+            padding: 18px;
+            position: relative;
+            cursor: pointer;
+            background: var(--input-bg);
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+
+        .tsapi-plan-card.selected {
+            border-color: var(--fn-blue);
+            background: #f4f9ff;
+        }
+        [data-theme="dark"] .tsapi-plan-card.selected {
+            background: #1c2d42;
+            border-color: #4599ff;
+        }
+
+        .tsapi-plan-radio {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            width: 18px;
+            height: 18px;
+            accent-color: var(--fn-blue);
+        }
+
+        .tsapi-plan-name { font-size: 17px; font-weight: 700; color: var(--text-dark); margin: 0 0 4px 0; }
+        .tsapi-plan-price { font-size: 19px; font-weight: 800; color: var(--fn-blue); margin-bottom: 10px; }
+        .tsapi-plan-features { font-size: 12px; color: var(--fn-gray); line-height: 1.6; margin: 0; padding-left: 14px; }
+
+        .btn-subscribe-tsapi {
+            background: var(--fn-blue);
+            color: var(--white);
+            border: none;
+            width: 100%;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        /* --- FONCTIONNALITÉS RECHERCHE MUSIQUE ET EFFETS --- */
+        .music-search-box { display: flex; gap: 10px; margin-bottom: 20px; }
+        .music-search-box input { flex: 1; }
+        .btn-fn-action { background: var(--fn-blue); color: #fff; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        
+        .music-track-item { display: flex; align-items: center; justify-content: space-between; background: var(--white); padding: 12px; border-radius: 10px; margin-bottom: 10px; border: 1px solid var(--fn-border); }
+        .track-info { display: flex; align-items: center; gap: 14px; }
+        .track-cover { width: 50px; height: 50px; border-radius: 6px; object-fit: cover; background: #eee; }
+        .track-meta strong { display: block; font-size: 14px; color: var(--text-dark); }
+        .track-meta span { font-size: 12px; color: var(--fn-gray); display: block; margin-top: 2px; }
+        
+        .btn-extract { background: linear-gradient(135deg, #fe2c55 0%, #ff6b8b 100%); color: white; border: none; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+        .btn-extract:disabled { background: #bcc0c4; cursor: not-allowed; }
+        .ia-progress-container { width: 100%; background: var(--fn-border); height: 6px; border-radius: 3px; margin-top: 8px; display: none; overflow: hidden; }
+        .ia-progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #fe2c55, #00f2fe); transition: width 0.1s linear; }
+
+        .beat-maker-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 15px; }
+        @media(min-width: 480px) { .beat-maker-grid { grid-template-columns: repeat(4, 1fr); } }
+        .beat-pad { background: #222; color: #fff; border: 2px solid #333; padding: 16px 8px; border-radius: 8px; text-align: center; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; justify-content: center; transition: 0.1s; }
+        .beat-pad i { font-size: 18px; color: #00f2fe; }
+        .beat-pad:active, .beat-pad.active { background: #fe2c55; color: #fff; border-color: #fff; }
+
+        /* --- STYLE MODALE MAGNIFIQUE FACENET --- */
+        .fn-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fn-modal-box {
+            background: var(--white);
+            border: 1px solid var(--fn-border);
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 10px 30px var(--card-shadow);
+            animation: modalFadeIn 0.2s ease-out;
+        }
+
+        .fn-modal-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(8, 102, 255, 0.1);
+            color: var(--fn-blue);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            margin: 0 auto 15px;
+        }
+
+        .fn-modal-title {
+            font-size: 18px;
+            font-weight: 800;
+            margin: 0 0 8px 0;
+            color: var(--text-dark);
+        }
+
+        .fn-modal-desc {
+            font-size: 13px;
+            color: var(--fn-gray);
+            margin: 0 0 20px 0;
+            line-height: 1.5;
+        }
+
+        .fn-modal-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .fn-modal-btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            border: none;
+            transition: 0.2s;
+        }
+
+        .fn-btn-cancel {
+            background: var(--fn-bg);
+            color: var(--text-dark);
+        }
+
+        .fn-btn-cancel:hover {
+            opacity: 0.8;
+        }
+
+        .fn-btn-confirm {
+            background: var(--fn-blue);
+            color: var(--white);
+        }
+
+        .fn-btn-confirm:hover {
+            opacity: 0.9;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Masquage complet de la barre Google Traduction brute */
+        .goog-te-banner-frame, .goog-te-gadget, #goog-gt-tt { display: none !important; }
+        body { top: 0 !important; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- BARRE DE RETOUR (pages de paramètres séparées) --- */
+        .back-bar {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 680px;
+        }
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            border-radius: 50%;
+            background: var(--white);
+            box-shadow: 0 1px 3px var(--card-shadow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-dark);
+            text-decoration: none;
+            font-size: 16px;
+            transition: background 0.2s;
+        }
+        .back-btn:hover {
+            background: var(--fn-border);
+        }
+        .back-title {
+            font-size: 20px;
+            font-weight: 800;
+            margin: 0;
+        }
+        .standalone-settings-wrap {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+    </style>
+
+</head>
+<body>
+
+<div class="fn-settings-main" style="height:100vh;">
+    <div class="standalone-settings-wrap">
+        <div class="back-bar">
+            <a href="{{ url_for('main.settings') }}" class="back-btn"><i class="fas fa-arrow-left"></i></a>
+            <h2 class="back-title">Studio Musical & Effets</h2>
+        </div>
+
+        <div class="settings-page active">
+            <div class="fn-card">
+                <h2><i class="fas fa-music" style="color: #fe2c55;"></i> Studio Musical & Karaoké</h2>
+                <p class="section-desc">Cherchez un morceau, l'appli en isole l'instrumental, puis chantez en direct au micro par-dessus avec des effets vocaux — comme un duo.</p>
+                
+                <div class="music-search-box">
+                    <input type="text" id="music-search-input" class="tsapi-input-group" style="margin:0;" placeholder="Rechercher un morceau (ex: Stanley Enow, Locko...)">
+                    <button class="btn-fn-action" onclick="lancerRechercheMusique()"><i class="fas fa-search"></i></button>
+                </div>
+
+                <div id="music-loading-spinner" style="display:none; text-align:center; padding:15px;">
+                    <i class="fas fa-circle-notch fa-spin" style="font-size:24px; color:var(--fn-blue);"></i>
+                </div>
+
+                <div id="music-results-area">
+                    <p style="text-align:center; color:var(--fn-gray); font-size:13px; padding:10px;">Entrez un titre pour trouver un morceau à chanter.</p>
+                </div>
+
+                <!-- ================= STUDIO D'ENREGISTREMENT (karaoké) ================= -->
+                <div id="recording-studio" style="display:none; margin-top:22px; border:1px solid var(--fn-border); border-radius:12px; padding:18px; background:var(--input-bg);">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                        <div>
+                            <strong id="studio-track-title" style="display:block; font-size:15px;"></strong>
+                            <span id="studio-track-status" style="font-size:12px; color:var(--fn-gray);"></span>
+                        </div>
+                        <button onclick="fermerStudio()" style="background:none; border:none; font-size:18px; color:var(--fn-gray); cursor:pointer;" title="Fermer le studio"><i class="fas fa-times"></i></button>
+                    </div>
+
+                    <div id="studio-extract-progress" class="ia-progress-container">
+                        <div class="ia-progress-bar" id="studio-extract-progress-bar"></div>
+                    </div>
+
+                    <div id="studio-controls" style="display:none;">
+                        <p class="section-desc" style="margin:10px 0;">Instrumental prêt (voix d'origine atténuée). Autorise ton micro pour commencer.</p>
+
+                        <button class="btn-fn-action" id="btn-mic-permission" onclick="demanderMicro()"><i class="fas fa-microphone"></i> Autoriser le micro</button>
+
+                        <div id="studio-record-area" style="display:none; margin-top:16px;">
+                            <p style="font-size:12px; color:var(--fn-gray); margin:0 0 10px;"><i class="fas fa-headphones"></i> Utilise un casque pour éviter le larsen (retour micro).</p>
+
+                            <h3 style="font-size:14px;"><i class="fas fa-wave-square"></i> Effets vocaux (en direct sur ta voix)</h3>
+                            <div class="beat-maker-grid">
+                                <div class="beat-pad" onclick="toggleEffectPad(this, 'Guitare')"><i class="fas fa-guitar"></i>TONALITÉ CHAUDE</div>
+                                <div class="beat-pad" onclick="toggleEffectPad(this, 'Djembé')"><i class="fas fa-drum"></i>FILTRE GRAVE</div>
+                                <div class="beat-pad" onclick="toggleEffectPad(this, 'Baffle')"><i class="fas fa-volume-up"></i>SATURATION</div>
+                                <div class="beat-pad" onclick="toggleEffectPad(this, 'Basse')"><i class="fas fa-sliders-h"></i>BOOST GRAVES</div>
+                                <div class="beat-pad" onclick="toggleEffectPad(this, 'Écho')"><i class="fas fa-wave-square"></i>ÉCHO</div>
+                                <div class="beat-pad" onclick="toggleEffectPad(this, 'Réverbération')"><i class="fas fa-door-open"></i>REVERB HALL</div>
+                            </div>
+                            <p id="audio-effects-feedback" style="font-size:12px; color:#fe2c55; font-weight:600; text-align:center; margin-top:12px;"></p>
+
+                            <div style="display:flex; gap:10px; align-items:center; margin-top:18px;">
+                                <button class="btn-fn-action" id="btn-record" style="background:#fe2c55;" onclick="toggleEnregistrement()"><i class="fas fa-circle"></i> Enregistrer mon duo</button>
+                                <span id="studio-timer" style="font-weight:700; font-family:monospace;">00:00</span>
+                            </div>
+
+                            <div id="studio-result" style="display:none; margin-top:16px;">
+                                <p style="font-size:13px; font-weight:600; margin-bottom:6px;"><i class="fas fa-check-circle" style="color:#17803d;"></i> Ton duo est prêt !</p>
+                                <audio id="studio-result-audio" controls style="width:100%;"></audio>
+                                <a id="studio-download-link" download="mon_duo_facenet.webm" class="btn-fn-action" style="margin-top:10px; text-decoration:none; display:inline-flex;"><i class="fas fa-download"></i> Télécharger mon duo</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function changerThemeGlobal(theme) {
+        if (theme === 'system') {
+            const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        } else {
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+    }
+
+    /* ==========================================================================
+       STUDIO MUSICAL & KARAOKÉ — MOTEUR AUDIO RÉEL (Web Audio API)
+
+       Flux :
+       1. Recherche réelle via la route backend main.music_search (API iTunes
+          Search, gratuite, sans clé) -> vrais morceaux + extraits 30s.
+       2. Clic sur "Chanter" -> l'extrait est téléchargé, décodé, puis filtré
+          (atténuation de la bande vocale ~1.2kHz + boost des basses) pour
+          obtenir un instrumental approximatif. RÉEL, mais ce n'est PAS une
+          séparation IA complète type Spleeter/Demucs — étiqueté honnêtement.
+       3. Le micro est capturé en direct (getUserMedia) et traversé par une
+          chaîne d'effets Web Audio réelle (echo, reverb, saturation, etc.)
+          appliquée à LA VOIX du chanteur — c'est là que les effets ont un
+          sens, contrairement à avant où ils s'appliquaient à la piste écoutée.
+       4. L'instrumental + la voix effectée sont mixés en direct dans un
+          MediaStreamDestination et enregistrés via MediaRecorder -> un vrai
+          fichier .webm téléchargeable, comme un duo/cover.
+       ========================================================================== */
+
+    const MUSIC_SEARCH_URL = "{{ url_for('main.music_search') }}";
+
+    let audioCtx = null;
+    let currentAudioEl = null;
+    let rechercheEnCours = false;
+    let lastSearchResults = [];
+
+    // Effets (appliqués à la voix une fois le micro autorisé)
+    let filterChain = {};
+    let activeEffects = new Set();
+
+    // Studio karaoké
+    let instrumentalBuffer = null;
+    let micStream = null;
+    let micSourceNode = null;
+    let micGainNode = null;
+    let recordDestination = null;
+    let instrumentalSourceNode = null;
+    let instrumentalGainNode = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let recording = false;
+    let recordStartTime = 0;
+    let timerInterval = null;
+
+    function getAudioContext() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        return audioCtx;
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str == null ? '' : String(str);
+        return div.innerHTML;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        changerThemeGlobal('system');
+        const input = document.getElementById('music-search-input');
+        if (input) {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); lancerRechercheMusique(); }
+            });
+        }
+    });
+
+    /* ------------------------- RECHERCHE MUSICALE RÉELLE ------------------------- */
+
+    async function lancerRechercheMusique() {
+        const input = document.getElementById('music-search-input');
+        const query = (input.value || '').trim();
+        const resultsArea = document.getElementById('music-results-area');
+        const spinner = document.getElementById('music-loading-spinner');
+
+        if (!query) {
+            resultsArea.innerHTML = '<p style="text-align:center; color:#d92d20; font-size:13px; padding:10px;">Veuillez saisir un titre ou un artiste.</p>';
+            return;
+        }
+        if (rechercheEnCours) return;
+        rechercheEnCours = true;
+        spinner.style.display = 'block';
+        resultsArea.innerHTML = '';
+
+        try {
+            const res = await fetch(MUSIC_SEARCH_URL + '?q=' + encodeURIComponent(query));
+            if (!res.ok) throw new Error('Erreur serveur ' + res.status);
+            const data = await res.json();
+
+            lastSearchResults = data.results || [];
+
+            if (lastSearchResults.length === 0) {
+                resultsArea.innerHTML = '<p style="text-align:center; color:var(--fn-gray); font-size:13px; padding:10px;">Aucun résultat pour « ' + escapeHtml(query) + ' ».</p>';
+                return;
+            }
+            resultsArea.innerHTML = lastSearchResults.map(buildTrackItemHTML).join('');
+        } catch (err) {
+            console.error(err);
+            resultsArea.innerHTML = '<p style="text-align:center; color:#d92d20; font-size:13px; padding:10px;">Impossible de charger les résultats. Réessayez.</p>';
+        } finally {
+            spinner.style.display = 'none';
+            rechercheEnCours = false;
+        }
+    }
+
+    function buildTrackItemHTML(track, index) {
+        const id = 'fn_track_' + index;
+        const cover = track.cover || 'https://via.placeholder.com/50x50.png?text=%E2%99%AA';
+        const title = escapeHtml(track.title);
+        const artist = escapeHtml(track.artist);
+        const hasPreview = !!track.preview_url;
+
+        return `
+        <div class="music-track-item" id="${id}">
+            <div class="track-info">
+                <img src="${cover}" class="track-cover" alt="${title}" loading="lazy">
+                <div class="track-meta">
+                    <strong>${title}</strong>
+                    <span>${artist}</span>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <button class="btn-fn-action" style="padding:8px 12px;" ${hasPreview ? '' : 'disabled'}
+                    onclick="togglePlayTrack(${index}, this)" title="Écouter l'extrait">
+                    <i class="fas fa-play"></i>
+                </button>
+                <button class="btn-extract" ${hasPreview ? '' : 'disabled'}
+                    onclick="chanterSurCeTitre(${index})" title="Chanter sur ce titre">
+                    <i class="fas fa-microphone"></i> Chanter
+                </button>
+            </div>
+        </div>`;
+    }
+
+    /* ------------------------- ÉCOUTE D'UN EXTRAIT (aperçu) ------------------------- */
+
+    function togglePlayTrack(index, btn) {
+        const track = lastSearchResults[index];
+        if (!track || !track.preview_url) {
+            alert("Aucun extrait audio disponible pour ce morceau.");
+            return;
+        }
+        const id = 'fn_track_' + index;
+        const isSameTrack = currentAudioEl && currentAudioEl.dataset.trackId === id;
+
+        if (isSameTrack && currentAudioEl && !currentAudioEl.paused) {
+            currentAudioEl.pause();
+            btn.innerHTML = '<i class="fas fa-play"></i>';
+            return;
+        }
+
+        document.querySelectorAll('.music-track-item .btn-fn-action i').forEach(i => i.className = 'fas fa-play');
+
+        if (isSameTrack && currentAudioEl) {
+            currentAudioEl.play();
+            btn.innerHTML = '<i class="fas fa-pause"></i>';
+            return;
+        }
+
+        if (currentAudioEl) currentAudioEl.pause();
+
+        const audio = new Audio(track.preview_url);
+        audio.dataset.trackId = id;
+        audio.addEventListener('ended', () => { btn.innerHTML = '<i class="fas fa-play"></i>'; });
+
+        currentAudioEl = audio;
+        audio.play().then(() => {
+            btn.innerHTML = '<i class="fas fa-pause"></i>';
+        }).catch(err => {
+            console.error(err);
+            alert("La lecture a été bloquée par le navigateur (interagissez d'abord avec la page).");
+        });
+    }
+
+    /* ------------------------- OUVERTURE DU STUDIO KARAOKÉ ------------------------- */
+
+    async function chanterSurCeTitre(index) {
+        const track = lastSearchResults[index];
+        if (!track || !track.preview_url) {
+            alert("Cet extrait n'est pas disponible pour l'enregistrement.");
+            return;
+        }
+        if (currentAudioEl) currentAudioEl.pause();
+
+        const studio = document.getElementById('recording-studio');
+        const progress = document.getElementById('studio-extract-progress');
+        const progressBar = document.getElementById('studio-extract-progress-bar');
+        const controls = document.getElementById('studio-controls');
+        const status = document.getElementById('studio-track-status');
+
+        // Réinitialisation de l'état du studio pour un nouveau morceau
+        fermerStudio(true);
+
+        document.getElementById('studio-track-title').textContent = track.title + ' — ' + track.artist;
+        studio.style.display = 'block';
+        controls.style.display = 'none';
+        progress.style.display = 'block';
+        progressBar.style.width = '5%';
+        status.textContent = "Extraction de l'instrumental en cours...";
+        studio.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        try {
+            instrumentalBuffer = await extraireInstrumental(track.preview_url, progressBar);
+            progress.style.display = 'none';
+            status.textContent = "Instrumental prêt (voix d'origine atténuée, approximatif).";
+            controls.style.display = 'block';
+        } catch (err) {
+            console.error(err);
+            status.textContent = "Échec de l'extraction — cet extrait n'est pas accessible depuis le navigateur.";
+            progress.style.display = 'none';
+        }
+    }
+
+    // Isolation approximative RÉELLE (filtrage fréquentiel), pas une IA de séparation complète
+    async function extraireInstrumental(previewUrl, progressBar) {
+        const response = await fetch(previewUrl);
+        if (!response.ok || !response.body) throw new Error('Extrait inaccessible');
+
+        const contentLength = +response.headers.get('Content-Length') || 0;
+        const reader = response.body.getReader();
+        const chunks = [];
+        let received = 0;
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+            received += value.length;
+            if (contentLength) {
+                progressBar.style.width = Math.min(55, (received / contentLength) * 55) + '%';
+            }
+        }
+
+        const arrayBuffer = await new Blob(chunks).arrayBuffer();
+        progressBar.style.width = '65%';
+
+        const ctx = getAudioContext();
+        const decoded = await ctx.decodeAudioData(arrayBuffer);
+        progressBar.style.width = '80%';
+
+        const offlineCtx = new OfflineAudioContext(decoded.numberOfChannels, decoded.length, decoded.sampleRate);
+        const src = offlineCtx.createBufferSource();
+        src.buffer = decoded;
+
+        const notch = offlineCtx.createBiquadFilter();
+        notch.type = 'notch'; notch.frequency.value = 1200; notch.Q.value = 0.7;
+
+        const lowBoost = offlineCtx.createBiquadFilter();
+        lowBoost.type = 'lowshelf'; lowBoost.frequency.value = 200; lowBoost.gain.value = 6;
+
+        src.connect(notch);
+        notch.connect(lowBoost);
+        lowBoost.connect(offlineCtx.destination);
+        src.start(0);
+
+        const rendered = await offlineCtx.startRendering();
+        progressBar.style.width = '100%';
+        return rendered;
+    }
+
+    /* ------------------------- MICRO + EFFETS VOCAUX EN DIRECT ------------------------- */
+
+    async function demanderMicro() {
+        try {
+            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (err) {
+            console.error(err);
+            alert("Micro refusé ou indisponible. Autorise l'accès au microphone dans les réglages du navigateur.");
+            return;
+        }
+
+        const ctx = getAudioContext();
+        if (ctx.state === 'suspended') ctx.resume();
+
+        micSourceNode = ctx.createMediaStreamSource(micStream);
+        micGainNode = ctx.createGain();
+        micGainNode.gain.value = 1;
+        micSourceNode.connect(micGainNode);
+
+        recordDestination = ctx.createMediaStreamDestination();
+        rebuildMicChain();
+
+        document.getElementById('btn-mic-permission').style.display = 'none';
+        document.getElementById('studio-record-area').style.display = 'block';
+    }
+
+    function toggleEffectPad(el, effectName) {
+        const isActive = el.classList.toggle('active');
+        if (isActive) activeEffects.add(effectName);
+        else activeEffects.delete(effectName);
+
+        const feedback = document.getElementById('audio-effects-feedback');
+
+        if (micGainNode) {
+            rebuildMicChain();
+            feedback.style.color = '#17803d';
+            feedback.textContent = `Effet « ${effectName} » ${isActive ? 'activé' : 'désactivé'} sur ta voix en direct.`;
+        } else {
+            feedback.style.color = '#fe2c55';
+            feedback.textContent = `Autorise ton micro pour entendre l'effet « ${effectName} » sur ta voix.`;
+        }
+    }
+
+    function rebuildMicChain() {
+        if (!micGainNode || !recordDestination) return;
+        const ctx = getAudioContext();
+
+        try { micGainNode.disconnect(); } catch (e) {}
+        Object.values(filterChain).forEach(node => { try { node.disconnect(); } catch (e) {} });
+        filterChain = {};
+
+        let lastNode = micGainNode;
+        activeEffects.forEach(effectName => {
+            const node = createEffectNode(ctx, effectName);
+            if (node) {
+                lastNode.connect(node);
+                lastNode = node;
+                filterChain[effectName] = node;
+            }
+        });
+        lastNode.connect(recordDestination);
+        lastNode.connect(ctx.destination); // retour casque en direct
+    }
+
+    function createEffectNode(ctx, effectName) {
+        switch (effectName) {
+            case 'Basse': {
+                const n = ctx.createBiquadFilter();
+                n.type = 'lowshelf'; n.frequency.value = 200; n.gain.value = 12;
+                return n;
+            }
+            case 'Guitare': {
+                const n = ctx.createBiquadFilter();
+                n.type = 'peaking'; n.frequency.value = 1000; n.Q.value = 1; n.gain.value = 6;
+                return n;
+            }
+            case 'Baffle': {
+                const n = ctx.createWaveShaper();
+                n.curve = makeDistortionCurve(10);
+                n.oversample = '4x';
+                return n;
+            }
+            case 'Écho': {
+                const n = ctx.createDelay(1.0);
+                n.delayTime.value = 0.25;
+                const fb = ctx.createGain();
+                fb.gain.value = 0.3;
+                n.connect(fb);
+                fb.connect(n);
+                return n;
+            }
+            case 'Réverbération': {
+                const n = ctx.createConvolver();
+                n.buffer = createImpulseResponse(ctx, 2.2, 3);
+                return n;
+            }
+            case 'Djembé': {
+                const n = ctx.createBiquadFilter();
+                n.type = 'lowpass'; n.frequency.value = 2500; n.Q.value = 0.7;
+                return n;
+            }
+            default:
+                return null;
+        }
+    }
+
+    function makeDistortionCurve(amount) {
+        const k = amount, n = 44100, curve = new Float32Array(n);
+        for (let i = 0; i < n; i++) {
+            const x = (i * 2) / n - 1;
+            curve[i] = ((3 + k) * x * 20 * Math.PI / 180) / (Math.PI + k * Math.abs(x));
+        }
+        return curve;
+    }
+
+    function createImpulseResponse(ctx, duration, decay) {
+        const rate = ctx.sampleRate;
+        const length = Math.floor(rate * duration);
+        const impulse = ctx.createBuffer(2, length, rate);
+        for (let ch = 0; ch < 2; ch++) {
+            const data = impulse.getChannelData(ch);
+            for (let i = 0; i < length; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+            }
+        }
+        return impulse;
+    }
+
+    /* ------------------------- ENREGISTREMENT DU DUO (instru + voix) ------------------------- */
+
+    function toggleEnregistrement() {
+        if (recording) arreterEnregistrement();
+        else demarrerEnregistrement();
+    }
+
+    function demarrerEnregistrement() {
+        if (!instrumentalBuffer || !recordDestination) return;
+        const ctx = getAudioContext();
+
+        instrumentalSourceNode = ctx.createBufferSource();
+        instrumentalSourceNode.buffer = instrumentalBuffer;
+        instrumentalGainNode = ctx.createGain();
+        instrumentalGainNode.gain.value = 0.9;
+        instrumentalSourceNode.connect(instrumentalGainNode);
+        instrumentalGainNode.connect(recordDestination);
+        instrumentalGainNode.connect(ctx.destination); // pour que le chanteur entende l'instru
+
+        recordedChunks = [];
+        const mimeType = (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/webm;codecs=opus'))
+            ? 'audio/webm;codecs=opus' : 'audio/webm';
+        mediaRecorder = new MediaRecorder(recordDestination.stream, { mimeType });
+        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+        mediaRecorder.onstop = onEnregistrementTermine;
+
+        mediaRecorder.start();
+        instrumentalSourceNode.start(0);
+        instrumentalSourceNode.onended = () => { if (recording) arreterEnregistrement(); };
+
+        recording = true;
+        recordStartTime = Date.now();
+        document.getElementById('btn-record').innerHTML = '<i class="fas fa-stop"></i> Arrêter';
+        document.getElementById('studio-result').style.display = 'none';
+        timerInterval = setInterval(updateTimer, 250);
+    }
+
+    function updateTimer() {
+        const elapsed = Math.floor((Date.now() - recordStartTime) / 1000);
+        const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+        const ss = String(elapsed % 60).padStart(2, '0');
+        document.getElementById('studio-timer').textContent = `${mm}:${ss}`;
+    }
+
+    function arreterEnregistrement() {
+        recording = false;
+        clearInterval(timerInterval);
+        document.getElementById('btn-record').innerHTML = '<i class="fas fa-circle"></i> Enregistrer mon duo';
+        try { instrumentalSourceNode.stop(); } catch (e) {}
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    }
+
+    function onEnregistrementTermine() {
+        const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        document.getElementById('studio-result-audio').src = url;
+        document.getElementById('studio-download-link').href = url;
+        document.getElementById('studio-result').style.display = 'block';
+    }
+
+    /* ------------------------- FERMETURE / RÉINITIALISATION DU STUDIO ------------------------- */
+
+    function fermerStudio(silencieux) {
+        if (recording) arreterEnregistrement();
+        if (micStream) micStream.getTracks().forEach(t => t.stop());
+
+        micStream = null;
+        micSourceNode = null;
+        micGainNode = null;
+        recordDestination = null;
+        instrumentalBuffer = null;
+        filterChain = {};
+        activeEffects.clear();
+
+        document.querySelectorAll('#recording-studio .beat-pad.active').forEach(el => el.classList.remove('active'));
+        const feedback = document.getElementById('audio-effects-feedback');
+        if (feedback) feedback.textContent = '';
+        document.getElementById('btn-mic-permission').style.display = 'inline-flex';
+        document.getElementById('studio-record-area').style.display = 'none';
+        document.getElementById('studio-result').style.display = 'none';
+        document.getElementById('studio-timer').textContent = '00:00';
+
+        if (!silencieux) {
+            document.getElementById('recording-studio').style.display = 'none';
+        }
+    }
+</script>
+</body>
+</html>
+{% endblock %}

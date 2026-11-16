@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <title>{% if avantage %}{{ avantage.titre }}{% else %}{{ page.titre }}{% endif %} | Tsapi Verified</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* Même mode « page plein écran » que la page du badge : aucune autre page n'est affectée. */
+        body > .fn-header, body > .facenet-nav-bottom, body > #notification-container { display: none !important; }
+        body > main.facenet-container { max-width: 100% !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
+
+        :root, [data-theme="light"] {
+            --fn-blue: #0866FF; --fn-blue-hover: #0052cc; --fn-bg: #F0F2F5; --fn-gray: #65676B;
+            --fn-border: #E4E6EB; --white: #ffffff; --text-dark: #1C1E21; --card-shadow: rgba(0,0,0,.08);
+            --input-bg: #FAFAFA; --section-bg: #F7F9FA; --success-color: #12883B; --error-color: #D92D20;
+            --placeholder-bg: #EAF1FB;
+        }
+        [data-theme="dark"] {
+            --fn-bg: #18191A; --white: #242526; --text-dark: #E4E6EB; --fn-border: #3E4042; --fn-gray: #B0B3B8;
+            --card-shadow: rgba(0,0,0,.35); --input-bg: #3A3B3C; --section-bg: #1E2021;
+            --success-color: #34C759; --error-color: #FF453A; --placeholder-bg: #2A2F38;
+        }
+        body { background: var(--fn-bg); margin: 0; color: var(--text-dark);
+               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+               -webkit-tap-highlight-color: transparent; }
+        .ti-wrap { min-height: 100vh; padding-bottom: 40px; }
+
+        /* Barre du haut avec bouton retour */
+        .ti-top { position: sticky; top: 0; z-index: 20; background: var(--white); border-bottom: 1px solid var(--fn-border); }
+        .ti-top-in { max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 12px; padding: 10px 14px; }
+        .ti-back { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; border: none; cursor: pointer;
+                   background: var(--section-bg); color: var(--text-dark); font: inherit; font-weight: 700; font-size: 14px;
+                   padding: 10px 16px; border-radius: 999px; border: 1px solid var(--fn-border); transition: background .2s, transform .15s; }
+        .ti-back:hover { background: var(--fn-border); }
+        .ti-back:active { transform: scale(.96); }
+        .ti-back:focus-visible { outline: 3px solid rgba(8,102,255,.45); outline-offset: 2px; }
+        .ti-top-title { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+        .ti-main { max-width: 760px; margin: 0 auto; padding: 18px 14px 0; }
+
+        .ti-hero { background: var(--white); border: 1px solid var(--fn-border); border-radius: 18px; overflow: hidden;
+                   box-shadow: 0 2px 14px var(--card-shadow); }
+        .ti-hero-img { background: var(--placeholder-bg); padding: 14px; }
+        .ti-hero-img svg { width: 100%; height: auto; max-height: 280px; display: block; }
+        .ti-hero-txt { padding: 20px 20px 22px; }
+        .ti-kicker { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; letter-spacing: .5px;
+                     text-transform: uppercase; color: var(--fn-blue); margin-bottom: 8px; }
+        .ti-title { font-size: 28px; line-height: 1.15; font-weight: 800; letter-spacing: -.5px; margin: 0 0 8px; }
+        .ti-lead { font-size: 16px; line-height: 1.55; color: var(--fn-gray); margin: 0; }
+
+        .ti-section { margin-top: 26px; }
+        .ti-h2 { font-size: 20px; font-weight: 800; letter-spacing: -.2px; margin: 0 0 14px; }
+        .ti-card { background: var(--white); border: 1px solid var(--fn-border); border-radius: 16px; padding: 18px; }
+        .ti-card p { margin: 0 0 10px; font-size: 15px; line-height: 1.6; }
+        .ti-card p:last-child { margin-bottom: 0; }
+
+        .ti-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; counter-reset: s; }
+        .ti-step { display: flex; gap: 14px; background: var(--white); border: 1px solid var(--fn-border); border-radius: 16px; padding: 16px; }
+        .ti-step-n { flex: 0 0 34px; height: 34px; border-radius: 50%; background: var(--fn-blue); color: #fff; font-weight: 800;
+                     display: flex; align-items: center; justify-content: center; font-size: 15px; }
+        .ti-step h3 { margin: 2px 0 4px; font-size: 16px; font-weight: 700; }
+        .ti-step p { margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--fn-gray); }
+
+        .ti-points { display: grid; grid-template-columns: 1fr; gap: 12px; }
+        .ti-point { background: var(--white); border: 1px solid var(--fn-border); border-left: 4px solid var(--fn-blue); border-radius: 12px; padding: 14px 16px; }
+        .ti-point h3 { margin: 0 0 4px; font-size: 15px; font-weight: 700; }
+        .ti-point p { margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--fn-gray); }
+
+        .ti-note { display: flex; gap: 12px; background: rgba(255,149,0,.10); border: 1px solid rgba(255,149,0,.35); border-radius: 14px; padding: 14px 16px; font-size: 14.5px; line-height: 1.55; }
+        .ti-note i { color: #ff9500; margin-top: 3px; }
+
+        .ti-variants { display: grid; grid-template-columns: 1fr; gap: 12px; }
+        .ti-variant { background: var(--white); border: 1px solid var(--fn-border); border-radius: 14px; padding: 16px; }
+        .ti-variant .chip { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; background: rgba(8,102,255,.12); color: var(--fn-blue); margin-bottom: 8px; }
+        .ti-variant h3 { margin: 0 0 6px; font-size: 16px; }
+        .ti-variant p { margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--fn-gray); }
+
+        .ti-plans { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .ti-plan { display: flex; flex-direction: column; gap: 4px; padding: 14px; border-radius: 14px; border: 1.5px solid var(--fn-border); background: var(--white); }
+        .ti-plan.on { border-color: var(--fn-blue); background: rgba(8,102,255,.06); }
+        .ti-plan-n { font-weight: 800; font-size: 15px; }
+        .ti-plan-p { font-size: 13px; color: var(--fn-gray); }
+        .ti-plan-s { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; margin-top: 4px; }
+        .ti-plan.on .ti-plan-s { color: var(--success-color); }
+        .ti-plan.off .ti-plan-s { color: var(--fn-gray); }
+
+        details.ti-faq { background: var(--white); border: 1px solid var(--fn-border); border-radius: 12px; margin-bottom: 10px; }
+        details.ti-faq summary { cursor: pointer; padding: 14px 16px; font-weight: 700; font-size: 15px; list-style: none; display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+        details.ti-faq summary::-webkit-details-marker { display: none; }
+        details.ti-faq summary::after { content: '\f078'; font-family: 'Font Awesome 6 Free'; font-weight: 900; font-size: 12px; color: var(--fn-gray); transition: transform .2s; }
+        details.ti-faq[open] summary::after { transform: rotate(180deg); }
+        details.ti-faq p { margin: 0; padding: 0 16px 16px; font-size: 14.5px; line-height: 1.6; color: var(--fn-gray); }
+
+        .ti-others { display: grid; grid-template-columns: 1fr; gap: 8px; }
+        .ti-other { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: var(--white); border: 1px solid var(--fn-border);
+                    border-radius: 12px; text-decoration: none; color: var(--text-dark); font-size: 14.5px; font-weight: 600; transition: border-color .2s; }
+        .ti-other:hover { border-color: var(--fn-blue); }
+        .ti-other i:first-child { width: 22px; text-align: center; color: var(--fn-blue); }
+        .ti-other i:last-child { margin-left: auto; color: var(--fn-gray); font-size: 12px; }
+
+        .ti-cta { margin-top: 26px; text-align: center; }
+        .ti-btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; box-sizing: border-box;
+                  padding: 15px 18px; border: none; border-radius: 999px; background: var(--fn-blue); color: #fff; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; text-decoration: none; }
+        .ti-btn:hover { background: var(--fn-blue-hover); }
+
+        /* Pages légales */
+        .ti-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 12px; scrollbar-width: none; }
+        .ti-tabs::-webkit-scrollbar { display: none; }
+        .ti-tab { flex: 0 0 auto; padding: 9px 14px; border-radius: 999px; font-size: 14px; font-weight: 600; text-decoration: none; color: var(--text-dark);
+                  background: var(--white); border: 1px solid var(--fn-border); white-space: nowrap; }
+        .ti-tab.on { background: var(--fn-blue); border-color: var(--fn-blue); color: #fff; }
+        .ti-toc { background: var(--white); border: 1px solid var(--fn-border); border-radius: 14px; padding: 14px 18px; }
+        .ti-toc ol { margin: 8px 0 0; padding-left: 20px; }
+        .ti-toc li { margin: 4px 0; font-size: 14.5px; }
+        .ti-toc a { color: var(--fn-blue); text-decoration: none; }
+        .ti-toc a:hover { text-decoration: underline; }
+        .ti-legal-sec { margin-top: 22px; scroll-margin-top: 80px; }
+        .ti-legal-sec h2 { font-size: 18px; margin: 0 0 8px; font-weight: 800; }
+        .ti-legal-sec p { font-size: 15px; line-height: 1.7; margin: 0 0 10px; }
+        .ti-legal-sec ul { margin: 0 0 10px; padding-left: 22px; }
+        .ti-legal-sec li { font-size: 15px; line-height: 1.65; margin-bottom: 6px; }
+        .ti-meta { font-size: 13px; color: var(--fn-gray); margin-top: 8px; }
+        .ti-foot { text-align: center; font-size: 12px; color: var(--fn-gray); margin-top: 34px; }
+
+        @media (min-width: 640px) {
+            .ti-points, .ti-variants, .ti-others { grid-template-columns: repeat(2, 1fr); }
+            .ti-plans { grid-template-columns: repeat(4, 1fr); }
+            .ti-title { font-size: 34px; }
+        }
+        @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+    </style>
+{% endblock %}
+
+{% block content %}
+{# Badge réutilisé par les illustrations #}
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+        <symbol id="fnBadge" viewBox="0 0 24 24">
+            <path fill="var(--fn-blue)" d="M 12.00,0.85 C 12.45,0.85 12.94,1.45 13.34,1.79 C 13.75,2.13 14.01,2.76 14.45,2.87 C 14.88,2.99 15.42,2.57 15.94,2.48 C 16.46,2.40 17.19,2.12 17.57,2.34 C 17.96,2.57 18.09,3.33 18.27,3.83 C 18.45,4.32 18.37,5.00 18.68,5.32 C 19.00,5.63 19.68,5.55 20.17,5.73 C 20.67,5.91 21.43,6.04 21.66,6.42 C 21.88,6.81 21.60,7.54 21.52,8.06 C 21.43,8.58 21.01,9.12 21.13,9.55 C 21.24,9.99 21.87,10.25 22.21,10.66 C 22.55,11.06 23.15,11.55 23.15,12.00 C 23.15,12.45 22.55,12.94 22.21,13.34 C 21.87,13.75 21.24,14.01 21.13,14.45 C 21.01,14.88 21.43,15.42 21.52,15.94 C 21.60,16.46 21.88,17.19 21.66,17.57 C 21.43,17.96 20.67,18.09 20.17,18.27 C 19.68,18.45 19.00,18.37 18.68,18.68 C 18.37,19.00 18.45,19.68 18.27,20.17 C 18.09,20.67 17.96,21.43 17.57,21.66 C 17.19,21.88 16.46,21.60 15.94,21.52 C 15.42,21.43 14.88,21.01 14.45,21.13 C 14.01,21.24 13.75,21.87 13.34,22.21 C 12.94,22.55 12.45,23.15 12.00,23.15 C 11.55,23.15 11.06,22.55 10.66,22.21 C 10.25,21.87 9.99,21.24 9.55,21.13 C 9.12,21.01 8.58,21.43 8.06,21.52 C 7.54,21.60 6.81,21.88 6.43,21.66 C 6.04,21.43 5.91,20.67 5.73,20.17 C 5.55,19.68 5.63,19.00 5.32,18.68 C 5.00,18.37 4.32,18.45 3.83,18.27 C 3.33,18.09 2.57,17.96 2.34,17.58 C 2.12,17.19 2.40,16.46 2.48,15.94 C 2.57,15.42 2.99,14.88 2.87,14.45 C 2.76,14.01 2.13,13.75 1.79,13.34 C 1.45,12.94 0.85,12.45 0.85,12.00 C 0.85,11.55 1.45,11.06 1.79,10.66 C 2.13,10.25 2.76,9.99 2.87,9.55 C 2.99,9.12 2.57,8.58 2.48,8.06 C 2.40,7.54 2.12,6.81 2.34,6.42 C 2.57,6.04 3.33,5.91 3.83,5.73 C 4.32,5.55 5.00,5.63 5.32,5.32 C 5.63,5.00 5.55,4.32 5.73,3.83 C 5.91,3.33 6.04,2.57 6.42,2.34 C 6.81,2.12 7.54,2.40 8.06,2.48 C 8.58,2.57 9.12,2.99 9.55,2.87 C 9.99,2.76 10.25,2.13 10.66,1.79 C 11.06,1.45 11.55,0.85 12.00,0.85 Z"/>
+            <path fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" d="M7.3 12.2l3 3 6.2-6.6"/>
+        </symbol>
+    </defs>
+</svg>
+
+<div class="ti-wrap">
+    <header class="ti-top">
+        <div class="ti-top-in">
+            <button type="button" class="ti-back" id="tiBack" aria-label="Retour à la page précédente">
+                <i class="fas fa-arrow-left" aria-hidden="true"></i> Retour
+            </button>
+            <div class="ti-top-title">{% if avantage %}Détail de l’avantage{% else %}{{ page.titre }}{% endif %}</div>
+        </div>
+    </header>
+
+    <main class="ti-main">
+
+    {% if avantage %}
+        {# ═══════════ PAGE D'UN AVANTAGE ═══════════ #}
+        <section class="ti-hero">
+            <div class="ti-hero-img">{{ avantage.svg|safe }}</div>
+            <div class="ti-hero-txt">
+                <div class="ti-kicker"><i class="fas {{ avantage.icone }}" aria-hidden="true"></i> Tsapi Verified</div>
+                <h1 class="ti-title">{{ avantage.titre }}</h1>
+                <p class="ti-lead">{{ avantage.intro }}</p>
+            </div>
+        </section>
+
+        {% if avantage.variantes %}
+        <section class="ti-section">
+            <h2 class="ti-h2">Selon votre forfait</h2>
+            <div class="ti-variants">
+                {% for forfait, etiquette, texte in avantage.variantes %}
+                <div class="ti-variant"><span class="chip">{{ etiquette }}</span><h3>{{ forfait }}</h3><p>{{ texte }}</p></div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        <section class="ti-section">
+            <h2 class="ti-h2">Comment ça se passe</h2>
+            <ol class="ti-steps">
+                {% for titre, texte in avantage.etapes %}
+                <li class="ti-step"><span class="ti-step-n">{{ loop.index }}</span>
+                    <div><h3>{{ titre }}</h3><p>{{ texte }}</p></div></li>
+                {% endfor %}
+            </ol>
+        </section>
+
+        <section class="ti-section">
+            <h2 class="ti-h2">À savoir</h2>
+            <div class="ti-points">
+                {% for titre, texte in avantage.points %}
+                <div class="ti-point"><h3>{{ titre }}</h3><p>{{ texte }}</p></div>
+                {% endfor %}
+            </div>
+            {% if avantage.limites %}
+            <div class="ti-note" style="margin-top:12px"><i class="fas fa-circle-info" aria-hidden="true"></i><div>{{ avantage.limites }}</div></div>
+            {% endif %}
+        </section>
+
+        <section class="ti-section">
+            <h2 class="ti-h2">Inclus dans quels forfaits ?</h2>
+            <div class="ti-plans">
+                {% for p in plans %}
+                {% set inclus = p.id in avantage.plans %}
+                <div class="ti-plan {{ 'on' if inclus else 'off' }}">
+                    <span class="ti-plan-n">{{ p.nom }}</span>
+                    <span class="ti-plan-p">{{ p.prix }} / mois</span>
+                    <span class="ti-plan-s">{% if inclus %}<i class="fas fa-circle-check" aria-hidden="true"></i> Inclus{% else %}<i class="fas fa-lock" aria-hidden="true"></i> Non inclus{% endif %}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        {% if avantage.faq %}
+        <section class="ti-section">
+            <h2 class="ti-h2">Questions fréquentes</h2>
+            {% for q, r in avantage.faq %}
+            <details class="ti-faq"><summary>{{ q }}</summary><p>{{ r }}</p></details>
+            {% endfor %}
+        </section>
+        {% endif %}
+
+        <section class="ti-section">
+            <h2 class="ti-h2">Autres avantages</h2>
+            <div class="ti-others">
+                {% for a in autres %}
+                <a class="ti-other" href="{{ url_for('main.tsapi_info', slug=a.slug) }}"><i class="fas {{ a.icone }}" aria-hidden="true"></i> {{ a.titre }} <i class="fas fa-chevron-right" aria-hidden="true"></i></a>
+                {% endfor %}
+            </div>
+        </section>
+
+        <div class="ti-cta"><button type="button" class="ti-btn" id="tiBack2"><i class="fas fa-arrow-left" aria-hidden="true"></i> Retour aux forfaits</button></div>
+
+    {% else %}
+        {# ═══════════ PAGE LÉGALE / AIDE ═══════════ #}
+        <nav class="ti-tabs" aria-label="Documents">
+            {% for s in ordre %}
+            <a class="ti-tab {{ 'on' if s == slug else '' }}" href="{{ url_for('main.tsapi_info', slug=s) }}">{{ pages[s].titre }}</a>
+            {% endfor %}
+        </nav>
+
+        <section class="ti-hero">
+            <div class="ti-hero-txt">
+                <div class="ti-kicker"><i class="fas {{ page.icone }}" aria-hidden="true"></i> FaceNet · Tsapi Verified</div>
+                <h1 class="ti-title">{{ page.titre }}</h1>
+                <p class="ti-lead">{{ page.resume }}</p>
+                <p class="ti-meta">Dernière mise à jour : {{ date_maj }}</p>
+            </div>
+        </section>
+
+        <section class="ti-section">
+            <div class="ti-toc">
+                <strong>Sommaire</strong>
+                <ol>
+                    {% for titre, paras, puces in page.sections %}
+                    <li><a href="#sec-{{ loop.index }}">{{ titre }}</a></li>
+                    {% endfor %}
+                </ol>
+            </div>
+        </section>
+
+        {% for titre, paras, puces in page.sections %}
+        <section class="ti-legal-sec" id="sec-{{ loop.index }}">
+            <h2>{{ titre }}</h2>
+            {% for p in paras %}<p>{{ p }}</p>{% endfor %}
+            {% if puces %}<ul>{% for li in puces %}<li>{{ li }}</li>{% endfor %}</ul>{% endif %}
+        </section>
+        {% endfor %}
+
+        <div class="ti-cta"><button type="button" class="ti-btn" id="tiBack2"><i class="fas fa-arrow-left" aria-hidden="true"></i> Retour</button></div>
+    {% endif %}
+
+        <p class="ti-foot">FaceNet &copy; <span class="ti-year">2026</span> · Tous droits réservés</p>
+    </main>
+</div>
+
+<script>
+(function () {
+    var fallback = "{{ retour_url|e }}";
+    /* On compte les pages d'info parcourues à la suite (avantage → autre avantage → conditions…)
+       pour que « Retour » ramène directement à la page des forfaits, pas à la page d'info précédente. */
+    var hops = 0;
+    try {
+        var venantInfo = document.referrer && document.referrer.indexOf('/tsapi-info/') !== -1;
+        hops = venantInfo ? (parseInt(sessionStorage.getItem('tiHops') || '0', 10) + 1) : 0;
+        sessionStorage.setItem('tiHops', String(hops));
+    } catch (e) {}
+    function retour() {
+        var sameSite = document.referrer && document.referrer.indexOf(location.origin) === 0;
+        if (sameSite && history.length > hops + 1) { history.go(-(hops + 1)); } else { location.href = fallback; }
+    }
+    ['tiBack', 'tiBack2'].forEach(function (id) {
+        var b = document.getElementById(id);
+        if (b) b.addEventListener('click', retour);
+    });
+    /* Sommaire : défilement sans ajouter d'entrée dans l'historique (le bouton Retour reste fiable). */
+    document.querySelectorAll('.ti-toc a').forEach(function (a) {
+        a.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            var cible = document.querySelector(a.getAttribute('href'));
+            if (cible) cible.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
+    /* Année du pied de page : automatique. */
+    document.querySelectorAll('.ti-year').forEach(function (el) { el.textContent = String(new Date().getFullYear()); });
+    /* Thème : suit celui de l'appareil, comme la page du badge. */
+    try {
+        var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (!document.documentElement.getAttribute('data-theme')) document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    } catch (e) {}
+})();
+</script>
+{% endblock %}

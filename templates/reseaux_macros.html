@@ -1,0 +1,65 @@
+{# Logos officiels (couleurs de marque) des réseaux sociaux et sites web — partagé par profile.html et profil_liens.html #}
+{% set fn_reseaux_options = ['Site web','Facebook','Instagram','Twitter / X','TikTok','YouTube','LinkedIn','Snapchat','WhatsApp','Telegram','Messenger','Pinterest','Amazon','GitHub','GitLab','Twitch','Discord','Spotify','SoundCloud','Reddit','Medium','Behance','Dribbble','Vimeo','Skype','Viber','WeChat','Tumblr','Flickr','Quora','Mastodon','Patreon','Shopify','Etsy','eBay','PayPal','Google','Apple','Microsoft','Stack Overflow','Autre'] %}
+
+{% macro fn_reseau_icone(plat) -%}
+{%- set pl = (plat or '')|lower|trim -%}
+{%- set defs = [
+  ('messenger','fa-brands fa-facebook-messenger','#0084FF',0),
+  ('facebook','fa-brands fa-facebook','#1877F2',0),
+  ('instagram','fa-brands fa-instagram','#E4405F',0),
+  ('tiktok','fa-brands fa-tiktok','#000000',1),
+  ('youtube','fa-brands fa-youtube','#FF0000',0),
+  ('linkedin','fa-brands fa-linkedin','#0A66C2',0),
+  ('snapchat','fa-brands fa-snapchat','#FFFC00',0),
+  ('whatsapp','fa-brands fa-whatsapp','#25D366',0),
+  ('telegram','fa-brands fa-telegram','#26A5E4',0),
+  ('pinterest','fa-brands fa-pinterest','#BD081C',0),
+  ('amazon','fa-brands fa-amazon','#FF9900',0),
+  ('github','fa-brands fa-github','#181717',1),
+  ('gitlab','fa-brands fa-gitlab','#FC6D26',0),
+  ('twitch','fa-brands fa-twitch','#9146FF',0),
+  ('discord','fa-brands fa-discord','#5865F2',0),
+  ('spotify','fa-brands fa-spotify','#1DB954',0),
+  ('soundcloud','fa-brands fa-soundcloud','#FF5500',0),
+  ('reddit','fa-brands fa-reddit','#FF4500',0),
+  ('medium','fa-brands fa-medium','#000000',1),
+  ('behance','fa-brands fa-behance','#1769FF',0),
+  ('dribbble','fa-brands fa-dribbble','#EA4C89',0),
+  ('vimeo','fa-brands fa-vimeo','#1AB7EA',0),
+  ('skype','fa-brands fa-skype','#00AFF0',0),
+  ('viber','fa-brands fa-viber','#7360F2',0),
+  ('wechat','fa-brands fa-weixin','#07C160',0),
+  ('weixin','fa-brands fa-weixin','#07C160',0),
+  ('tumblr','fa-brands fa-tumblr','#36465D',1),
+  ('flickr','fa-brands fa-flickr','#0063DC',0),
+  ('quora','fa-brands fa-quora','#B92B27',0),
+  ('mastodon','fa-brands fa-mastodon','#6364FF',0),
+  ('patreon','fa-brands fa-patreon','#FF424D',0),
+  ('shopify','fa-brands fa-shopify','#7AB55C',0),
+  ('etsy','fa-brands fa-etsy','#F1641E',0),
+  ('ebay','fa-brands fa-ebay','#E53238',0),
+  ('paypal','fa-brands fa-paypal','#003087',1),
+  ('google','fa-brands fa-google','#4285F4',0),
+  ('apple','fa-brands fa-apple','#000000',1),
+  ('microsoft','fa-brands fa-microsoft','#00A4EF',0),
+  ('stack','fa-brands fa-stack-overflow','#F58025',0)
+] -%}
+{%- set ns = namespace(ic='fa-solid fa-link', co='#65676B', dk=0, ok=0, svg=0) -%}
+{%- if pl == 'x' or 'twitter' in pl -%}
+  {%- set ns.svg = 1 -%}{%- set ns.ok = 1 -%}
+{%- else -%}
+  {%- for k, ic, co, dk in defs -%}
+    {%- if not ns.ok and k in pl -%}{%- set ns.ic = ic -%}{%- set ns.co = co -%}{%- set ns.dk = dk -%}{%- set ns.ok = 1 -%}{%- endif -%}
+  {%- endfor -%}
+  {%- if not ns.ok and (pl.startswith('site') or 'web' in pl) -%}
+    {%- set ns.ic = 'fa-solid fa-globe' -%}{%- set ns.co = '#1877F2' -%}
+  {%- endif -%}
+{%- endif -%}
+{%- if ns.svg -%}<svg class="fn-b-dark" style="color:#000000" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>
+{%- else -%}<i class="{{ ns.ic }}{% if ns.dk %} fn-b-dark{% endif %}{% if 'snapchat' in pl %} fn-b-snap{% endif %}" style="color:{{ ns.co }}" aria-hidden="true"></i>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro fn_url(u) -%}{%- set l = (u or '')|trim -%}{{ l if (l|lower).startswith('http://') or (l|lower).startswith('https://') else 'https://' ~ l }}{%- endmacro %}
+
+{% macro fn_domaine(u) -%}{{ ((u or '')|replace('https://','')|replace('http://','')|replace('www.','')).split('/')[0] }}{%- endmacro %}

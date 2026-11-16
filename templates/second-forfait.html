@@ -1,0 +1,1327 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tsapi Verified | FaceNet</title>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Google libphonenumber -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/google-libphonenumber/3.2.33/libphonenumber.js"></script>
+
+    <style>
+        :root, [data-theme="light"] {
+            --fn-blue: #0866FF;
+            --fn-blue-hover: #0052cc;
+            --fn-bg: #F0F2F5;
+            --fn-gray: #65676B;
+            --fn-border: #E4E6EB;
+            --white: #ffffff;
+            --text-dark: #1C1E21;
+            --card-shadow: rgba(0, 0, 0, 0.08);
+            --card-shadow-hover: rgba(8, 102, 255, 0.15);
+            --input-bg: #FAFAFA;
+            --section-bg: #F7F9FA;
+            --success-color: #12883B;
+            --error-color: #D92D20;
+        }
+
+        [data-theme="dark"] {
+            --fn-bg: #18191A;
+            --white: #242526;
+            --text-dark: #E4E6EB;
+            --fn-border: #3E4042;
+            --fn-gray: #B0B3B8;
+            --card-shadow: rgba(0, 0, 0, 0.35);
+            --card-shadow-hover: rgba(69, 153, 255, 0.25);
+            --input-bg: #3A3B3C;
+            --section-bg: #1E2021;
+            --success-color: #34C759;
+            --error-color: #FF453A;
+        }
+
+        body {
+            background: var(--fn-bg);
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text-dark);
+            transition: background 0.3s ease, color 0.3s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .forfait-page-wrap {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 12px 60px 12px;
+            box-sizing: border-box;
+        }
+
+        .forfait-back-link {
+            width: 100%;
+            max-width: 620px;
+            margin: 0 auto 16px auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--text-dark);
+            text-decoration: none;
+            transition: transform 0.2s ease;
+        }
+
+        .forfait-back-link i { color: var(--fn-blue); }
+        .forfait-back-link:hover { transform: translateX(-3px); text-decoration: underline; }
+
+        .tsapi-card-wrapper {
+            max-width: 620px;
+            width: 100%;
+            margin: 0 auto;
+            background: var(--white);
+            border-radius: 24px;
+            box-shadow: 0 16px 48px var(--card-shadow);
+            overflow: hidden;
+            border: 1px solid var(--fn-border);
+        }
+
+        .tsapi-premium-header {
+            height: 190px;
+            background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 25%, #0866FF 60%, #7209b7 85%, #f72585 100%);
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-start;
+            padding: 0 0 20px 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header-decor-shapes {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .header-decor-shapes .shape-circle {
+            position: absolute;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 50%;
+        }
+        .shape-1 { width: 300px; height: 300px; top: -100px; right: -50px; }
+        .shape-2 { width: 180px; height: 180px; top: 10px; right: 120px; border-color: rgba(247, 37, 133, 0.3) !important; }
+
+        .header-decor-shapes .star-glow {
+            position: absolute;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+            animation: pulseGlow 3s infinite alternate;
+        }
+        .star-1 { top: 25px; left: 40%; font-size: 16px; color: #ffd700; }
+        .star-2 { top: 70px; right: 25%; font-size: 10px; color: #4cc9f0; }
+        .star-3 { top: 30px; right: 10%; font-size: 14px; color: #f72585; }
+
+        @keyframes pulseGlow {
+            0% { opacity: 0.3; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1.2); }
+        }
+
+        .tsapi-header-brand {
+            align-self: flex-end;
+            margin: 0 0 26px 14px;
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+            background: linear-gradient(90deg, #ffd700 0%, #4cc9f0 35%, #0866FF 60%, #f72585 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+            z-index: 2;
+        }
+
+        .tsapi-avatar-container {
+            position: relative;
+            width: 90px;
+            height: 90px;
+            border-radius: 22px;
+            background: linear-gradient(145deg, #ffffff, #e6eef8);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.25), 0 0 0 4px rgba(255, 255, 255, 0.8), 0 0 20px rgba(8, 102, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: -52px;
+            z-index: 2;
+            transform: rotate(-3deg);
+            transition: transform 0.3s ease;
+        }
+
+        .tsapi-avatar-container:hover {
+            transform: rotate(0deg) scale(1.05);
+        }
+
+        [data-theme="dark"] .tsapi-avatar-container {
+            background: linear-gradient(145deg, #242526, #1a1a1b);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5), 0 0 0 4px rgba(255, 255, 255, 0.15), 0 0 20px rgba(8, 102, 255, 0.3);
+        }
+
+        .tsapi-avatar-container .main-badge-icon {
+            width: 58px;
+            height: 58px;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 8px rgba(8, 102, 255, 0.4));
+            animation: badge3DSpin 6.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+        }
+
+        @keyframes badge3DSpin {
+            0% { transform: rotateY(0deg); }
+            23% { transform: rotateY(360deg); }
+            100% { transform: rotateY(360deg); }
+        }
+
+        .tsapi-content-area {
+            padding: 65px 20px 30px 20px;
+            text-align: left;
+        }
+
+        .tsapi-verified-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--text-dark);
+            margin: 0 0 6px 0;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tsapi-verified-subtitle {
+            color: var(--fn-gray);
+            font-size: 14px;
+            margin: 0 0 20px 0;
+            line-height: 1.5;
+        }
+
+        .fn-selected-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0 0 20px;
+            padding: 12px 14px;
+            border: 1px solid var(--fn-border);
+            border-radius: 14px;
+            background: var(--input-bg);
+        }
+
+        .fn-selected-profile .fn-name {
+            font-weight: 800;
+            color: var(--text-dark);
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .fn-selected-profile .fn-badge {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+        }
+
+        .fn-selected-profile small {
+            display: block;
+            margin-top: 2px;
+            color: var(--fn-gray);
+            font-size: 12px;
+        }
+
+        .tsapi-step-block {
+            background: var(--section-bg);
+            border: 1px solid var(--fn-border);
+            border-radius: 18px;
+            padding: 18px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        .form-section-title {
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 14px;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tsapi-plans-scroll-container {
+            display: flex !important;
+            flex-direction: row !important;
+            gap: 12px;
+            width: 100%;
+            overflow-x: auto !important;
+            overflow-y: hidden;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            padding: 4px 4px 12px 4px;
+            box-sizing: border-box;
+        }
+
+        .tsapi-plans-scroll-container::-webkit-scrollbar {
+            height: 6px;
+        }
+        .tsapi-plans-scroll-container::-webkit-scrollbar-thumb {
+            background: var(--fn-border);
+            border-radius: 10px;
+        }
+
+        .tsapi-plan-card {
+            flex: 0 0 78% !important;
+            min-width: 230px !important;
+            max-width: 270px !important;
+            scroll-snap-align: start;
+            box-sizing: border-box;
+            border: 2px solid var(--fn-border);
+            border-radius: 16px;
+            padding: 16px;
+            position: relative;
+            cursor: pointer;
+            background: var(--white);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+        }
+
+        .tsapi-plan-card:hover {
+            border-color: var(--fn-blue);
+        }
+
+        .tsapi-plan-card.selected {
+            border-color: var(--fn-blue);
+            background: rgba(8, 102, 255, 0.05);
+            box-shadow: 0 6px 16px var(--card-shadow-hover);
+        }
+
+        [data-theme="dark"] .tsapi-plan-card.selected {
+            background: rgba(69, 153, 255, 0.12);
+            border-color: #4599FF;
+        }
+
+        .tsapi-current-plan-card {
+            border: 2px solid var(--fn-blue);
+            background: rgba(8, 102, 255, 0.05);
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        [data-theme="dark"] .tsapi-current-plan-card {
+            background: rgba(69, 153, 255, 0.1);
+        }
+
+        .current-plan-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .current-plan-badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--fn-blue);
+            background: rgba(8, 102, 255, 0.12);
+            padding: 3px 10px;
+            border-radius: 20px;
+            margin-bottom: 6px;
+        }
+
+        .current-plan-name {
+            font-size: 20px;
+            font-weight: 800;
+            margin: 0 0 2px;
+            color: var(--text-dark);
+        }
+
+        .current-plan-price {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--fn-gray);
+        }
+
+        .current-plan-price span {
+            font-weight: 400;
+            font-size: 12px;
+        }
+
+        .current-plan-badge-icon {
+            width: 42px;
+            height: 42px;
+            flex-shrink: 0;
+            animation: badge3DSpin 6.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+        }
+
+        .current-plan-renewal {
+            font-size: 13px;
+            color: var(--fn-gray);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 0 0 14px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--fn-border);
+        }
+
+        .current-plan-features {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .current-plan-features li {
+            font-size: 14px;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .current-plan-features li i {
+            color: var(--success-color);
+            font-size: 15px;
+        }
+
+        .upgrade-card {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .btn-upgrade-plan {
+            margin-top: 12px;
+            width: 100%;
+            padding: 9px;
+            border: none;
+            border-radius: 10px;
+            background: var(--fn-blue);
+            color: white;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-upgrade-plan:hover {
+            background: var(--fn-blue-hover);
+        }
+
+        .tsapi-best-plan-msg {
+            text-align: center;
+            padding: 18px;
+            background: var(--section-bg);
+            border: 1px solid var(--fn-border);
+            border-radius: 14px;
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 14px;
+        }
+
+        .tsapi-best-plan-msg i {
+            color: #f5a623;
+            margin-right: 8px;
+        }
+
+        .tsapi-plan-radio {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            width: 18px;
+            height: 18px;
+            accent-color: var(--fn-blue);
+            cursor: pointer;
+        }
+
+        .tsapi-plan-name { font-size: 16px; font-weight: 700; color: var(--text-dark); margin: 0 0 4px 0; }
+        .tsapi-plan-price { font-size: 18px; font-weight: 800; color: var(--fn-blue); margin-bottom: 10px; }
+        .tsapi-plan-features { font-size: 12px; color: var(--fn-gray); line-height: 1.6; margin: 0; padding-left: 14px; }
+        
+        .inline-badge-icon {
+            width: 14px;
+            height: 14px;
+            vertical-align: -2px;
+            margin-right: 3px;
+        }
+
+        .tsapi-input-group {
+            margin-bottom: 16px;
+            position: relative;
+        }
+
+        .tsapi-input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            font-size: 13px;
+            color: var(--text-dark);
+        }
+
+        .tsapi-input-group select,
+        .tsapi-input-group input[type="text"],
+        .tsapi-input-group input[type="tel"],
+        .tsapi-input-group input[type="email"] {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1.5px solid var(--fn-border);
+            border-radius: 10px;
+            font-size: 14px;
+            box-sizing: border-box;
+            background: var(--input-bg);
+            color: var(--text-dark);
+            font-family: inherit;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .tsapi-input-group select:focus,
+        .tsapi-input-group input:focus {
+            border-color: var(--fn-blue);
+            box-shadow: 0 0 0 3px rgba(8, 102, 255, 0.12);
+        }
+
+        .card-type-icon {
+            position: absolute;
+            right: 14px;
+            top: 38px;
+            font-size: 20px;
+            color: var(--fn-gray);
+        }
+
+        .tsapi-input-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .tsapi-input-row .tsapi-input-group { flex: 1; margin-bottom: 0; }
+
+        .upload-feedback {
+            font-size: 12px;
+            margin-top: 6px;
+            font-weight: 500;
+            color: var(--fn-gray);
+        }
+        .upload-feedback.error { color: var(--error-color); font-weight: 600; }
+
+        .phone-country-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        .phone-country-row > .tsapi-input-group:first-child { flex: 0 0 46%; }
+        .phone-country-row > .tsapi-input-group:last-child { flex: 1 1 auto; min-width: 0; }
+        .phone-country-row .tsapi-input-group { margin-bottom: 0; }
+
+        .field-valid {
+            border-color: var(--success-color) !important;
+            box-shadow: 0 0 0 3px rgba(18, 136, 59, 0.15) !important;
+        }
+
+        .field-invalid {
+            border-color: var(--error-color) !important;
+            box-shadow: 0 0 0 3px rgba(217, 45, 32, 0.15) !important;
+        }
+
+        .phone-status {
+            min-height: 20px;
+            margin-top: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .phone-status.ok { color: var(--success-color); }
+        .phone-status.error { color: var(--error-color); }
+
+        .title-badge-icon {
+            width: 22px;
+            height: 22px;
+            object-fit: contain;
+        }
+
+        .btn-subscribe-tsapi {
+            background: var(--fn-blue);
+            color: #ffffff;
+            border: none;
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(8, 102, 255, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        .btn-subscribe-tsapi:hover {
+            background: var(--fn-blue-hover);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+
+<div class="forfait-page-wrap">
+    <a href="{{ url_for('main.settings') }}" class="forfait-back-link">
+        <i class="fas fa-arrow-left"></i> Retour aux paramètres
+    </a>
+
+    <div class="tsapi-card-wrapper">
+        <div class="tsapi-premium-header">
+            <div class="header-decor-shapes">
+                <div class="shape-circle shape-1"></div>
+                <div class="shape-circle shape-2"></div>
+                <i class="fas fa-star star-glow star-1"></i>
+                <i class="fas fa-sparkles star-glow star-2"></i>
+                <i class="fas fa-certificate star-glow star-3"></i>
+            </div>
+
+            <div class="tsapi-avatar-container">
+                <svg class="main-badge-icon" viewBox="0 0 24 24" role="img" aria-label="Badge Premium"><path fill="#1877F2" d="M12,2L14.4 4.3L17.7 3.8L18.9 7L22.2 7.7L21.1 11L22.9 13.9L20.2 16.2L20.3 19.5L17.1 20L15.2 22.8L12 21.6L8.8 22.8L6.9 20L3.7 19.5L3.8 16.2L1.1 13.9L2.9 11L1.8 7.7L5.1 7L6.3 3.8L9.6 4.3L12 2Z"/><path fill="white" d="M10.5 15.6L6.4 11.8L7.8 10.4L10.2 12.8L16.2 6.8L17.6 8.2L10.2 15.6Z"/></svg>
+            </div>
+            <span class="tsapi-header-brand">Tsapi Verified</span>
+        </div>
+
+        <div class="tsapi-content-area">
+            <div class="fn-selected-profile">
+                <div>
+                    <div class="fn-name">
+                        {{ current_user.nom_complet if current_user.is_authenticated and current_user.nom_complet else 'Utilisateur FaceNet' }}
+                        <svg class="fn-badge" viewBox="0 0 24 24" role="img" aria-label="Badge bleu vérifié"><path fill="#1877F2" d="M12,2L14.4 4.3L17.7 3.8L18.9 7L22.2 7.7L21.1 11L22.9 13.9L20.2 16.2L20.3 19.5L17.1 20L15.2 22.8L12 21.6L8.8 22.8L6.9 20L3.7 19.5L3.8 16.2L1.1 13.9L2.9 11L1.8 7.7L5.1 7L6.3 3.8L9.6 4.3L12 2Z"/><path fill="white" d="M10.5 15.6L6.4 11.8L7.8 10.4L10.2 12.8L16.2 6.8L17.6 8.2L10.2 15.6Z"/></svg>
+                    </div>
+                    <small>Aperçu en direct sur votre profil</small>
+                </div>
+            </div>
+
+            <div class="tsapi-input-group" style="margin-bottom: 18px;">
+                <label for="display_currency_select"><i class="fas fa-globe" style="color: var(--fn-blue);"></i> Afficher les prix en</label>
+                <select id="display_currency_select" onchange="convertirDevise(this.value)">
+                    <option value="CM">🇨🇲 Cameroun — Franc CFA (XAF)</option>
+                    <option value="CF">🇨🇫 Centrafrique — Franc CFA (XAF)</option>
+                    <option value="CG">🇨🇬 Congo — Franc CFA (XAF)</option>
+                    <option value="GA">🇬🇦 Gabon — Franc CFA (XAF)</option>
+                    <option value="TD">🇹🇩 Tchad — Franc CFA (XAF)</option>
+                    <option value="CI">🇨🇮 Côte d'Ivoire — Franc CFA (XOF)</option>
+                    <option value="BJ">🇧🇯 Bénin — Franc CFA (XOF)</option>
+                    <option value="BF">🇧🇫 Burkina Faso — Franc CFA (XOF)</option>
+                    <option value="ML">🇲🇱 Mali — Franc CFA (XOF)</option>
+                    <option value="SN">🇸🇳 Sénégal — Franc CFA (XOF)</option>
+                    <option value="TG">🇹🇬 Togo — Franc CFA (XOF)</option>
+                    <option value="FR">🇫🇷 France — Euro (EUR)</option>
+                    <option value="BE">🇧🇪 Belgique — Euro (EUR)</option>
+                    <option value="DE">🇩🇪 Allemagne — Euro (EUR)</option>
+                    <option value="ES">🇪🇸 Espagne — Euro (EUR)</option>
+                    <option value="IT">🇮🇹 Italie — Euro (EUR)</option>
+                    <option value="US">🇺🇸 États-Unis — Dollar (USD)</option>
+                    <option value="CA">🇨🇦 Canada — Dollar canadien (CAD)</option>
+                    <option value="GB">🇬🇧 Royaume-Uni — Livre Sterling (GBP)</option>
+                    <option value="CH">🇨🇭 Suisse — Franc suisse (CHF)</option>
+                    <option value="MA">🇲🇦 Maroc — Dirham (MAD)</option>
+                    <option value="DZ">🇩🇿 Algérie — Dinar (DZD)</option>
+                    <option value="SA">🇸🇦 Arabie Saoudite — Riyal (SAR)</option>
+                    <option value="NG">🇳🇬 Nigeria — Naira (NGN)</option>
+                    <option value="AO">🇦🇴 Angola — Kwanza (AOA)</option>
+                    <option value="CD">🇨🇩 RD Congo — Franc congolais (CDF)</option>
+                    <option value="GN">🇬🇳 Guinée — Franc guinéen (GNF)</option>
+                </select>
+                <div class="upload-feedback" id="currency_note">Les montants sont convertis à titre indicatif. Le paiement est toujours traité en Franc CFA.</div>
+            </div>
+
+            {% if current_user.badge_expire %}
+            <h1 class="tsapi-verified-title">
+                <svg class="title-badge-icon" viewBox="0 0 24 24" role="img" aria-label="Badge vérifié"><path fill="#1877F2" d="M12,2L14.4 4.3L17.7 3.8L18.9 7L22.2 7.7L21.1 11L22.9 13.9L20.2 16.2L20.3 19.5L17.1 20L15.2 22.8L12 21.6L8.8 22.8L6.9 20L3.7 19.5L3.8 16.2L1.1 13.9L2.9 11L1.8 7.7L5.1 7L6.3 3.8L9.6 4.3L12 2Z"/><path fill="white" d="M10.5 15.6L6.4 11.8L7.8 10.4L10.2 12.8L16.2 6.8L17.6 8.2L10.2 15.6Z"/></svg>
+                Vos avantages
+            </h1>
+            <p class="tsapi-verified-subtitle">Merci pour ta confiance ! Voici ton forfait actuel et tout ce qu'il t'apporte.</p>
+
+            {% if current_user.plan_amount == 112000 %}
+                {% set plan_name, plan_price, plan_amount_num = "Max Plus", "112 000", 112000 %}
+                {% set plan_features = ["Toutes fonctionnalités", "Badge Officiel Or/Bleu", "Visibilité maximale"] %}
+                {% set upgrades = [] %}
+            {% elif current_user.plan_amount == 78000 %}
+                {% set plan_name, plan_price, plan_amount_num = "Max", "78 000", 78000 %}
+                {% set plan_features = ["Badge Vérifié", "Protection renforcée", "Support VIP 24/7"] %}
+                {% set upgrades = [{"amount": 112000, "name": "Max Plus", "price": "112 000", "features": ["Toutes fonctionnalités", "Badge Officiel Or/Bleu", "Visibilité maximale"]}] %}
+            {% elif current_user.plan_amount == 12000 %}
+                {% set plan_name, plan_price, plan_amount_num = "Premium", "12 000", 12000 %}
+                {% set plan_features = ["Badge Vérifié", "Protection anti-usurpation", "Recherche prioritaire"] %}
+                {% set upgrades = [
+                    {"amount": 78000, "name": "Max", "price": "78 000", "features": ["Badge Vérifié", "Protection renforcée", "Support VIP 24/7"]},
+                    {"amount": 112000, "name": "Max Plus", "price": "112 000", "features": ["Toutes fonctionnalités", "Badge Officiel Or/Bleu", "Visibilité maximale"]}
+                ] %}
+            {% else %}
+                {% set plan_name, plan_price, plan_amount_num = "Standard", "4 500", 4500 %}
+                {% set plan_features = ["Badge Vérifié", "Protection anti-usurpation", "Boost visibilité commentaires"] %}
+                {% set upgrades = [
+                    {"amount": 12000, "name": "Premium", "price": "12 000", "features": ["Badge Vérifié", "Protection anti-usurpation", "Recherche prioritaire"]},
+                    {"amount": 78000, "name": "Max", "price": "78 000", "features": ["Badge Vérifié", "Protection renforcée", "Support VIP 24/7"]},
+                    {"amount": 112000, "name": "Max Plus", "price": "112 000", "features": ["Toutes fonctionnalités", "Badge Officiel Or/Bleu", "Visibilité maximale"]}
+                ] %}
+            {% endif %}
+
+            <div class="tsapi-current-plan-card">
+                <div class="current-plan-header">
+                    <div>
+                        <span class="current-plan-badge">Forfait actuel</span>
+                        <h2 class="current-plan-name">{{ plan_name }}</h2>
+                        <div class="current-plan-price">
+                            <span class="price-display" data-fcfa="{{ plan_amount_num }}">{{ plan_price }} FCFA</span>
+                            <span>/mois</span>
+                        </div>
+                    </div>
+                    <svg class="current-plan-badge-icon" viewBox="0 0 24 24" role="img" aria-label="Badge vérifié"><path fill="#1877F2" d="M12,2L14.4 4.3L17.7 3.8L18.9 7L22.2 7.7L21.1 11L22.9 13.9L20.2 16.2L20.3 19.5L17.1 20L15.2 22.8L12 21.6L8.8 22.8L6.9 20L3.7 19.5L3.8 16.2L1.1 13.9L2.9 11L1.8 7.7L5.1 7L6.3 3.8L9.6 4.3L12 2Z"/><path fill="white" d="M10.5 15.6L6.4 11.8L7.8 10.4L10.2 12.8L16.2 6.8L17.6 8.2L10.2 15.6Z"/></svg>
+                </div>
+                <p class="current-plan-renewal">
+                    <i class="fas fa-rotate"></i>
+                    Renouvellement le <strong>{{ current_user.badge_expire.strftime('%d %B %Y') }}</strong>
+                </p>
+                <ul class="current-plan-features">
+                    {% for feature in plan_features %}
+                    <li>
+                        {% if 'Badge' in feature %}
+                        <svg class="inline-badge-icon" viewBox="0 0 24 24" role="img" aria-label="Badge"><path fill="#1877F2" d="M12,2L14.4 4.3L17.7 3.8L18.9 7L22.2 7.7L21.1 11L22.9 13.9L20.2 16.2L20.3 19.5L17.1 20L15.2 22.8L12 21.6L8.8 22.8L6.9 20L3.7 19.5L3.8 16.2L1.1 13.9L2.9 11L1.8 7.7L5.1 7L6.3 3.8L9.6 4.3L12 2Z"/><path fill="white" d="M10.5 15.6L6.4 11.8L7.8 10.4L10.2 12.8L16.2 6.8L17.6 8.2L10.2 15.6Z"/></svg>
+                        {% else %}
+                        <i class="fas fa-check-circle"></i>
+                        {% endif %}
+                        {{ feature }}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            {% if upgrades %}
+            <div class="tsapi-step-block">
+                <div class="form-section-title">
+                    <i class="fas fa-arrow-up" style="color: var(--fn-blue);"></i>
+                    Augmentez votre crédibilité
+                </div>
+                <p style="font-size:13px; color:var(--fn-gray); margin:0 0 14px;">Passez à un forfait supérieur pour plus de visibilité et de protection.</p>
+                <div class="tsapi-plans-scroll-container">
+                    {% for plan in upgrades %}
+                    <div class="tsapi-plan-card upgrade-card">
+                        <div class="tsapi-plan-name">{{ plan.name }}</div>
+                        <div class="tsapi-plan-price">
+                            <span class="price-display" data-fcfa="{{ plan.amount }}">{{ plan.price }} FCFA</span>
+                            <span style="font-size:11px; font-weight:normal; color:var(--fn-gray);">/mois</span>
+                        </div>
+                        <ul class="tsapi-plan-features">
+                            {% for f in plan.features %}
+                            <li>
+                                {% if 'Badge' in f %}
+                                <svg class="inline-badge-icon" viewBox="0 0 24 24" role="img" aria-label="Badge"><path fill="#1877F2" d="M12,2L14.4 4.3L17.7 3.8L18.9 7L22.2 7.7L21.1 11L22.9 13.9L20.2 16.2L20.3 19.5L17.1 20L15.2 22.8L12 21.6L8.8 22.8L6.9 20L3.7 19.5L3.8 16.2L1.1 13.9L2.9 11L1.8 7.7L5.1 7L6.3 3.8L9.6 4.3L12 2Z"/><path fill="white" d="M10.5 15.6L6.4 11.8L7.8 10.4L10.2 12.8L16.2 6.8L17.6 8.2L10.2 15.6Z"/></svg>
+                                {% endif %}
+                                {{ f }} ✔
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        <button type="button" class="btn-upgrade-plan" onclick="revealUpgradeForm('{{ plan.amount }}')">
+                            Passer à ce forfait
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="tsapi-best-plan-msg">
+                <i class="fas fa-crown"></i> Vous avez déjà le meilleur forfait disponible !
+            </div>
+            {% endif %}
+
+            {% else %}
+            <h1 class="tsapi-verified-title">
+                <svg class="title-badge-icon" viewBox="0 0 24 24" role="img" aria-label="Badge vérifié"><path fill="#1877F2" d="M12,2L14.4 4.3L17.7 3.8L18.9 7L22.2 7.7L21.1 11L22.9 13.9L20.2 16.2L20.3 19.5L17.1 20L15.2 22.8L12 21.6L8.8 22.8L6.9 20L3.7 19.5L3.8 16.2L1.1 13.9L2.9 11L1.8 7.7L5.1 7L6.3 3.8L9.6 4.3L12 2Z"/><path fill="white" d="M10.5 15.6L6.4 11.8L7.8 10.4L10.2 12.8L16.2 6.8L17.6 8.2L10.2 15.6Z"/></svg>
+                Tsapi Verified
+            </h1>
+            <p class="tsapi-verified-subtitle">Abonnez-vous pour obtenir votre badge bleu, booster votre visibilité et sécuriser votre compte.</p>
+            {% endif %}
+
+            <form id="tsapi_payment_form" action="{{ url_for('main.process_payment') }}" method="POST" enctype="multipart/form-data" onsubmit="return validatePaymentForm(event)"
+                  {% if current_user.badge_expire %}style="display:none;"{% endif %}>
+                
+                <div class="tsapi-step-block">
+                    <div class="form-section-title">
+                        <i class="fas fa-layer-group" style="color: var(--fn-blue);"></i> 
+                        1. Choisissez votre forfait (glissez le doigt ➔)
+                    </div>
+
+                    <div class="tsapi-plans-scroll-container">
+                        <div class="tsapi-plan-card selected" onclick="selectPlan(this)">
+                            <input type="radio" name="amount" value="4500" class="tsapi-plan-radio" checked>
+                            <div class="tsapi-plan-name">Standard</div>
+                            <div class="tsapi-plan-price">
+                                <span class="price-display" data-fcfa="4500">4 500 FCFA</span>
+                                <span style="font-size:11px; font-weight:normal; color:var(--fn-gray);">/mois</span>
+                            </div>
+                            <ul class="tsapi-plan-features">
+                                <li><svg class="inline-badge-icon" viewBox="0 0 24 24" role="img" aria-label="Badge"><path fill="#1877F2" d="M12,2L14.4 4.3L17.7 3.8L18.9 7L22.2 7.7L21.1 11L22.9 13.9L20.2 16.2L20.3 19.5L17.1 20L15.2 22.8L12 21.6L8.8 22.8L6.9 20L3.7 19.5L3.8 16.2L1.1 13.9L2.9 11L1.8 7.7L5.1 7L6.3 3.8L9.6 4.3L12 2Z"/><path fill="white" d="M10.5 15.6L6.4 11.8L7.8 10.4L10.2 12.8L16.2 6.8L17.6 8.2L10.2 15.6Z"/></svg>Badge Vérifié ✔</li>
+                                <li>Protection anti-usurpation ✔</li>
+                                <li>Boost visibilité commentaires ✔</li>
+                            </ul>
+                        </div>
+
+                        <div class="tsapi-plan-card" onclick="selectPlan(this)">
+                            <input type="radio" name="amount" value="12000" class="tsapi-plan-radio">
+                            <div class="tsapi-plan-name">Premium</div>
+                            <div class="tsapi-plan-price">
+                                <span class="price-display" data-fcfa="12000">12 000 FCFA</span>
+                                <span style="font-size:11px; font-weight:normal; color:var(--fn-gray);">/mois</span>
+                            </div>
+                            <ul class="tsapi-plan-features">
+                                <li><svg class="inline-badge-icon" viewBox="0 0 24 24" role="img" aria-label="Badge"><path fill="#1877F2" d="M12,2L14.4 4.3L17.7 3.8L18.9 7L22.2 7.7L21.1 11L22.9 13.9L20.2 16.2L20.3 19.5L17.1 20L15.2 22.8L12 21.6L8.8 22.8L6.9 20L3.7 19.5L3.8 16.2L1.1 13.9L2.9 11L1.8 7.7L5.1 7L6.3 3.8L9.6 4.3L12 2Z"/><path fill="white" d="M10.5 15.6L6.4 11.8L7.8 10.4L10.2 12.8L16.2 6.8L17.6 8.2L10.2 15.6Z"/></svg>Badge Vérifié ✔</li>
+                                <li>Protection anti-usurpation ✔</li>
+                                <li>Recherche prioritaire ✔</li>
+                            </ul>
+                        </div>
+
+                        <div class="tsapi-plan-card" onclick="selectPlan(this)">
+                            <input type="radio" name="amount" value="78000" class="tsapi-plan-radio">
+                            <div class="tsapi-plan-name">Max</div>
+                            <div class="tsapi-plan-price">
+                                <span class="price-display" data-fcfa="78000">78 000 FCFA</span>
+                                <span style="font-size:11px; font-weight:normal; color:var(--fn-gray);">/mois</span>
+                            </div>
+                            <ul class="tsapi-plan-features">
+                                <li><svg class="inline-badge-icon" viewBox="0 0 24 24" role="img" aria-label="Badge"><path fill="#1877F2" d="M12,2L14.4 4.3L17.7 3.8L18.9 7L22.2 7.7L21.1 11L22.9 13.9L20.2 16.2L20.3 19.5L17.1 20L15.2 22.8L12 21.6L8.8 22.8L6.9 20L3.7 19.5L3.8 16.2L1.1 13.9L2.9 11L1.8 7.7L5.1 7L6.3 3.8L9.6 4.3L12 2Z"/><path fill="white" d="M10.5 15.6L6.4 11.8L7.8 10.4L10.2 12.8L16.2 6.8L17.6 8.2L10.2 15.6Z"/></svg>Badge Vérifié ✔</li>
+                                <li>Protection renforcée ✔</li>
+                                <li>Support VIP 24/7 ✔</li>
+                            </ul>
+                        </div>
+
+                        <div class="tsapi-plan-card" onclick="selectPlan(this)">
+                            <input type="radio" name="amount" value="112000" class="tsapi-plan-radio">
+                            <div class="tsapi-plan-name">Max Plus</div>
+                            <div class="tsapi-plan-price">
+                                <span class="price-display" data-fcfa="112000">112 000 FCFA</span>
+                                <span style="font-size:11px; font-weight:normal; color:var(--fn-gray);">/mois</span>
+                            </div>
+                            <ul class="tsapi-plan-features">
+                                <li>Toutes fonctionnalités ✔</li>
+                                <li><svg class="inline-badge-icon" viewBox="0 0 24 24" role="img" aria-label="Badge"><path fill="#1877F2" d="M12,2L14.4 4.3L17.7 3.8L18.9 7L22.2 7.7L21.1 11L22.9 13.9L20.2 16.2L20.3 19.5L17.1 20L15.2 22.8L12 21.6L8.8 22.8L6.9 20L3.7 19.5L3.8 16.2L1.1 13.9L2.9 11L1.8 7.7L5.1 7L6.3 3.8L9.6 4.3L12 2Z"/><path fill="white" d="M10.5 15.6L6.4 11.8L7.8 10.4L10.2 12.8L16.2 6.8L17.6 8.2L10.2 15.6Z"/></svg>Badge Officiel Or/Bleu ✔</li>
+                                <li>Visibilité maximale ✔</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tsapi-step-block">
+                    <div class="form-section-title">
+                        <i class="fas fa-credit-card" style="color: var(--fn-blue);"></i> 
+                        2. Moyen de facturation
+                    </div>
+
+                    <div class="tsapi-input-group">
+                        <label for="payment_method">Sélectionnez le mode de paiement</label>
+                        <select id="payment_method" name="method" onchange="togglePaymentFields()">
+                            <option value="momo">MTN MoMo / Orange Money / Mobile International</option>
+                            <option value="card">Carte Bancaire (Visa / Mastercard)</option>
+                            <option value="paypal">PayPal</option>
+                        </select>
+                    </div>
+
+                    <div id="payment-momo-fields" class="tsapi-input-group">
+                        <label>Numéro de Téléphone Mobile</label>
+                        <div class="phone-country-row">
+                            <div class="tsapi-input-group">
+                                <label for="phone_country">Pays du numéro</label>
+                                <select id="phone_country" name="phone_country">
+                                    <option value="CM" selected>Cameroun (+237)</option>
+                                    <option value="CI">Côte d’Ivoire (+225)</option>
+                                    <option value="SN">Sénégal (+221)</option>
+                                    <option value="GA">Gabon (+241)</option>
+                                    <option value="CG">Congo-Brazzaville (+242)</option>
+                                    <option value="CD">Congo-Kinshasa (+243)</option>
+                                    <option value="TD">Tchad (+235)</option>
+                                    <option value="CF">Centrafrique (+236)</option>
+                                    <option value="BJ">Bénin (+229)</option>
+                                    <option value="BF">Burkina Faso (+226)</option>
+                                    <option value="ML">Mali (+223)</option>
+                                    <option value="TG">Togo (+228)</option>
+                                    <option value="GN">Guinée (+224)</option>
+                                    <option value="FR">France (+33)</option>
+                                    <option value="US">États-Unis (+1)</option>
+                                    <option value="CA">Canada (+1)</option>
+                                </select>
+                            </div>
+
+                            <div class="tsapi-input-group">
+                                <label for="phone_number">Numéro local</label>
+                                <input
+                                    type="tel"
+                                    id="phone_number"
+                                    name="phone"
+                                    inputmode="tel"
+                                    autocomplete="tel"
+                                    placeholder="Saisissez le numéro"
+                                >
+                            </div>
+                        </div>
+                        <div id="phone_status" class="phone-status" role="status" aria-live="polite"></div>
+                        <div class="upload-feedback">
+                            Le système vérifie la longueur et le préfixe réseau officiel du pays sélectionné.
+                        </div>
+                    </div>
+
+                    <div id="payment-card-fields" class="tsapi-input-group" style="display:none;">
+                        <div class="tsapi-input-group">
+                            <label for="card_holder">Titulaire de la carte (Nom imprimé)</label>
+                            <input type="text" name="card_holder" id="card_holder" placeholder="EX: JEAN DUPONT" autocomplete="cc-name">
+                            <div class="upload-feedback error" id="card_holder_error" style="display:none;"></div>
+                        </div>
+
+                        <div class="tsapi-input-group">
+                            <label for="card_number">Numéro de Carte Bancaire</label>
+                            <input type="text" name="card_number" id="card_number" placeholder="xxxx xxxx xxxx xxxx" autocomplete="cc-number" oninput="detectCardType(this.value)">
+                            <i id="card_logo" class="far fa-credit-card card-type-icon"></i>
+                            <div class="upload-feedback error" id="card_number_error" style="display:none;"></div>
+                        </div>
+
+                        <div class="tsapi-input-row">
+                            <div class="tsapi-input-group">
+                                <label for="card_expiry">Expiration</label>
+                                <input type="text" name="card_expiry" id="card_expiry" placeholder="MM/AA" autocomplete="cc-exp">
+                                <div class="upload-feedback error" id="card_expiry_error" style="display:none;"></div>
+                            </div>
+                            <div class="tsapi-input-group">
+                                <label for="card_cvv">Code CVV</label>
+                                <input type="text" name="card_cvv" id="card_cvv" placeholder="123" autocomplete="cc-csc">
+                                <div class="upload-feedback error" id="card_cvv_error" style="display:none;"></div>
+                            </div>
+                        </div>
+
+                        <div class="tsapi-input-group" style="margin-top: 12px;">
+                            <label for="card_billing">Adresse de facturation</label>
+                            <input type="text" name="card_billing" id="card_billing" placeholder="Ex: Douala, Cameroun">
+                        </div>
+                    </div>
+
+                    <div id="payment-paypal-fields" class="tsapi-input-group" style="display:none;">
+                        <label for="paypal_email">Adresse E-mail du compte PayPal</label>
+                        <input type="email" id="paypal_email" name="paypal_email" placeholder="votre-compte@paypal.com" autocomplete="email">
+                        <div id="paypal_email_status" class="phone-status" role="status" aria-live="polite"></div>
+                        <div class="upload-feedback">
+                            Entrez l'adresse e-mail rattachée à votre compte PayPal officiel.
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-subscribe-tsapi">
+                    <i class="fas fa-lock" style="margin-right: 8px;"></i> Soumettre et Procéder au paiement
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const phoneCountry = document.getElementById('phone_country');
+    const phoneInput = document.getElementById('phone_number');
+    const phoneStatus = document.getElementById('phone_status');
+
+    function validateSelectedPhone(showEmpty = true) {
+        if (!phoneCountry || !phoneInput || !phoneStatus) return false;
+
+        const rawNumber = phoneInput.value.trim();
+        const countryCode = phoneCountry.value;
+
+        phoneInput.classList.remove('field-valid', 'field-invalid');
+        phoneStatus.className = 'phone-status';
+
+        if (!rawNumber) {
+            if (showEmpty) {
+                phoneStatus.innerHTML = '<i class="fas fa-exclamation-circle"></i> Veuillez entrer un numéro de téléphone.';
+                phoneStatus.classList.add('error');
+                phoneInput.classList.add('field-invalid');
+            } else {
+                phoneStatus.textContent = '';
+            }
+            return false;
+        }
+
+        try {
+            if (window.i18n && window.i18n.phonenumbers) {
+                const phoneUtil = i18n.phonenumbers.PhoneNumberUtil.getInstance();
+                const parsedNumber = phoneUtil.parseAndKeepRawInput(rawNumber, countryCode);
+
+                const isValidForRegion = phoneUtil.isValidNumberForRegion(parsedNumber, countryCode);
+                const isValidNumber = phoneUtil.isValidNumber(parsedNumber);
+
+                if (isValidForRegion && isValidNumber) {
+                    const formatted = phoneUtil.format(parsedNumber, i18n.phonenumbers.PhoneNumberFormat.INTERNATIONAL);
+                    phoneStatus.innerHTML = `<i class="fas fa-check-circle"></i> Numéro valide (${formatted})`;
+                    phoneStatus.classList.add('ok');
+                    phoneInput.classList.add('field-valid');
+                    return true;
+                }
+            } else {
+                if (rawNumber.length >= 8) {
+                    phoneStatus.innerHTML = `<i class="fas fa-check-circle"></i> Numéro saisi`;
+                    phoneStatus.classList.add('ok');
+                    phoneInput.classList.add('field-valid');
+                    return true;
+                }
+            }
+        } catch (e) {}
+
+        phoneStatus.innerHTML = `<i class="fas fa-times-circle"></i> Numéro invalide pour le pays (${countryCode}).`;
+        phoneStatus.classList.add('error');
+        phoneInput.classList.add('field-invalid');
+        return false;
+    }
+
+    if (phoneInput) {
+        phoneInput.addEventListener('input', () => validateSelectedPhone(false));
+        phoneInput.addEventListener('blur', () => validateSelectedPhone(true));
+    }
+
+    if (phoneCountry) {
+        phoneCountry.addEventListener('change', () => {
+            validateSelectedPhone(phoneInput.value.trim().length > 0);
+        });
+    }
+
+    const paypalEmail = document.getElementById('paypal_email');
+    const paypalStatus = document.getElementById('paypal_email_status');
+
+    function validatePaypalEmail(showEmpty = true) {
+        if (!paypalEmail || !paypalStatus) return true;
+        const email = paypalEmail.value.trim().toLowerCase();
+        
+        paypalEmail.classList.remove('field-valid', 'field-invalid');
+        paypalStatus.className = 'phone-status';
+
+        if (!email) {
+            if (showEmpty) {
+                paypalStatus.innerHTML = '<i class="fas fa-exclamation-circle"></i> Adresse e-mail requise.';
+                paypalStatus.classList.add('error');
+                paypalEmail.classList.add('field-invalid');
+            } else {
+                paypalStatus.textContent = '';
+            }
+            return false;
+        }
+
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(email)) {
+            paypalStatus.innerHTML = '<i class="fas fa-times-circle"></i> Adresse e-mail incomplète ou format invalide.';
+            paypalStatus.classList.add('error');
+            paypalEmail.classList.add('field-invalid');
+            return false;
+        }
+
+        paypalStatus.innerHTML = '<i class="fas fa-check-circle"></i> Compte PayPal valide.';
+        paypalStatus.classList.add('ok');
+        paypalEmail.classList.add('field-valid');
+        return true;
+    }
+
+    if (paypalEmail) {
+        paypalEmail.addEventListener('input', () => validatePaypalEmail(false));
+        paypalEmail.addEventListener('blur', () => validatePaypalEmail(true));
+    }
+
+    window.validateSelectedPhoneGlobal = validateSelectedPhone;
+    window.validatePaypalEmailGlobal = validatePaypalEmail;
+})();
+
+const cardHolderInput = document.getElementById('card_holder');
+if (cardHolderInput) {
+    cardHolderInput.addEventListener('input', function() {
+        this.value = this.value.toUpperCase();
+        const err = document.getElementById('card_holder_error');
+        if (err) err.style.display = 'none';
+        this.classList.remove('field-invalid');
+    });
+}
+
+function validateCardHolder() {
+    const holderVal = cardHolderInput ? cardHolderInput.value.trim() : '';
+    const err = document.getElementById('card_holder_error');
+    
+    const holderRegex = /^[A-ZÀ-ÖØ-ß\s'-]{3,}$/i;
+    const words = holderVal.split(/\s+/).filter(w => w.length > 0);
+
+    if (!holderVal || words.length < 2 || !holderRegex.test(holderVal)) {
+        if (err) {
+            err.textContent = "Veuillez entrer le nom complet affiché sur la carte (Prénom et Nom).";
+            err.style.display = 'block';
+        }
+        if (cardHolderInput) cardHolderInput.classList.add('field-invalid');
+        return false;
+    }
+
+    if (err) err.style.display = 'none';
+    if (cardHolderInput) {
+        cardHolderInput.classList.remove('field-invalid');
+        cardHolderInput.classList.add('field-valid');
+    }
+    return true;
+}
+
+const TAUX_PAR_PAYS = {
+    CM: { code: 'XAF', locale: 'fr-CM', tauxFcfa: 1 },
+    CF: { code: 'XAF', locale: 'fr-CF', tauxFcfa: 1 },
+    CG: { code: 'XAF', locale: 'fr-CG', tauxFcfa: 1 },
+    GA: { code: 'XAF', locale: 'fr-GA', tauxFcfa: 1 },
+    TD: { code: 'XAF', locale: 'fr-TD', tauxFcfa: 1 },
+    CI: { code: 'XOF', locale: 'fr-CI', tauxFcfa: 1 },
+    BJ: { code: 'XOF', locale: 'fr-BJ', tauxFcfa: 1 },
+    BF: { code: 'XOF', locale: 'fr-BF', tauxFcfa: 1 },
+    ML: { code: 'XOF', locale: 'fr-ML', tauxFcfa: 1 },
+    SN: { code: 'XOF', locale: 'fr-SN', tauxFcfa: 1 },
+    TG: { code: 'XOF', locale: 'fr-TG', tauxFcfa: 1 },
+    FR: { code: 'EUR', locale: 'fr-FR', tauxFcfa: 655.957 },
+    BE: { code: 'EUR', locale: 'fr-BE', tauxFcfa: 655.957 },
+    DE: { code: 'EUR', locale: 'de-DE', tauxFcfa: 655.957 },
+    ES: { code: 'EUR', locale: 'es-ES', tauxFcfa: 655.957 },
+    IT: { code: 'EUR', locale: 'it-IT', tauxFcfa: 655.957 },
+    US: { code: 'USD', locale: 'en-US', tauxFcfa: 570 },
+    CA: { code: 'CAD', locale: 'fr-CA', tauxFcfa: 413 },
+    GB: { code: 'GBP', locale: 'en-GB', tauxFcfa: 730 },
+    CH: { code: 'CHF', locale: 'fr-CH', tauxFcfa: 645 },
+    MA: { code: 'MAD', locale: 'fr-MA', tauxFcfa: 60.6 },
+    DZ: { code: 'DZD', locale: 'fr-DZ', tauxFcfa: 4.25 },
+    SA: { code: 'SAR', locale: 'ar-SA', tauxFcfa: 152 },
+    NG: { code: 'NGN', locale: 'en-NG', tauxFcfa: 0.368 },
+    AO: { code: 'AOA', locale: 'pt-AO', tauxFcfa: 0.6 },
+    CD: { code: 'CDF', locale: 'fr-CD', tauxFcfa: 0.204 },
+    GN: { code: 'GNF', locale: 'fr-GN', tauxFcfa: 0.066 },
+};
+
+function convertirDevise(paysCode) {
+    const taux = TAUX_PAR_PAYS[paysCode] || TAUX_PAR_PAYS.CM;
+    const isFcfaZone = (taux.code === 'XAF' || taux.code === 'XOF');
+
+    document.querySelectorAll('.price-display').forEach(el => {
+        const montantFcfa = parseFloat(el.getAttribute('data-fcfa'));
+        if (isNaN(montantFcfa)) return;
+
+        const montantConverti = montantFcfa / taux.tauxFcfa;
+
+        let texteAffiche;
+        try {
+            texteAffiche = new Intl.NumberFormat(taux.locale, {
+                style: 'currency',
+                currency: taux.code
+            }).format(montantConverti);
+        } catch (e) {
+            texteAffiche = montantConverti.toFixed(0) + ' ' + taux.code;
+        }
+
+        el.textContent = texteAffiche;
+    });
+
+    const note = document.getElementById('currency_note');
+    if (note) {
+        note.textContent = isFcfaZone
+            ? 'Les prix sont affichés et facturés en Franc CFA.'
+            : 'Montants convertis à titre indicatif (taux approximatif). Le paiement est toujours traité en Franc CFA.';
+    }
+}
+
+function revealUpgradeForm(amount) {
+    const formEl = document.getElementById('tsapi_payment_form');
+    formEl.style.display = 'block';
+
+    const radio = formEl.querySelector('input[name="amount"][value="' + amount + '"]');
+    if (radio) {
+        const card = radio.closest('.tsapi-plan-card');
+        if (card) selectPlan(card);
+    }
+
+    formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function selectPlan(card) {
+    const cards = document.querySelectorAll('.tsapi-plan-card');
+    cards.forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    
+    const radio = card.querySelector('.tsapi-plan-radio');
+    if (radio) radio.checked = true;
+
+    const selectedName = card.querySelector('.tsapi-plan-name')?.textContent?.trim();
+    const note = document.querySelector('.fn-selected-profile small');
+    if (note && selectedName) {
+        note.textContent = 'Forfait sélectionné : ' + selectedName + ' — Badge actif sur le profil';
+    }
+}
+
+function togglePaymentFields() {
+    const method = document.getElementById('payment_method').value;
+    document.getElementById('payment-momo-fields').style.display = method === 'momo' ? 'block' : 'none';
+    document.getElementById('payment-card-fields').style.display = method === 'card' ? 'block' : 'none';
+    document.getElementById('payment-paypal-fields').style.display = method === 'paypal' ? 'block' : 'none';
+}
+
+function detectCardType(number) {
+    const logo = document.getElementById('card_logo');
+    const cleanNumber = number.replace(/\s+/g, '');
+
+    if (cleanNumber.startsWith('4')) {
+        logo.className = "fab fa-cc-visa card-type-icon";
+        logo.style.color = "#0052cc";
+    } else if (/^(5[1-5]|222[1-9]|22[3-9]|2[3-6]|27[0-1]|2720)/.test(cleanNumber)) {
+        logo.className = "fab fa-cc-mastercard card-type-icon";
+        logo.style.color = "#FF5F00";
+    } else {
+        logo.className = "far fa-credit-card card-type-icon";
+        logo.style.color = "var(--fn-gray)";
+    }
+}
+
+function validatePaymentForm(event) {
+    const method = document.getElementById('payment_method').value;
+    let isValid = true;
+
+    if (method === 'momo') {
+        if (!window.validateSelectedPhoneGlobal(true)) {
+            isValid = false;
+            document.getElementById('phone_number').focus();
+        }
+    } else if (method === 'card') {
+        document.getElementById('card_holder_error').style.display = 'none';
+        document.getElementById('card_number_error').style.display = 'none';
+        document.getElementById('card_expiry_error').style.display = 'none';
+        document.getElementById('card_cvv_error').style.display = 'none';
+
+        if (!validateCardHolder()) {
+            isValid = false;
+            if (cardHolderInput) cardHolderInput.focus();
+        }
+
+        const cardNum = document.getElementById('card_number').value.replace(/\s+/g, '');
+        const cardExpiry = document.getElementById('card_expiry').value.trim();
+        const cardCvv = document.getElementById('card_cvv').value.trim();
+
+        if (cardNum.length < 16) {
+            const err = document.getElementById('card_number_error');
+            err.textContent = "Numéro de carte invalide (16 chiffres requis).";
+            err.style.display = 'block';
+            isValid = false;
+        }
+
+        if (!/^\d{2}\/\d{2}$/.test(cardExpiry)) {
+            const err = document.getElementById('card_expiry_error');
+            err.textContent = "Format incorrect (Utilisez MM/AA).";
+            err.style.display = 'block';
+            isValid = false;
+        } else {
+            const parts = cardExpiry.split('/');
+            const inputMonth = parseInt(parts[0], 10);
+            const inputYear = parseInt("20" + parts[1], 10);
+
+            const currentDate = new Date();
+            const currentYear = currentDate.getFullYear();
+            const currentMonth = currentDate.getMonth() + 1;
+
+            if (inputMonth < 1 || inputMonth > 12) {
+                const err = document.getElementById('card_expiry_error');
+                err.textContent = "Mois invalide (doit être entre 01 et 12).";
+                err.style.display = 'block';
+                isValid = false;
+            } else if (inputYear < currentYear || (inputYear === currentYear && inputMonth < currentMonth)) {
+                const err = document.getElementById('card_expiry_error');
+                err.textContent = "Cette carte bancaire a expiré.";
+                err.style.display = 'block';
+                isValid = false;
+            }
+        }
+
+        if (cardCvv.length < 3 || cardCvv.length > 4) {
+            const err = document.getElementById('card_cvv_error');
+            err.textContent = "CVV invalide (3 ou 4 chiffres requis).";
+            err.style.display = 'block';
+            isValid = false;
+        }
+
+    } else if (method === 'paypal') {
+        if (!window.validatePaypalEmailGlobal(true)) {
+            isValid = false;
+            document.getElementById('paypal_email').focus();
+        }
+    }
+
+    if (!isValid) {
+        event.preventDefault();
+    }
+    return isValid;
+}
+
+(function initCardFieldsFormatting() {
+    const cardNumberInput = document.getElementById('card_number');
+    const cardExpiryInput = document.getElementById('card_expiry');
+    const cardCvvInput = document.getElementById('card_cvv');
+
+    if (cardNumberInput) {
+        cardNumberInput.setAttribute('maxlength', '19');
+        cardNumberInput.addEventListener('input', function () {
+            let digits = this.value.replace(/\D/g, '').slice(0, 16);
+            this.value = digits.replace(/(.{4})/g, '$1 ').trim();
+        });
+    }
+
+    if (cardExpiryInput) {
+        cardExpiryInput.setAttribute('maxlength', '5');
+        cardExpiryInput.addEventListener('input', function () {
+            let digits = this.value.replace(/\D/g, '').slice(0, 4);
+            if (digits.length >= 3) {
+                this.value = digits.slice(0, 2) + '/' + digits.slice(2);
+            } else {
+                this.value = digits;
+            }
+        });
+    }
+
+    if (cardCvvInput) {
+        cardCvvInput.setAttribute('maxlength', '4');
+        cardCvvInput.addEventListener('input', function () {
+            this.value = this.value.replace(/\D/g, '').slice(0, 4);
+        });
+    }
+})();
+
+document.addEventListener('DOMContentLoaded', () => {
+    const select = document.getElementById('display_currency_select');
+    if (select) {
+        const langue = (navigator.language || 'fr-CM').toUpperCase();
+        let paysDevine = 'CM';
+        for (const code in TAUX_PAR_PAYS) {
+            if (langue.endsWith('-' + code)) { paysDevine = code; break; }
+        }
+        select.value = paysDevine;
+        convertirDevise(paysDevine);
+    }
+});
+</script>
+</body>
+</html>
+{% endblock %}

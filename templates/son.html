@@ -1,0 +1,607 @@
+{% extends "base.html" %}
+
+{% block body_class %} fn-sans-menu{% endblock %}
+
+{% block content %}
+{% set pub_id = request.view_args.pub_id if request and request.view_args else '' %}
+{% set liste = items|default([]) %}
+{% macro ic(n) %}<svg class="ic" aria-hidden="true" focusable="false"><use href="#i-{{ n }}"></use></svg>{% endmacro %}
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+<symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.2v13.6a1 1 0 0 0 1.5.9l11-6.8a1 1 0 0 0 0-1.8l-11-6.8A1 1 0 0 0 8 5.2z" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="5" width="4.2" height="14" rx="1.4" fill="currentColor" stroke="none"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.4" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20.5s-7.6-4.6-9.3-9.4C1.6 7.9 3.5 5 6.7 5c1.9 0 3.7 1.1 5.3 3 1.6-1.9 3.4-3 5.3-3 3.2 0 5.1 2.9 4 6.1-1.7 4.8-9.3 9.4-9.3 9.4z" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-comment" viewBox="0 0 24 24"><path d="M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-8.5L6 20.5V17H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M7 4h10a1 1 0 0 1 1 1v15l-6-4.2L6 20V5a1 1 0 0 1 1-1z"/></symbol>
+<symbol id="i-bookmark-on" viewBox="0 0 24 24"><path d="M7 4h10a1 1 0 0 1 1 1v15l-6-4.2L6 20V5a1 1 0 0 1 1-1z" fill="currentColor"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5.5M11 5.5 4.5 12l6.5 6.5"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></symbol>
+<symbol id="i-share" viewBox="0 0 24 24"><path d="M13.5 4.2l7.3 6.6a1.2 1.2 0 0 1 0 1.8l-7.3 6.6v-3.9c-5 0-8.2 1.3-10 4.6.2-6 3.5-9.4 10-9.8z" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-video" viewBox="0 0 24 24"><rect x="2.8" y="6" width="12.7" height="12" rx="3.2" fill="currentColor" stroke="none"/><path d="M16.8 10.4l4.4-2.9a.6.6 0 0 1 .9.5v8a.6.6 0 0 1-.9.5l-4.4-2.9z" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-music" viewBox="0 0 24 24"><path d="M9 17.5V6.2l10-2v11.3"/><circle cx="6.8" cy="17.6" r="2.4" fill="currentColor"/><circle cx="16.8" cy="15.6" r="2.4" fill="currentColor"/></symbol>
+<symbol id="i-image" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="3"/><circle cx="9" cy="10" r="1.6" fill="currentColor"/><path d="m4.5 17 4.8-4.4 3.8 3.3 2.8-2.4 3.6 3.4"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+<symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 2.8 3 15.2 0 18M12 3c-3 2.8-3 15.2 0 18"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="9" r="3.2"/><path d="M3.5 19c.5-3.2 2.8-5 5.5-5s5 1.8 5.5 5"/><circle cx="17" cy="9.5" r="2.5"/><path d="M16.5 14.2c2.4.2 4 1.7 4.5 4.3"/></symbol>
+<symbol id="i-house" viewBox="0 0 24 24"><path d="m4 11 8-6.5 8 6.5v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M10 20v-5h4v5"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9.5" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+</defs></svg>
+
+<style>
+.fn-son{--sb-grad:linear-gradient(135deg,#0866FF,#7a5cff);--sb-bleu:#0866FF;--sb-bg:var(--bg-card,#fff);--sb-tx:var(--text-dark,#14171f);--sb-mut:var(--gray-mid,#65676b);--sb-fill:rgba(127,127,127,.13);--sb-line:rgba(127,127,127,.24);position:relative;max-width:680px;margin:0 auto;padding:0 0 130px;color:var(--sb-tx);-webkit-tap-highlight-color:transparent}
+.fn-son *,.fn-sp *{box-sizing:border-box}
+.ic{width:1em;height:1em;display:inline-block;flex:none;vertical-align:-.14em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.fn-son button,.fn-sp button{font-family:inherit;-webkit-appearance:none;appearance:none}
+.fn-son :focus-visible,.fn-sp :focus-visible{outline:2.5px solid var(--sb-bleu);outline-offset:2px;border-radius:10px}
+
+/* Barre du haut */
+.fn-son-bar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:8px;padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top));transition:background .25s,box-shadow .25s}
+.fn-son-bar.scrolled{background:var(--sb-bg);background:color-mix(in srgb,var(--sb-bg) 82%,transparent);-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4);box-shadow:0 1px 0 var(--sb-line)}
+.fn-son-ib{flex:0 0 44px;width:44px;height:44px;border:0;border-radius:50%;background:transparent;color:inherit;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s,transform .15s}
+.fn-son-ib:hover{background:var(--sb-fill)}.fn-son-ib:active{transform:scale(.92)}
+.fn-son-rech{flex:1;min-width:0;display:flex;align-items:center;gap:9px;height:44px;padding:0 6px 0 14px;border-radius:14px;background:var(--sb-fill);box-shadow:inset 0 0 0 1.5px var(--sb-line);color:var(--sb-mut);font-size:18px;transition:box-shadow .2s,background .2s}
+.fn-son-rech:focus-within{box-shadow:inset 0 0 0 2px var(--sb-bleu);background:transparent}
+.fn-son-rech input{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;color:var(--sb-tx);font:inherit;font-size:15.5px}
+.fn-son-rech input::-webkit-search-cancel-button{display:none}
+.fn-son-eff{flex:0 0 34px;width:34px;height:34px;border:0;border-radius:50%;background:transparent;color:var(--sb-mut);font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.fn-son-eff[hidden]{display:none}
+
+/* En-tête */
+.fn-son-hero{position:relative;padding:6px 16px 4px;overflow:hidden;margin-top:-64px;padding-top:70px}
+.fn-son-fond{position:absolute;inset:-40px;width:calc(100% + 80px);height:calc(100% + 80px);object-fit:cover;filter:blur(46px) saturate(1.5);opacity:.38;z-index:0;pointer-events:none;-webkit-mask-image:linear-gradient(#000 55%,transparent);mask-image:linear-gradient(#000 55%,transparent)}
+.fn-son-hero::before{content:"";position:absolute;inset:0;z-index:0;background:radial-gradient(110% 80% at 0 0,rgba(8,102,255,.20),rgba(122,92,255,.08) 50%,transparent 80%);pointer-events:none}
+.fn-son-tete{position:relative;z-index:1;display:flex;align-items:center;gap:18px;padding:12px 0 8px}
+.fn-son-rond{position:relative;flex:0 0 clamp(96px,28vw,128px);width:clamp(96px,28vw,128px);height:clamp(96px,28vw,128px);border-radius:50%;background:var(--gray-light,#e4e6eb);color:#65676B;font-size:36px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px var(--sb-bg),0 0 0 5px rgba(8,102,255,.55),0 16px 34px rgba(8,102,255,.30)}
+.fn-son-rond>span{position:absolute;inset:0;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.fn-son-rond img{width:100%;height:100%;object-fit:cover;display:block}
+.fn-son-rond>span::after{content:"";position:absolute;left:50%;top:50%;width:17%;height:17%;transform:translate(-50%,-50%);border-radius:50%;background:var(--sb-bg);box-shadow:inset 0 0 0 2px rgba(0,0,0,.12)}
+.fn-son-rond.joue>span{animation:fnSonTourne 9s linear infinite}
+@keyframes fnSonTourne{to{transform:rotate(360deg)}}
+.fn-son-info{min-width:0;flex:1}
+.fn-son-info h1{display:flex;align-items:center;gap:10px;margin:0;font-size:clamp(22px,6.2vw,30px);font-weight:800;line-height:1.14;letter-spacing:-.4px;overflow-wrap:anywhere}
+.fn-son-pl{flex:0 0 34px;width:34px;height:34px;border:0;border-radius:50%;background:var(--sb-fill);box-shadow:inset 0 0 0 1px var(--sb-line);color:inherit;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .15s,background .2s}
+.fn-son-pl:active{transform:scale(.9)}
+.fn-son-eq{display:none;align-items:flex-end;gap:2.5px;height:16px}.fn-son-eq.on{display:inline-flex}
+.fn-son-eq i{display:block;width:3.5px;border-radius:2px;background:var(--sb-grad);height:30%;animation:fnSonEq .9s ease-in-out infinite}
+.fn-son-eq i:nth-child(2){animation-delay:.2s}.fn-son-eq i:nth-child(3){animation-delay:.45s}
+@keyframes fnSonEq{0%,100%{height:25%}50%{height:100%}}
+.fn-son-art{margin:7px 0 0;font-size:16.5px;font-weight:700;overflow-wrap:anywhere}
+.fn-son-nb{margin:6px 0 0;font-size:15.5px;color:var(--sb-mut)}
+.fn-son-meta{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
+.fn-son-meta span{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:var(--sb-fill);box-shadow:inset 0 0 0 1px var(--sb-line);font-size:13px;font-weight:600;color:var(--sb-mut)}
+.fn-son-meta b{color:var(--sb-tx);font-weight:800}
+.fn-son-barre{height:3px;margin:12px 16px 0;border-radius:3px;background:var(--sb-fill);overflow:hidden;opacity:0;transition:opacity .2s}.fn-son-barre.on{opacity:1}
+.fn-son-barre i{display:block;height:100%;width:0;background:var(--sb-grad)}
+.fn-son-enreg{display:flex;align-items:center;justify-content:center;gap:10px;width:calc(100% - 32px);margin:14px 16px 20px;padding:15px;border:0;border-radius:999px;background:var(--sb-fill);box-shadow:inset 0 0 0 1px var(--sb-line);color:inherit;font-size:17px;font-weight:700;cursor:pointer;transition:background .25s,color .25s,transform .12s}
+.fn-son-enreg:active{transform:scale(.985)}.fn-son-enreg.on{background:var(--sb-grad);color:#fff;box-shadow:0 10px 24px rgba(8,102,255,.35)}.fn-son-enreg:disabled{opacity:.7;cursor:default}
+
+/* Onglets */
+.fn-son-tri{position:relative;display:flex;border-bottom:1px solid var(--sb-line)}
+.fn-son-tri button{flex:1;padding:13px 0;border:0;background:transparent;color:inherit;font-size:15px;font-weight:700;opacity:.55;cursor:pointer;transition:opacity .2s}
+.fn-son-tri button[aria-selected="true"]{opacity:1}
+.fn-son-tri::after{content:"";position:absolute;left:0;bottom:-1px;width:50%;height:3px;border-radius:3px;background:var(--sb-grad);transform:translateX(calc(var(--i,0)*100%));transition:transform .3s cubic-bezier(.3,.8,.3,1)}
+
+/* Grille */
+.fn-son-grille{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5px}
+.fn-son-tuile{position:relative;display:block;aspect-ratio:3/4;overflow:hidden;color:#fff;text-decoration:none;background:linear-gradient(110deg,var(--sb-fill) 30%,rgba(127,127,127,.24) 46%,var(--sb-fill) 62%) 0 0/220% 100%;animation:fnSonShim 1.5s linear infinite}
+.fn-son-tuile.pret{animation:none;background:var(--sb-fill)}
+@keyframes fnSonShim{to{background-position:-220% 0}}
+.fn-son-tuile[hidden],.fn-son-vide[hidden]{display:none}
+.fn-son-tuile img,.fn-son-tuile video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;transition:transform .35s}
+.fn-son-tuile:hover img,.fn-son-tuile:hover video{transform:scale(1.04)}
+.fn-son-tuile:active{filter:brightness(.92)}
+.fn-son-txt{position:absolute;inset:0;padding:14px 12px 46px;font-size:13.5px;line-height:1.4;color:var(--sb-tx);background:linear-gradient(150deg,rgba(8,102,255,.20),rgba(122,92,255,.20));overflow:hidden;display:-webkit-box;-webkit-line-clamp:8;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+.fn-son-nota{position:absolute;top:8px;right:8px;z-index:2;font-size:16px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}
+.fn-son-tuile.ko img,.fn-son-tuile.ko video{display:none}
+.fn-son-tuile.ko::after{content:"♪";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:40px;color:var(--sb-mut);opacity:.6}
+.fn-son-orig{position:absolute;top:8px;left:8px;z-index:2;padding:3px 9px;border-radius:7px;background:var(--sb-grad);color:#fff;font-size:12px;font-weight:800;box-shadow:0 3px 10px rgba(8,102,255,.45)}
+.fn-son-bas{position:absolute;left:0;right:0;bottom:0;z-index:2;display:flex;flex-direction:column;gap:4px;padding:34px 8px 8px;background:linear-gradient(to top,rgba(0,0,0,.78),rgba(0,0,0,0))}
+.fn-son-bas .qui{font-size:11.5px;font-weight:600;opacity:.92;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fn-son-bas .ligne{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.fn-son-bas .vues{display:inline-flex;align-items:center;gap:4px;font-size:13.5px;font-weight:800}.fn-son-bas .vues .ic{font-size:12px}
+.fn-son-bas .rea{display:inline-flex;align-items:center;gap:8px;font-size:11.5px;font-weight:700}.fn-son-bas .rea span{display:inline-flex;align-items:center;gap:3px}.fn-son-bas .rea .ic{font-size:11px}
+.fn-son-vide{margin:22px 16px;padding:34px 18px;text-align:center;color:var(--sb-mut);font-size:15px;border:1.5px dashed var(--sb-line);border-radius:20px;background:var(--sb-fill)}
+.fn-son-vide .ic{display:block;margin:0 auto 12px;font-size:34px;opacity:.6}
+.fn-son-vide button{margin-top:14px;border:0;border-radius:999px;padding:11px 20px;background:var(--sb-grad);color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+
+/* Barre flottante */
+.fn-son-flot{position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;justify-content:center;gap:12px;padding:26px 16px 0;padding-bottom:max(14px,env(safe-area-inset-bottom));pointer-events:none;background:linear-gradient(to top,var(--sb-bg),transparent);background:linear-gradient(to top,color-mix(in srgb,var(--sb-bg) 70%,transparent),transparent)}
+.fn-son-pill{pointer-events:auto;flex:1 1 0;max-width:300px;display:flex;align-items:center;justify-content:center;gap:10px;border:0;border-radius:999px;padding:14px;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 10px 26px rgba(0,0,0,.3);transition:transform .12s,filter .15s;white-space:nowrap}
+.fn-son-pill:active{transform:scale(.97)}.fn-son-pill:hover{filter:brightness(1.04)}
+.fn-son-pill.blanc{background:var(--sb-bg);color:var(--sb-tx);box-shadow:0 10px 26px rgba(0,0,0,.28),inset 0 0 0 1px var(--sb-line)}
+.fn-son-pill.bleu{background:var(--sb-grad);color:#fff}
+.fn-son-pill .ic{font-size:19px}
+.fn-son-pill .mini{flex:0 0 30px;width:30px;height:30px;border-radius:50%;background:var(--sb-grad);color:#fff;display:flex;align-items:center;justify-content:center}.fn-son-pill .mini .ic{font-size:15px}
+
+/* Message */
+.fn-son-toast{position:fixed;left:50%;bottom:92px;z-index:100010;max-width:min(92vw,420px);padding:12px 18px;border-radius:14px;background:#14171f;color:#fff;font-size:14.5px;font-weight:600;text-align:center;box-shadow:0 12px 30px rgba(0,0,0,.4);opacity:0;pointer-events:none;transform:translate(-50%,12px);transition:opacity .25s,transform .25s}
+.fn-son-toast.on{opacity:1;transform:translate(-50%,0)}.fn-son-toast.err{background:#c62828}.fn-son-toast.ok{background:#1a7f4b}
+
+/* Écran « Publier le son » */
+.fn-sp{position:fixed;inset:0;z-index:100000;display:none;flex-direction:column;overflow:hidden;background:var(--bg-card,#fff);color:var(--text-dark,#14171f);font-family:inherit}
+.fn-sp.on{display:flex}
+.fn-sp-fond{position:absolute;inset:-60px;z-index:0;background:center/cover no-repeat;filter:blur(60px) saturate(1.7);opacity:.38;transform:scale(1.1);pointer-events:none}
+.fn-sp::before{content:"";position:absolute;inset:0;z-index:0;background:linear-gradient(to bottom,rgba(8,102,255,.10),rgba(122,92,255,.06) 50%,transparent);pointer-events:none}
+.fn-sp-top,.fn-sp-corps,.fn-sp-pied{position:relative;z-index:1}
+.fn-sp-top{display:flex;align-items:center;gap:10px;padding:12px 14px;padding-top:max(12px,env(safe-area-inset-top))}
+.fn-sp-top h2{margin:0;flex:1;font-size:19px;font-weight:800;letter-spacing:-.2px}
+.fn-sp-x{flex:0 0 44px;width:44px;height:44px;border:0;border-radius:50%;background:rgba(127,127,127,.18);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:inherit;font-size:19px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .15s}.fn-sp-x:active{transform:scale(.92)}
+.fn-sp-pas{display:flex;gap:6px}.fn-sp-pas i{width:8px;height:8px;border-radius:999px;background:rgba(127,127,127,.38);transition:width .3s,background .3s}.fn-sp-pas i.on{width:26px;background:linear-gradient(135deg,#0866FF,#7a5cff)}
+.fn-sp-corps{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:10px 18px 24px;display:flex;justify-content:center;align-items:flex-start}
+.fn-sp-etape{display:none;width:100%;max-width:520px;flex-direction:column;align-items:center}
+.fn-sp-etape.on{display:flex;animation:fnSpIn .38s cubic-bezier(.2,.8,.2,1) both}
+@keyframes fnSpIn{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+.fn-sp-cadre{position:relative;margin-top:8px}
+.fn-sp-cadre::before{content:"";position:absolute;inset:10% -4% -6%;border-radius:28px;background:#0866FF;filter:blur(38px);opacity:.35;z-index:-1}
+.fn-sp-cover{position:relative;width:min(76vw,330px);aspect-ratio:1/1;border-radius:26px;overflow:hidden;background:var(--gray-light,#e4e6eb);display:flex;align-items:center;justify-content:center;font-size:58px;color:#65676B;box-shadow:0 26px 60px rgba(0,0,0,.38);outline:1px solid rgba(255,255,255,.16);outline-offset:-1px;animation:fnSpFlotte 6s ease-in-out infinite}
+@keyframes fnSpFlotte{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.fn-sp-cover img{width:100%;height:100%;object-fit:cover;display:block}
+.fn-sp-ecoute{position:absolute;left:12px;bottom:12px;z-index:2;width:46px;height:46px;border:0;border-radius:50%;background:rgba(0,0,0,.45);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.fn-sp-note{position:absolute;right:-10px;bottom:-10px;width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:19px;background:linear-gradient(135deg,#0866FF,#7a5cff);box-shadow:0 8px 20px rgba(8,102,255,.5)}
+.fn-sp-titre{margin:26px 0 0;font-size:clamp(20px,5.6vw,26px);font-weight:800;letter-spacing:-.4px;text-align:center;overflow-wrap:anywhere}
+.fn-sp-art{margin:4px 0 0;font-size:16px;color:var(--gray-mid,#65676B);text-align:center;overflow-wrap:anywhere}
+.fn-sp-changer{margin-top:22px;display:inline-flex;align-items:center;gap:9px;border:0;border-radius:999px;padding:13px 22px;background:rgba(127,127,127,.16);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:inset 0 0 0 1px rgba(127,127,127,.24);color:inherit;font-size:16px;font-weight:700;cursor:pointer;transition:transform .15s}.fn-sp-changer:active{transform:scale(.96)}
+.fn-sp-aide{margin:10px 0 0;font-size:13px;color:var(--gray-mid,#65676B);text-align:center}
+.fn-sp-mini{display:flex;align-items:center;gap:12px;width:100%;padding:12px;margin-bottom:16px;border-radius:18px;background:rgba(127,127,127,.12);box-shadow:inset 0 0 0 1px rgba(127,127,127,.16)}
+.fn-sp-mini-img{flex:0 0 60px;width:60px;height:60px;border-radius:14px;overflow:hidden;background:var(--gray-light,#e4e6eb);color:#65676B;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(0,0,0,.25)}
+.fn-sp-mini-img img{width:100%;height:100%;object-fit:cover;display:block}
+.fn-sp-mini b{display:block;font-size:15px;overflow-wrap:anywhere}.fn-sp-mini span{display:block;font-size:13px;color:var(--gray-mid,#65676B);overflow-wrap:anywhere}
+.fn-sp-opt{display:flex;align-items:center;gap:14px;width:100%;margin-bottom:10px;padding:14px;border:0;border-radius:18px;background:rgba(127,127,127,.08);box-shadow:inset 0 0 0 1.5px rgba(127,127,127,.16);color:inherit;text-align:left;cursor:pointer;transition:transform .15s,box-shadow .2s,background .2s}
+.fn-sp-opt:active{transform:scale(.985)}
+.fn-sp-opt>.fn-sp-pic{flex:0 0 42px;width:42px;height:42px;border-radius:50%;background:rgba(127,127,127,.18);display:flex;align-items:center;justify-content:center;font-size:19px;transition:background .2s,color .2s}
+.fn-sp-lib{font-size:16px;font-weight:700}.fn-sp-sub{font-size:13px;color:var(--gray-mid,#65676B)}
+.fn-sp-ok{margin-left:auto;flex:0 0 24px;width:24px;height:24px;border-radius:50%;background:#1877f2;color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(.5);transition:opacity .2s,transform .2s}
+.fn-sp-opt.sel{background:rgba(24,119,242,.12);box-shadow:inset 0 0 0 2px #1877f2,0 8px 22px rgba(24,119,242,.2)}
+.fn-sp-opt.sel>.fn-sp-pic{background:linear-gradient(135deg,#0866FF,#7a5cff);color:#fff}.fn-sp-opt.sel .fn-sp-ok{opacity:1;transform:none}
+.fn-sp-story{display:flex;align-items:center;gap:12px;width:100%;margin-top:4px;padding:12px 14px;border-radius:16px;background:rgba(127,127,127,.08);box-shadow:inset 0 0 0 1.5px rgba(127,127,127,.16);cursor:pointer}
+.fn-sp-story b{display:block;font-size:14.5px}.fn-sp-story small{color:var(--gray-mid,#65676B);font-size:12px}
+.fn-sp-story input{flex:none;margin-left:auto;width:44px;height:26px;-webkit-appearance:none;appearance:none;border-radius:999px;background:rgba(127,127,127,.42);position:relative;cursor:pointer;transition:background .2s}
+.fn-sp-story input::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s}
+.fn-sp-story input:checked{background:#1877f2}.fn-sp-story input:checked::after{left:21px}.fn-sp-story input:disabled{opacity:.4;cursor:default}
+.fn-sp-pied{padding:18px 16px 12px;padding-bottom:max(14px,env(safe-area-inset-bottom));background:linear-gradient(to top,var(--bg-card,#fff) 55%,transparent)}
+.fn-sp-err{margin:0 0 10px;color:#d93025;font-size:14px;font-weight:600;text-align:center}.fn-sp-err[hidden]{display:none}
+.fn-sp-suivant{width:100%;border:0;border-radius:18px;padding:16px 18px;background:linear-gradient(135deg,#0866FF,#7a5cff);color:#fff;font-size:17px;font-weight:700;letter-spacing:.2px;cursor:pointer;box-shadow:0 12px 28px rgba(8,102,255,.42);transition:transform .15s,filter .15s}
+.fn-sp-suivant:active{transform:scale(.98)}.fn-sp-suivant:hover:not(:disabled){filter:brightness(1.07)}.fn-sp-suivant:disabled{opacity:.6;cursor:default}
+
+@media (max-width:380px){.fn-son-bas .rea{gap:5px;font-size:10.5px}.fn-son-bas .vues{font-size:12.5px}.fn-son-pill{font-size:14.5px;padding:13px 10px}.fn-son-pill .mini{display:none}}
+@media (min-width:700px){.fn-son-flot{max-width:680px;margin:0 auto}}
+@media (prefers-reduced-motion:reduce){.fn-son *,.fn-sp *{animation:none!important;transition:none!important}}
+</style>
+
+<div class="fn-son" id="fn-son">
+    <header class="fn-son-bar" id="fn-son-bar">
+        <button type="button" class="fn-son-ib" id="fn-son-retour" aria-label="Retour">{{ ic('back') }}</button>
+        <label class="fn-son-rech">{{ ic('search') }}<input type="search" id="fn-son-q" placeholder="Trouver du contenu associé" autocomplete="off" enterkeyhint="search" aria-label="Trouver du contenu associé"><button type="button" class="fn-son-eff" id="fn-son-eff" aria-label="Effacer la recherche" hidden>{{ ic('x') }}</button></label>
+        <button type="button" class="fn-son-ib" id="fn-son-partager" aria-label="Partager ce son">{{ ic('share') }}</button>
+    </header>
+
+    <section class="fn-son-hero">
+        {% if cover %}<img class="fn-son-fond" src="{{ cover }}" alt="" aria-hidden="true">{% endif %}
+        <div class="fn-son-tete">
+            <div class="fn-son-rond" id="fn-son-rond"><span>{% if cover %}<img src="{{ cover }}" alt="">{% else %}{{ ic('music') }}{% endif %}</span></div>
+            <div class="fn-son-info">
+                <h1>{{ titre|default('Son') }}{% if preview %}<button type="button" class="fn-son-pl" id="fn-son-play" aria-label="Écouter l’extrait">{{ ic('play') }}</button><span class="fn-son-eq" id="fn-son-eq" aria-hidden="true"><i></i><i></i><i></i></span>{% endif %}</h1>
+                {% if artiste %}<p class="fn-son-art">{{ artiste }}</p>{% endif %}
+                <p class="fn-son-nb">{{ (nb_publications|default(0))|compact }} publication{{ '' if (nb_publications|default(0)) == 1 else 's' }}</p>
+            </div>
+        </div>
+        <div class="fn-son-meta">
+            <span><b>{{ (nb_utilisateurs|default(0))|compact }}</b> créateur{{ '' if (nb_utilisateurs|default(0)) == 1 else 's' }}</span>
+            <span><b>{{ (total_vues|default(0))|compact }}</b> vue{{ '' if (total_vues|default(0)) == 1 else 's' }}</span>
+        </div>
+    </section>
+    <div class="fn-son-barre" id="fn-son-barre"><i></i></div>
+    <button type="button" class="fn-son-enreg" id="fn-son-enreg" aria-pressed="false"><span class="fn-son-enreg-ic">{{ ic('bookmark') }}</span> <span class="fn-son-enreg-tx">Enregistrer</span></button>
+
+    {% if liste %}
+    <div class="fn-son-tri" id="fn-son-tri" role="tablist" aria-label="Trier les publications">
+        <button type="button" role="tab" aria-selected="true" data-m="pop">Populaires</button>
+        <button type="button" role="tab" aria-selected="false" data-m="rec">Récents</button>
+    </div>
+    <div class="fn-son-grille" id="fn-son-grille">
+        {% for it in liste %}
+        <a class="fn-son-tuile" href="{{ it.lien }}" data-vues="{{ it.vues|default(0) }}" data-ordre="{{ loop.index }}" data-q="{{ ((it.auteur|default('')) ~ ' ' ~ (it.texte|default('')))|lower }}">
+            {% if it.media and it.est_video %}
+                {% if it.poster %}<img src="{{ it.poster }}" alt="" loading="lazy" decoding="async">{% else %}<video src="{{ it.media }}#t=0.1" preload="metadata" muted playsinline></video>{% endif %}
+            {% elif it.media %}
+                <img src="{{ it.media }}" alt="" loading="lazy" decoding="async">
+            {% elif it.cover %}
+                <img src="{{ it.cover }}" alt="" loading="lazy" decoding="async"><span class="fn-son-nota">{{ ic('music') }}</span>
+            {% else %}
+                <div class="fn-son-txt">{{ it.texte }}</div>
+            {% endif %}
+            {% if it.original|default(false) %}<span class="fn-son-orig">Original</span>{% endif %}
+            <span class="fn-son-bas">
+                {% if it.auteur %}<span class="qui">{{ it.auteur }}</span>{% endif %}
+                <span class="ligne">
+                    <span class="vues">{{ ic('play') }}{{ (it.vues|default(0))|compact }}</span>
+                    {% if (it.likes|default(0)) or (it.commentaires|default(0)) %}<span class="rea"><span>{{ ic('heart') }}{{ (it.likes|default(0))|compact }}</span><span>{{ ic('comment') }}{{ (it.commentaires|default(0))|compact }}</span></span>{% endif %}
+                </span>
+            </span>
+        </a>
+        {% endfor %}
+    </div>
+    <div class="fn-son-vide" id="fn-son-aucun" hidden>{{ ic('search') }}Aucun résultat pour cette recherche.<br><button type="button" id="fn-son-raz">Effacer la recherche</button></div>
+    {% else %}
+    <div class="fn-son-vide">{{ ic('video') }}Aucune publication à afficher pour le moment.<br><button type="button" id="fn-son-premier">Sois le premier à publier ce son</button></div>
+    {% endif %}
+
+    <div class="fn-son-flot">
+        <button type="button" class="fn-son-pill blanc" id="fn-son-publier"><span class="mini">{{ ic('music') }}</span> Publier ce son</button>
+        <button type="button" class="fn-son-pill bleu" id="fn-son-utiliser">{{ ic('video') }} Utiliser le son</button>
+    </div>
+    <div class="fn-son-toast" id="fn-son-toast" role="status" aria-live="polite"></div>
+</div>
+
+<!-- Publier ce son sans vidéo : écran plein page (étape 1 : photo, étape 2 : confidentialité) -->
+<div class="fn-sp" id="fn-sp" role="dialog" aria-modal="true" aria-labelledby="fn-sp-h">
+    <div class="fn-sp-fond" id="fn-sp-fond" aria-hidden="true"></div>
+    <div class="fn-sp-top">
+        <button type="button" class="fn-sp-x" id="fn-sp-retour" aria-label="Retour">{{ ic('back') }}</button>
+        <h2 id="fn-sp-h">Publier le son</h2>
+        <div class="fn-sp-pas" aria-hidden="true"><i class="on" id="fn-sp-p1"></i><i id="fn-sp-p2"></i></div>
+    </div>
+    <div class="fn-sp-corps">
+        <div class="fn-sp-etape on" id="fn-sp-e1">
+            <div class="fn-sp-cadre"><div class="fn-sp-cover" id="fn-sp-cover"></div>{% if preview %}<button type="button" class="fn-sp-ecoute" id="fn-sp-ecoute" aria-label="Écouter l’extrait">{{ ic('play') }}</button>{% endif %}<span class="fn-sp-note" aria-hidden="true">{{ ic('music') }}</span></div>
+            <p class="fn-sp-titre" id="fn-sp-titre"></p>
+            <p class="fn-sp-art" id="fn-sp-art"></p>
+            <button type="button" class="fn-sp-changer" id="fn-sp-changer">{{ ic('image') }} <span id="fn-sp-changer-txt">Changer la photo</span></button>
+            <input type="file" id="fn-sp-fichier" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+            <p class="fn-sp-aide">La photo s’affichera avec ton son dans le fil d’actualité.</p>
+        </div>
+        <div class="fn-sp-etape" id="fn-sp-e2">
+            <div class="fn-sp-mini"><div class="fn-sp-mini-img" id="fn-sp-mini-img"></div><div><b id="fn-sp-mini-t"></b><span id="fn-sp-mini-a"></span></div></div>
+            <button type="button" class="fn-sp-opt sel" data-v="public" role="radio" aria-checked="true"><span class="fn-sp-pic">{{ ic('globe') }}</span><span><div class="fn-sp-lib">Public</div><div class="fn-sp-sub">Tout le monde sur FaceNet</div></span><span class="fn-sp-ok">{{ ic('check') }}</span></button>
+            <button type="button" class="fn-sp-opt" data-v="amis" role="radio" aria-checked="false"><span class="fn-sp-pic">{{ ic('users') }}</span><span><div class="fn-sp-lib">Ami(e)s</div><div class="fn-sp-sub">Vos ami(e)s FaceNet uniquement</div></span><span class="fn-sp-ok">{{ ic('check') }}</span></button>
+            <button type="button" class="fn-sp-opt" data-v="famille" role="radio" aria-checked="false"><span class="fn-sp-pic">{{ ic('house') }}</span><span><div class="fn-sp-lib">Famille</div><div class="fn-sp-sub">Votre cercle familial uniquement</div></span><span class="fn-sp-ok">{{ ic('check') }}</span></button>
+            <button type="button" class="fn-sp-opt" data-v="prive" role="radio" aria-checked="false"><span class="fn-sp-pic">{{ ic('lock') }}</span><span><div class="fn-sp-lib">Moi uniquement</div><div class="fn-sp-sub">Vous seul(e) pouvez voir cette publication</div></span><span class="fn-sp-ok">{{ ic('check') }}</span></button>
+            <label class="fn-sp-story"><span><b>Partager aussi dans ma story</b><small>Avec la même musique</small></span><input type="checkbox" id="fn-sp-story"></label>
+        </div>
+    </div>
+    <div class="fn-sp-pied">
+        <p class="fn-sp-err" id="fn-sp-err" role="alert" aria-live="assertive" hidden></p>
+        <button type="button" class="fn-sp-suivant" id="fn-sp-suivant">Suivant</button>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+    var SON = {{ {
+        'source_pub_id': pub_id,
+        'titre': titre|default(''),
+        'artiste': artiste|default(''),
+        'cover': cover or '',
+        'preview': preview or '',
+        'debut': debut or 0,
+        'original': false,
+        'musique': musique|default('')
+    }|tojson }};
+    var URL_CREER = {{ url_for('main.creer_reel_ecran')|tojson }};
+    var URL_PUBLIER = {{ url_for('main.creer_publication')|tojson }};
+    var URL_POCHETTE = '/api/son/pochette';
+
+    var $ = function (i) { return document.getElementById(i); };
+    var each = function (l, f) { Array.prototype.forEach.call(l, f); };
+    function icone(n) { return '<svg class="ic" aria-hidden="true" focusable="false"><use href="#i-' + n + '"></use></svg>'; }
+    function setIcone(el, n) { var u = el && el.querySelector('use'); if (u) u.setAttribute('href', '#i-' + n); }
+    function norm(t) { t = String(t || '').toLowerCase(); try { t = t.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) {} return t; }
+
+    /* ── Message court (toast) ── */
+    var toastEl = $('fn-son-toast'), toastT = 0;
+    function toast(texte, type) {
+        if (!toastEl) return;
+        toastEl.textContent = texte; toastEl.className = 'fn-son-toast on' + (type ? ' ' + type : '');
+        clearTimeout(toastT); toastT = setTimeout(function () { toastEl.classList.remove('on'); }, 3000);
+    }
+
+    /* ── Lecture de l'extrait (un seul lecteur pour toute la page) ── */
+    var rond = $('fn-son-rond'), barre = $('fn-son-barre'), eq = $('fn-son-eq'), prog = barre ? barre.querySelector('i') : null;
+    var audio = null, joue = false, debutSon = parseFloat(SON.debut) || 0;
+    function etatLecture(on) {
+        joue = on;
+        var b = $('fn-son-play'), o = $('fn-sp-ecoute');
+        if (b) { setIcone(b, on ? 'pause' : 'play'); b.setAttribute('aria-label', on ? 'Mettre en pause' : 'Écouter l’extrait'); }
+        if (o) setIcone(o, on ? 'pause' : 'play');
+        if (rond) rond.classList.toggle('joue', on);
+        if (barre) barre.classList.toggle('on', on);
+        if (eq) eq.classList.toggle('on', on);
+        if (!on && prog && (!audio || audio.ended)) prog.style.width = '0';
+    }
+    function arreter() { if (audio) { try { audio.pause(); } catch (e) {} } etatLecture(false); }
+    function basculer() {
+        if (!SON.preview) return;
+        if (!audio) {
+            audio = new Audio(); audio.preload = 'none'; audio.src = SON.preview;
+            audio.addEventListener('loadedmetadata', function () { try { if (debutSon > 0 && debutSon < audio.duration) audio.currentTime = debutSon; } catch (e) {} });
+            audio.addEventListener('timeupdate', function () {
+                var d = audio.duration; if (!d || !isFinite(d) || !prog) return;
+                var seg = d - debutSon; prog.style.width = (seg > 0 ? Math.max(0, Math.min(100, (audio.currentTime - debutSon) / seg * 100)) : 0) + '%';
+            });
+            audio.addEventListener('ended', function () { etatLecture(false); try { audio.currentTime = debutSon; } catch (e) {} });
+            audio.addEventListener('error', function () { etatLecture(false); toast('Impossible de lire l’extrait.', 'err'); });
+        }
+        if (audio.paused) {
+            var p = audio.play();
+            if (p && p.then) p.then(function () { etatLecture(true); }, function () { etatLecture(false); toast('Lecture impossible sur cet appareil.', 'err'); });
+            else etatLecture(true);
+        } else { audio.pause(); etatLecture(false); }
+    }
+    var bPlay = $('fn-son-play'); if (bPlay) bPlay.addEventListener('click', basculer);
+    document.addEventListener('visibilitychange', function () { if (document.hidden) arreter(); });
+    window.addEventListener('pagehide', arreter);
+
+    /* ── Barre du haut : retour, ombre au défilement, partage ── */
+    var barreHaut = $('fn-son-bar'), tick = false;
+    function surScroll() { if (tick) return; tick = true; requestAnimationFrame(function () { tick = false; if (barreHaut) barreHaut.classList.toggle('scrolled', (window.pageYOffset || document.documentElement.scrollTop) > 8); }); }
+    window.addEventListener('scroll', surScroll, { passive: true }); surScroll();
+    var bRet = $('fn-son-retour');
+    if (bRet) bRet.addEventListener('click', function () { if (history.length > 1) history.back(); else location.href = '/feed'; });
+
+    function copierVieux(t) {
+        var a = document.createElement('textarea'); a.value = t; a.setAttribute('readonly', ''); a.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+        document.body.appendChild(a); a.select(); var ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(a); toast(ok ? 'Lien copié' : 'Copie impossible : copie le lien depuis la barre d’adresse.', ok ? 'ok' : 'err');
+    }
+    function copier(t) {
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function () { toast('Lien copié', 'ok'); }, function () { copierVieux(t); });
+        else copierVieux(t);
+    }
+    var bPart = $('fn-son-partager');
+    if (bPart) bPart.addEventListener('click', function () {
+        var url = location.href.split('#')[0];
+        if (navigator.share) navigator.share({ title: SON.titre, text: 'Découvre ce son sur FaceNet', url: url }).catch(function (e) { if (e && e.name !== 'AbortError') copier(url); });
+        else copier(url);
+    });
+
+    /* ── Utiliser ce son : ouvre la création de reel avec le son déjà choisi ── */
+    var bUt = $('fn-son-utiliser');
+    if (bUt) bUt.addEventListener('click', function () {
+        try { sessionStorage.setItem('fnReelSon', JSON.stringify(SON)); } catch (e) {}
+        arreter();
+        location.href = URL_CREER + (URL_CREER.indexOf('?') === -1 ? '?' : '&') + 'son=' + encodeURIComponent(SON.source_pub_id);
+    });
+
+    /* ── Grille : images de secours, recherche, tri ── */
+    var grille = $('fn-son-grille'), tuiles = grille ? Array.prototype.slice.call(grille.children) : [];
+    function pret(t) { t.classList.add('pret'); }
+    each(tuiles, function (t) {
+        t._q = norm(t.getAttribute('data-q'));
+        var m = t.querySelector('img,video');
+        if (!m) { pret(t); return; }
+        if (m.tagName === 'IMG' && m.complete) { (m.naturalWidth ? pret : function (x) { x.classList.add('ko'); pret(x); })(t); }
+    });
+    if (grille) {
+        grille.addEventListener('load', function (e) { var t = e.target.closest && e.target.closest('.fn-son-tuile'); if (t) pret(t); }, true);
+        grille.addEventListener('loadeddata', function (e) { var t = e.target.closest && e.target.closest('.fn-son-tuile'); if (t) pret(t); }, true);
+        grille.addEventListener('error', function (e) { var t = e.target.closest && e.target.closest('.fn-son-tuile'); if (t) { t.classList.add('ko'); pret(t); } }, true);
+    }
+    var q = $('fn-son-q'), eff = $('fn-son-eff'), aucun = $('fn-son-aucun'), minuteur = 0;
+    function filtrer() {
+        var v = norm(q ? q.value.trim() : ''), n = 0;
+        if (eff) eff.hidden = !v;
+        each(tuiles, function (t) { var ok = !v || t._q.indexOf(v) !== -1; t.hidden = !ok; if (ok) n++; });
+        if (aucun) aucun.hidden = !(v && n === 0);
+    }
+    if (q) {
+        q.addEventListener('input', function () { clearTimeout(minuteur); minuteur = setTimeout(filtrer, 120); });
+        q.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); q.blur(); } });
+    }
+    function viderRecherche() { if (q) { q.value = ''; filtrer(); q.focus(); } }
+    if (eff) eff.addEventListener('click', viderRecherche);
+    var bRaz = $('fn-son-raz'); if (bRaz) bRaz.addEventListener('click', viderRecherche);
+
+    var tri = $('fn-son-tri');
+    function trier(m) {
+        if (!grille) return;
+        var l = tuiles.slice();
+        l.sort(function (a, b) {
+            var o = (+a.getAttribute('data-ordre')) - (+b.getAttribute('data-ordre'));
+            return m === 'pop' ? ((+b.getAttribute('data-vues')) - (+a.getAttribute('data-vues'))) || o : o;
+        });
+        l.forEach(function (e) { grille.appendChild(e); });
+        if (tri) { each(tri.querySelectorAll('button'), function (b, i) { var on = b.getAttribute('data-m') === m; b.setAttribute('aria-selected', on ? 'true' : 'false'); if (on) tri.style.setProperty('--i', i); }); }
+    }
+    if (tri) each(tri.querySelectorAll('button'), function (b) { b.addEventListener('click', function () { trier(b.getAttribute('data-m')); }); });
+    trier('pop');
+
+    /* ── Enregistrer le son (favoris de musique) ── */
+    var bEnr = $('fn-son-enreg'), favId = null;
+    function etatEnreg(on) {
+        if (!bEnr) return;
+        bEnr.classList.toggle('on', on); bEnr.setAttribute('aria-pressed', on ? 'true' : 'false');
+        setIcone(bEnr, on ? 'bookmark-on' : 'bookmark');
+        bEnr.querySelector('.fn-son-enreg-tx').textContent = on ? 'Enregistré' : 'Enregistrer';
+    }
+    function appel(url, corps) {
+        return fetch(url, {
+            method: corps ? 'POST' : 'GET', credentials: 'same-origin',
+            headers: corps ? { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } : { 'X-Requested-With': 'XMLHttpRequest' },
+            body: corps ? JSON.stringify(corps) : undefined
+        }).then(function (r) { if (r.redirected && /login/i.test(r.url)) throw new Error('session'); return r.json(); });
+    }
+    function messageReseau(e) {
+        if (e && e.message === 'session') return 'Ta session a expiré. Reconnecte-toi puis réessaie.';
+        return navigator.onLine === false ? 'Pas de connexion internet.' : 'Une erreur est survenue. Réessaie.';
+    }
+    if (bEnr) {
+        appel('/api/musique/favoris').then(function (d) {
+            each(d.favoris || [], function (f) { if (f.titre === SON.titre && (f.artiste || '') === (SON.artiste || '')) favId = f.id; });
+            etatEnreg(!!favId);
+        }).catch(function () {});
+        bEnr.addEventListener('click', function () {
+            if (bEnr.disabled) return; bEnr.disabled = true;
+            var avant = !!favId, p;
+            etatEnreg(!avant);
+            if (avant) p = appel('/api/musique/favoris/' + favId + '/retirer', {}).then(function (d) { if (!d.success) throw new Error('x'); favId = null; });
+            else p = appel('/api/musique/favoris/ajouter', { titre: SON.titre, artiste: SON.artiste, cover: SON.cover, preview: SON.preview }).then(function (d) { if (!d.success) throw new Error('x'); favId = d.id; toast('Son enregistré', 'ok'); });
+            p.catch(function (e) { etatEnreg(avant); toast(messageReseau(e), 'err'); }).then(function () { bEnr.disabled = false; });
+        });
+    }
+
+    /* ── Publier ce son sans vidéo : 1) photo  2) confidentialité  3) publication dans le fil ── */
+    var sp = $('fn-sp'), bOuvrir = $('fn-son-publier');
+    if (!sp || !bOuvrir) return;
+    document.body.appendChild(sp);   /* évite qu'un parent de la page limite le plein écran */
+    var e1 = $('fn-sp-e1'), e2 = $('fn-sp-e2'), coverBox = $('fn-sp-cover'), miniImg = $('fn-sp-mini-img');
+    var bSuiv = $('fn-sp-suivant'), erreur = $('fn-sp-err'), inputF = $('fn-sp-fichier'), titreH = $('fn-sp-h'), caseStory = $('fn-sp-story');
+    var etape = 1, niveau = 'public', fichier = null, apercu = SON.cover || '', envoi = false, pousse = false, avantFocus = null, urlLocale = '';
+    var EXT_OK = /\.(jpe?g|png|webp|gif)$/i, TYPE_OK = /^image\/(jpeg|png|webp|gif)$/i;
+    var titreSon = SON.titre || SON.musique || '', artisteSon = SON.artiste || '';
+    $('fn-sp-titre').textContent = titreSon; $('fn-sp-art').textContent = artisteSon;
+    $('fn-sp-mini-t').textContent = titreSon; $('fn-sp-mini-a').textContent = artisteSon;
+
+    function dessiner(box) {
+        box.innerHTML = '';
+        if (apercu) { var im = document.createElement('img'); im.alt = ''; im.src = apercu; im.onerror = function () { box.innerHTML = icone('music'); }; box.appendChild(im); }
+        else box.innerHTML = icone('music');
+    }
+    function rafraichir() {
+        dessiner(coverBox); dessiner(miniImg);
+        $('fn-sp-fond').style.backgroundImage = apercu ? 'url("' + String(apercu).replace(/["\\\n\r]/g, function (c) { return encodeURIComponent(c); }) + '")' : 'none';
+        $('fn-sp-changer-txt').textContent = apercu ? 'Changer la photo' : 'Ajouter une photo';
+        var o = $('fn-sp-ecoute'); if (o) coverBox.parentNode.appendChild(o);
+    }
+    function msg(t) { erreur.textContent = t || ''; erreur.hidden = !t; }
+    function allerEtape(n) {
+        etape = n; msg('');
+        e1.classList.toggle('on', n === 1); e2.classList.toggle('on', n === 2);
+        $('fn-sp-p1').classList.toggle('on', n === 1); $('fn-sp-p2').classList.toggle('on', n === 2);
+        titreH.textContent = n === 1 ? 'Publier le son' : 'Confidentialité';
+        bSuiv.textContent = n === 1 ? 'Suivant' : 'Publier';
+        var c = sp.querySelector('.fn-sp-corps'); if (c) c.scrollTop = 0;
+    }
+    function ouvrir() {
+        avantFocus = document.activeElement; envoi = false; bSuiv.disabled = false;
+        rafraichir(); allerEtape(1);
+        sp.classList.add('on'); document.documentElement.style.overflow = 'hidden';
+        try { history.pushState({ fnSp: 1 }, ''); pousse = true; } catch (e) {}
+        setTimeout(function () { var b = $('fn-sp-retour'); if (b) b.focus(); }, 30);
+    }
+    function masquer() {
+        sp.classList.remove('on'); document.documentElement.style.overflow = '';
+        if (avantFocus && avantFocus.focus) { try { avantFocus.focus(); } catch (e) {} }
+    }
+    function fermer() {
+        if (envoi) return;
+        masquer();
+        if (pousse) { pousse = false; try { history.back(); } catch (e) {} }
+    }
+    function retour() { if (etape === 2) allerEtape(1); else fermer(); }
+
+    bOuvrir.addEventListener('click', ouvrir);
+    var bPrem = $('fn-son-premier'); if (bPrem) bPrem.addEventListener('click', ouvrir);
+    $('fn-sp-retour').addEventListener('click', retour);
+    window.addEventListener('popstate', function () {
+        if (!sp.classList.contains('on')) return;
+        if (envoi) { try { history.pushState({ fnSp: 1 }, ''); } catch (e) {} return; }
+        if (etape === 2) { allerEtape(1); try { history.pushState({ fnSp: 1 }, ''); } catch (e) {} return; }
+        pousse = false; masquer();
+    });
+    document.addEventListener('keydown', function (ev) {
+        if (!sp.classList.contains('on')) return;
+        if (ev.key === 'Escape') { retour(); return; }
+        if (ev.key === 'Tab') {
+            var f = sp.querySelectorAll('button:not([disabled]),input:not([disabled]),[tabindex]:not([tabindex="-1"])');
+            var vis = Array.prototype.filter.call(f, function (x) { return x.offsetParent !== null; });
+            if (!vis.length) return;
+            var p = vis[0], d = vis[vis.length - 1];
+            if (ev.shiftKey && document.activeElement === p) { ev.preventDefault(); d.focus(); }
+            else if (!ev.shiftKey && document.activeElement === d) { ev.preventDefault(); p.focus(); }
+        }
+    });
+    var bEcoute = $('fn-sp-ecoute'); if (bEcoute) bEcoute.addEventListener('click', basculer);
+
+    $('fn-sp-changer').addEventListener('click', function () { inputF.click(); });
+    inputF.addEventListener('change', function () {
+        var f = inputF.files && inputF.files[0];
+        if (!f) return;
+        if (!(TYPE_OK.test(f.type) || (!f.type && EXT_OK.test(f.name)))) { msg('Choisis une image JPG, PNG, WebP ou GIF.'); inputF.value = ''; return; }
+        if (f.size > 25 * 1024 * 1024) { msg('Cette image est trop lourde (25 Mo maximum).'); inputF.value = ''; return; }
+        msg(''); fichier = f;
+        try { if (urlLocale) URL.revokeObjectURL(urlLocale); urlLocale = URL.createObjectURL(f); apercu = urlLocale; } catch (e) {}
+        rafraichir();
+    });
+
+    each(sp.querySelectorAll('.fn-sp-opt'), function (b) {
+        b.addEventListener('click', function () {
+            niveau = b.getAttribute('data-v');
+            each(sp.querySelectorAll('.fn-sp-opt'), function (x) { var on = x === b; x.classList.toggle('sel', on); x.setAttribute('aria-checked', on ? 'true' : 'false'); });
+            if (caseStory) { caseStory.disabled = (niveau === 'prive'); if (caseStory.disabled) caseStory.checked = false; }
+        });
+    });
+
+    /* Réduit une grande photo avant l'envoi (plus rapide, moins d'échecs) ; renvoie toujours un fichier utilisable */
+    function reduire(f) {
+        return new Promise(function (ok) {
+            if (!/^image\/(jpeg|png|webp)$/i.test(f.type)) return ok({ blob: f, nom: f.name || 'pochette' });
+            var u = URL.createObjectURL(f), im = new Image();
+            im.onload = function () {
+                try {
+                    var w = im.naturalWidth, h = im.naturalHeight, k = Math.min(1, 1400 / Math.max(w, h));
+                    if (k === 1 && f.size < 1.5 * 1024 * 1024) { URL.revokeObjectURL(u); return ok({ blob: f, nom: f.name || 'pochette' }); }
+                    var c = document.createElement('canvas'); c.width = Math.round(w * k); c.height = Math.round(h * k);
+                    var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height);
+                    c.toBlob(function (b) { URL.revokeObjectURL(u); ok(b && b.size < f.size ? { blob: b, nom: 'pochette.jpg' } : { blob: f, nom: f.name || 'pochette' }); }, 'image/jpeg', 0.88);
+                } catch (e) { URL.revokeObjectURL(u); ok({ blob: f, nom: f.name || 'pochette' }); }
+            };
+            im.onerror = function () { URL.revokeObjectURL(u); ok({ blob: f, nom: f.name || 'pochette' }); };
+            im.src = u;
+        });
+    }
+    function envoyer(url, fd, ms) {
+        var c = ('AbortController' in window) ? new AbortController() : null, t = setTimeout(function () { if (c) c.abort(); }, ms || 40000);
+        return fetch(url, { method: 'POST', body: fd, credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' }, signal: c ? c.signal : undefined })
+            .then(function (r) {
+                clearTimeout(t);
+                var perdue = r.redirected && /login/i.test(r.url);
+                return r.json().catch(function () { return null; }).then(function (j) { return { r: r, j: j, perdue: perdue }; });
+            }, function (e) { clearTimeout(t); throw e; });
+    }
+    function texteErreur(o, e) {
+        if (o) {
+            if (o.perdue || o.r.status === 401 || o.r.status === 403) return 'Ta session a expiré. Reconnecte-toi puis réessaie.';
+            if (o.j && typeof o.j.error === 'string' && o.j.error) return o.j.error;
+            if (o.r.status === 413) return 'L’image est trop lourde.';
+            if (o.r.status >= 500) return 'Le serveur a un souci. Réessaie dans un instant.';
+        }
+        if (e && e.name === 'AbortError') return 'La connexion est trop lente. Réessaie.';
+        if (navigator.onLine === false) return 'Pas de connexion internet.';
+        return 'Impossible de publier pour le moment. Réessaie dans un instant.';
+    }
+    function echec(t) { envoi = false; bSuiv.disabled = false; bSuiv.textContent = 'Publier'; msg(t); }
+
+    function publier() {
+        if (envoi) return;
+        if (navigator.onLine === false) { msg('Pas de connexion internet.'); return; }
+        envoi = true; bSuiv.disabled = true; bSuiv.textContent = 'Publication…'; msg('');
+        var etapeCover = Promise.resolve(SON.cover || '');
+        if (fichier) {
+            etapeCover = reduire(fichier).then(function (r) {
+                var fd0 = new FormData(); fd0.append('pochette', r.blob, r.nom);
+                return envoyer(URL_POCHETTE, fd0, 60000);
+            }).then(function (o) {
+                if (!o.r.ok || !o.j || !o.j.success || !o.j.url) { var er = new Error(texteErreur(o)); er.direct = true; throw er; }
+                return o.j.url;
+            });
+        }
+        etapeCover.then(function (cover) {
+            var fd = new FormData();
+            fd.append('contenu', ''); fd.append('confidentialite', niveau);
+            fd.append('musique', SON.musique || ''); fd.append('musique_preview_url', SON.preview || '');
+            fd.append('musique_cover_url', cover || ''); fd.append('musique_debut', String(debutSon));
+            fd.append('programmation_mode', 'maintenant'); fd.append('qui_peut_commenter', 'public');
+            fd.append('partager_story', (caseStory && caseStory.checked) ? '1' : '0');
+            return envoyer(URL_PUBLIER, fd, 40000);
+        }).then(function (o) {
+            if (!o.r.ok || !o.j || !o.j.success) { var er = new Error(texteErreur(o)); er.direct = true; throw er; }
+            arreter(); bSuiv.textContent = 'Publié ✓';
+            window.location.href = o.j.redirect || '/feed';
+        }).catch(function (e) { echec(e && e.direct ? e.message : texteErreur(null, e)); });
+    }
+    bSuiv.addEventListener('click', function () { if (etape === 1) allerEtape(2); else publier(); });
+})();
+</script>
+{% endblock %}

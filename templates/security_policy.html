@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion du Compte | FaceNet</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* --- STYLES HARMONISÉS FACENET --- */
+        :root {
+            --fn-blue: #0866FF;
+            --fn-bg: #F0F2F5;
+            --fn-gray: #65676B;
+            --fn-border: #e4e6eb;
+            --white: #ffffff;
+            --text-dark: #1c1e21;
+            --card-shadow: rgba(0,0,0,0.1);
+            --input-bg: #fafafa;
+            --danger-red: #d92d20;
+        }
+
+        body {
+            background: var(--fn-bg);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-dark);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .settings-container {
+            width: 100%;
+            max-width: 680px;
+        }
+
+        .fn-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px var(--card-shadow);
+            margin-bottom: 20px;
+            border: 1px solid var(--fn-border);
+        }
+
+        .fn-card h2 {
+            font-size: 20px;
+            margin-top: 0;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-desc {
+            color: var(--fn-gray);
+            font-size: 14px;
+            line-height: 1.5;
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+
+        .fn-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--fn-border);
+        }
+
+        .tsapi-input-group {
+            margin-bottom: 15px;
+        }
+
+        .tsapi-input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+
+        .tsapi-input-group select, 
+        .tsapi-input-group input[type="text"], 
+        .tsapi-input-group input[type="email"],
+        .tsapi-input-group input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--fn-border);
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+            background: var(--input-bg);
+            color: var(--text-dark);
+            font-family: inherit;
+        }
+
+        .btn-fn-action {
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            border: none;
+            transition: 0.2s;
+        }
+
+        .btn-cancel {
+            background: var(--fn-bg);
+            color: var(--text-dark);
+        }
+
+        .btn-danger {
+            background: var(--danger-red);
+            color: white;
+        }
+
+        .btn-submit {
+            background: var(--fn-blue);
+            color: white;
+            width: 100%;
+            padding: 14px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 15px;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        /* BANNIÈRE DE CONDOLÉANCES Spéciale FaceNet */
+        .condolences-banner {
+            background: #f8f9fa;
+            border-left: 4px solid var(--fn-blue);
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .condolences-banner p {
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-dark);
+        }
+    </style>
+</head>
+<body>
+
+<div class="settings-container">
+
+    <!-- 1. DÉSACTIVATION ET SUPPRESSION DU COMPTE -->
+    <div class="fn-card">
+        <h2><i class="fas fa-user-shield" style="color: var(--fn-blue);"></i> Désactivation et Suppression</h2>
+        <p class="section-desc">Gère la visibilité de ton profil ou supprime définitivement tes données de FaceNet.</p>
+
+        <!-- Option Désactivation -->
+        <div class="fn-row">
+            <div>
+                <strong style="display:block;">Désactiver le compte</strong>
+                <span style="font-size:12px; color:var(--fn-gray);">Ton profil, tes photos et tes publications seront masqués jusqu'à ta prochaine connexion.</span>
+            </div>
+            <div>
+                <button type="button" class="btn-fn-action btn-cancel" onclick="confirmerDesactivation()">Désactiver</button>
+            </div>
+        </div>
+
+        <!-- Option Suppression -->
+        <div class="fn-row" style="border-bottom: none;">
+            <div>
+                <strong style="display:block; color:var(--danger-red);">Supprimer le compte</strong>
+                <span style="font-size:12px; color:var(--fn-gray);">Action irréversible. Toutes tes données, messages et publications seront effacés.</span>
+            </div>
+            <div>
+                <button type="button" class="btn-fn-action btn-danger" onclick="confirmerSuppression()">Supprimer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. GESTION ET SIGNALEMENT DE DÉCÈS AVEC CONDOLÉANCES -->
+    <div class="fn-card">
+        <h2><i class="fas fa-ribbon" style="color: var(--fn-gray);"></i> Signaler le décès d'un utilisateur</h2>
+        
+        <!-- BANNIÈRE OFFICIELLE DE CONDOLÉANCES FACENET -->
+        <div class="condolences-banner">
+            <p>
+                <strong><i class="fas fa-heart" style="color: #e0245e;"></i> L'équipe FaceNet vous présente ses plus sincères condoléances.</strong><br>
+                Nous partageons votre peine et nous nous engageons à vous accompagner pour protéger et honorer la mémoire de votre proche dans le plus grand respect.
+            </p>
+        </div>
+
+        <p class="section-desc">
+            Veuillez remplir ce formulaire afin que notre équipe puisse procéder à la mémorialisation ou à la suppression sécurisée du compte.
+        </p>
+
+        <form action="/api/report-deceased" method="POST" enctype="multipart/form-data">
+            <div class="tsapi-input-group">
+                <label>Nom d'utilisateur ou lien du profil FaceNet du défunt</label>
+                <input type="text" name="deceased_user" placeholder="ex: @nomutilisateur ou lien du profil" required>
+            </div>
+
+            <div class="tsapi-input-group">
+                <label>Que souhaitez-vous faire avec ce compte ?</label>
+                <select name="action_requested" required>
+                    <option value="memorialize">Transformer en compte de souvenir (Mémorial)</option>
+                    <option value="delete">Supprimer définitivement le compte</option>
+                </select>
+            </div>
+
+            <div class="tsapi-input-group">
+                <label>Preuve ou justificatif du décès</label>
+                <p style="font-size: 12px; color: var(--fn-gray); margin-top: -4px; margin-bottom: 6px;">
+                    Avis de décès, article de presse, faire-part ou acte de décès.
+                </p>
+                <input type="file" name="proof_document" accept=".pdf,.jpg,.jpeg,.png" required>
+            </div>
+
+            <div class="tsapi-input-group">
+                <label>Votre adresse e-mail de contact</label>
+                <input type="email" name="reporter_email" placeholder="votre-email@exemple.com" required>
+            </div>
+
+            <button type="submit" class="btn-submit" style="background: #333;">
+                Transmettre la demande à l'équipe FaceNet
+            </button>
+        </form>
+    </div>
+
+</div>
+
+<!-- SCRIPTS DE CONFIRMATION JS -->
+<script>
+    function confirmerDesactivation() {
+        if (confirm("Es-tu sûr de vouloir désactiver ton compte FaceNet ? Tu pourras le réactiver à tout moment en te reconnectant.")) {
+            window.location.href = "/deactivate-account";
+        }
+    }
+
+    function confirmerSuppression() {
+        const confirmation = prompt("ATTENTION : Cette action est définitive. Tape 'SUPPRIMER' pour confirmer la suppression de ton compte FaceNet.");
+        if (confirmation === "SUPPRIMER") {
+            window.location.href = "/delete-account";
+        } else if (confirmation !== null) {
+            alert("Saisie incorrecte. La suppression a été annulée.");
+        }
+    }
+</script>
+
+</body>
+</html>
